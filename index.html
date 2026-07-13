@@ -2,14 +2,15 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Приватная VTT Комната</title>
-    <!-- Подключение Firebase SDK -->
+    <title>Ультимативная VTT Комната</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <style>
         :root { --bg-dark: #0f1015; --panel-bg: #161822; --border-color: #242736; --accent: #ff4757; --text-main: #e2e8f0; --text-muted: #718096; }
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-        body { background: var(--bg-dark); color: var(--text-main); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        body { background: var(--bg-dark); color: var(--text-main); font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        
         #auth-screen { position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(10,11,15,0.95); z-index:9999; display:flex; justify-content:center; align-items:center; backdrop-filter: blur(10px); }
         .auth-card { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 40px; width: 100%; max-width: 420px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center; }
         .form-group { text-align: left; margin-bottom: 14px; }
@@ -18,46 +19,47 @@
         .btn { width: 100%; padding: 12px; border-radius: 6px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; }
         .btn-primary { background: var(--accent); color: #fff; }
         .btn-secondary { background: #242736; color: var(--text-main); margin-top: 10px; }
+        
         #app-header { height: 50px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 10; }
         #workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
-        #sidebar { width: 300px; background: var(--panel-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 5; }
+        
+        #toolbar { position: absolute; left: 20px; top: 20px; background: var(--panel-bg); border: 1px solid var(--border-color); padding: 6px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 100; }
+        .tool-btn { width: 38px; height: 38px; border-radius: 6px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 16px; }
+        .tool-btn.active { background: var(--accent); color: #fff; }
+        
+        #board-wrapper { flex: 1; position: relative; background: #0b0c10; overflow: hidden; cursor: grab; }
+        #board-wrapper:active { cursor: grabbing; }
+        #game-board { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+        #game-map { display: block; background: #14161f; pointer-events: none; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #lighting-canvas { z-index: 2; mix-blend-mode: multiply; }
+        #ruler-canvas { z-index: 45; }
+        
+        #sidebar { width: 320px; background: var(--panel-bg); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 5; }
         .tabs-header { display: flex; border-bottom: 1px solid var(--border-color); background: #12141d; }
         .tab-btn { flex: 1; padding: 14px 0; text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); cursor: pointer; }
         .tab-btn.active { color: var(--accent); background: var(--panel-bg); }
         .tab-content { flex: 1; display: none; padding: 15px; overflow-y: auto; }
-        .tab-content.active { display: flex; flex-direction: column; }
-        #board-wrapper { flex: 1; position: relative; background: #0b0c10; overflow: hidden; }
-        #game-board { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
-        #game-map { display: block; width: 1200px; height: 800px; background: #14161f; pointer-events: none; }
-        #grid-canvas, #fog-canvas, #walls-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        #fog-canvas { mix-blend-mode: multiply; opacity: 0.95; z-index: 3; }
-        #walls-canvas { z-index: 35; }
-        .token { position: absolute; width: 40px; height: 40px; border-radius: 50%; cursor: move; z-index: 4; border: 2px solid #fff; background-size: cover; background-position: center; }
+        .tab-content.active { display: flex; flex-direction: column; gap: 12px; }
+        
+        .token { position: absolute; border-radius: 50%; cursor: move; z-index: 10; border: 2px solid #fff; background-size: cover; background-position: center; }
         .token.selected { border-color: var(--accent); box-shadow: 0 0 15px var(--accent); z-index: 40; }
         .token-label { position: absolute; bottom: -22px; background: rgba(10,11,15,0.85); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px; white-space: nowrap; left: 50%; transform: translateX(-50%); border: 1px solid var(--border-color); }
         .token-hp-bar { position: absolute; top: -10px; left: 0; width: 100%; height: 5px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; }
-        .token-hp-fill { height: 100%; background: #2ed573; width: 100%; }
-        .token-status-markers { position: absolute; top: -5px; right: -5px; display: flex; gap: 2px; z-index: 5; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #fff; }
+        .token-hp-fill { height: 100%; width: 100%; transition: background 0.3s, width 0.3s; }
         
-        #context-menu { position: fixed; z-index: 999999 !important; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; width: 260px; box-shadow: 0 15px 35px rgba(0,0,0,0.7); padding: 12px; display: none; }
-        .aura-visual { position: absolute; border-radius: 50%; pointer-events: none; opacity: 0.25; z-index: 1; transform: translate(-50%, -50%); }
-        #toolbar { position: absolute; left: 20px; top: 20px; background: var(--panel-bg); border: 1px solid var(--border-color); padding: 6px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 100; }
-        .tool-btn { width: 38px; height: 38px; border-radius: 6px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 16px; }
-        .tool-btn.active { background: var(--accent); color: #fff; }
-        #chat-log { flex: 1; background: #11131a; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; overflow-y: auto; margin-bottom: 12px; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
-        .chat-msg { background: #181b26; padding: 6px 10px; border-radius: 6px; }
-        .library-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .library-item { aspect-ratio: 1; border-radius: 6px; border: 1px solid var(--border-color); background-size: cover; background-position: center; cursor: pointer; }
-        .map-selector-card { background: #1a1d29; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 8px; cursor: pointer; }
-        .map-selector-card.active { border-color: var(--accent); }
+        #chat-log { flex: 1; background: #11131a; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; overflow-y: auto; font-size: 13px; display: flex; flex-direction: column; gap: 6px; min-height: 200px; }
+        .chat-msg { background: #181b26; padding: 6px 10px; border-radius: 6px; border-left: 3px solid var(--accent); }
+        .dice-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
     <div id="auth-screen">
         <div class="auth-card">
-            <h1>VTT CORE</h1>
+            <h1>VTT ULTIMATE</h1>
             <p>Подключение к игровой сессии</p>
             <div class="form-group">
                 <label>Ваш Никнейм</label>
@@ -73,101 +75,117 @@
     </div>
 
     <div id="app-header">
-        <div class="logo-area"><div class="logo-dot"></div><span>VTT CORE</span></div>
-        <div id="room-display-id" class="room-id-badge">Комната: <strong>---</strong></div>
+        <div><strong>VTT ULTIMATE</strong></div>
+        <div id="room-display-id">Комната: <strong>---</strong></div>
     </div>
 
     <div id="workspace">
         <div id="toolbar">
-            <button class="tool-btn active" data-tool="select">✋</button>
-            <button class="tool-btn" data-tool="wall" id="tool-wall-btn" style="display:none;">🧱</button>
-            <button class="tool-btn" data-tool="light" id="tool-light-btn" style="display:none;">💡</button>
+            <button class="tool-btn active" data-tool="select" title="Выбор и перемещение">✋</button>
+            <button class="tool-btn" data-tool="ruler" title="Линейка расстояний">📏</button>
+            <button class="tool-btn gm-only hidden" data-tool="wall" title="Рисовать Стены">🧱</button>
+            <button class="tool-btn gm-only hidden" data-tool="light" title="Поставить Свет">💡</button>
         </div>
 
         <div id="board-wrapper">
             <div id="game-board">
                 <img id="game-map" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'><rect width='1200' height='800' fill='%2314161f'/></svg>">
-                <div id="auras-container" style="position:absolute; top:0; left:0; pointer-events:none; z-index:2;"></div>
-                <canvas id="grid-canvas"></canvas>
-                <canvas id="walls-canvas"></canvas>
-                <canvas id="fog-canvas"></canvas>
+                <canvas id="lighting-canvas"></canvas>
+                <canvas id="ruler-canvas"></canvas>
                 <div id="tokens-container"></div>
             </div>
         </div>
 
         <div id="sidebar">
             <div class="tabs-header">
-                <div class="tab-btn active" data-tab="maps">Карты</div>
+                <div class="tab-btn active" data-tab="maps">Карта</div>
                 <div class="tab-btn" data-tab="tokens">Токены</div>
                 <div class="tab-btn" data-tab="chat">Кубы</div>
             </div>
 
+            <!-- ВКЛАДКА КАРТЫ -->
             <div class="tab-content active" id="tab-maps">
-                <button id="btn-add-map" class="btn btn-secondary" style="display:none; margin-bottom:10px;">+ Загрузить Карту</button>
-                <input type="file" id="map-library-upload" accept="image/*" style="display:none;">
-                <div id="maps-list-container"></div>
-            </div>
-
-            <div class="tab-content" id="tab-tokens">
-                <div class="library-grid">
-                    <div class="library-item" style="background-image:url('https://i.imgur.com/7b2eX9F.png')" data-name="Воин"></div>
-                    <div class="library-item" style="background-image:url('https://i.imgur.com/vHqY7bM.png')" data-name="Маг"></div>
-                    <div class="library-item" style="background-image:url('https://i.imgur.com/N7Wb8p6.png')" data-name="Орк"></div>
+                <div id="gm-map-controls" style="display:none; flex-direction:column; gap:10px;">
+                    <label style="font-size:11px; color:var(--text-muted);">ЗАГРУЗКА ФОНА КАРТЫ</label>
+                    <input type="file" id="file-map-upload" class="form-control" accept="image/*">
+                    
+                    <div style="display:flex; gap:6px; margin-top:10px;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Ширина карты (px)</label>
+                            <input type="number" id="input-map-w" class="form-control" value="1200">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Высота карты (px)</label>
+                            <input type="number" id="input-map-h" class="form-control" value="800">
+                        </div>
+                    </div>
+                    <button id="btn-save-map-settings" class="btn btn-primary">Применить размеры</button>
+                    <hr style="border-color:var(--border-color); margin:10px 0;">
+                    <button id="btn-clear-walls" class="btn btn-secondary" style="background:#3a2424; color:#ff4757;">🗑️ Удалить все стены и свет</button>
                 </div>
-                <select id="gm-layer-selector" class="form-control" style="margin-top:15px; display:none;">
-                    <option value="token">Основной слой</option>
-                    <option value="gm">Скрытый слой ДМ-а</option>
-                </select>
-                <div style="margin-top:15px; font-size:12px; color:var(--text-muted)">Игроки в комнате:</div>
-                <div id="players-list" style="font-size:13px; color:#fff; margin-top:5px;"></div>
+                <div id="player-map-status" style="color:var(--text-muted); font-size:13px;">Размеры и освещение контролируются Мастером.</div>
             </div>
 
+            <!-- ВКЛАДКА ТОКЕНЫ -->
+            <div class="tab-content" id="tab-tokens">
+                <div class="gm-only hidden">
+                    <label style="font-size:11px; color:var(--text-muted);">ЗАГРУЗИТЬ СВОЙ ТОКЕН (ФАЙЛ)</label>
+                    <input type="file" id="file-token-upload" class="form-control" accept="image/*" style="margin-bottom:12px;">
+                </div>
+                
+                <label style="font-size:11px; color:var(--text-muted);">БЫСТРЫЙ СПАВН</label>
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px;">
+                    <button class="btn btn-secondary spawn-token-btn" data-name="Герой" data-img="https://i.imgur.com/7b2eX9F.png">🛡️ Герой</button>
+                    <button class="btn btn-secondary spawn-token-btn" data-name="Враг" data-img="https://i.imgur.com/N7Wb8p6.png">👹 Враг</button>
+                    <button class="btn btn-secondary spawn-token-btn" data-name="НПС" data-img="https://i.imgur.com/vHqY7bM.png">🧙 НПС</button>
+                </div>
+                <div style="margin-top:15px; font-size:12px; color:var(--text-muted)">В сети:</div>
+                <div id="players-list" style="font-size:13px;"></div>
+            </div>
+
+            <!-- ВКЛАДКА КУБЫ -->
             <div class="tab-content" id="tab-chat">
-                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-bottom:10px;">
+                <div class="dice-grid">
+                    <button class="btn btn-secondary d-btn" data-dice="4">D4</button>
                     <button class="btn btn-secondary d-btn" data-dice="6">D6</button>
+                    <button class="btn btn-secondary d-btn" data-dice="8">D8</button>
+                    <button class="btn btn-secondary d-btn" data-dice="10">D10</button>
+                    <button class="btn btn-secondary d-btn" data-dice="12">D12</button>
                     <button class="btn btn-secondary d-btn" data-dice="20">D20</button>
                     <button class="btn btn-secondary d-btn" data-dice="100">D100</button>
                 </div>
+                <button id="btn-clear-chat" class="btn btn-secondary" style="background:#3a2424; color:#ff4757; font-size:11px; padding:6px;">🗑️ Очистить историю бросков</button>
                 <div id="chat-log"></div>
-                <input type="text" id="chat-input" class="form-control" placeholder="Сообщение...">
+                <input type="text" id="chat-input" class="form-control" placeholder="Сообщение в чат...">
             </div>
         </div>
     </div>
 
+    <!-- КОНТЕКСТНОЕ МЕНЮ ТОКЕНА -->
     <div id="context-menu">
-        <div id="ctx-title" style="font-weight:700; margin-bottom:8px; font-size:14px;">Токен</div>
+        <div id="ctx-title" style="font-weight:700; margin-bottom:8px;">Параметры токена</div>
         <div class="form-group">
-            <label>Хитпоинты</label>
+            <label>Имя токена</label>
+            <input type="text" id="ctx-token-name" class="form-control">
+        </div>
+        <div class="form-group">
+            <label>Размер токена (px)</label>
+            <input type="number" id="ctx-token-size" class="form-control" value="40">
+        </div>
+        <div class="form-group">
+            <label>Хитпоинты (Текущие / Макс)</label>
             <div style="display:flex; gap:4px;">
-                <input type="number" id="ctx-hp-val" class="form-control" placeholder="Текущие">
-                <input type="number" id="ctx-hp-max" class="form-control" placeholder="Макс">
+                <input type="number" id="ctx-hp-val" class="form-control">
+                <input type="number" id="ctx-hp-max" class="form-control">
             </div>
         </div>
-        
-        <div class="form-group">
-            <label>Настройка 3-х Аур (Радиус в px)</label>
-            <div style="display:flex; flex-direction:column; gap:4px;">
-                <div style="display:flex; gap:4px;"><input type="number" id="ctx-aura1-r" class="form-control" placeholder="Аура 1 R"><input type="color" id="ctx-aura1-c" value="#ff4757"></div>
-                <div style="display:flex; gap:4px;"><input type="number" id="ctx-aura2-r" class="form-control" placeholder="Аура 2 R"><input type="color" id="ctx-aura2-c" value="#2ed573"></div>
-                <div style="display:flex; gap:4px;"><input type="number" id="ctx-aura3-r" class="form-control" placeholder="Аура 3 R"><input type="color" id="ctx-aura3-c" value="#1e90ff"></div>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>Статусы</label>
-            <div style="display:flex; gap:12px; background: #1e2230; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color);">
-                <label style="cursor:pointer;"><input type="checkbox" id="status-wounded"> 🩸</label>
-                <label style="cursor:pointer;"><input type="checkbox" id="status-poisoned"> 🤢</label>
-                <label style="cursor:pointer;"><input type="checkbox" id="status-dead"> 💀</label>
-            </div>
-        </div>
-        <button id="ctx-save-btn" class="btn btn-primary" style="padding:6px; font-size:12px; margin-bottom:4px;">Сохранить параметры</button>
-        <button id="ctx-delete-item" class="btn btn-secondary" style="padding:6px; font-size:12px; background:#ff4757; color:#fff;">Удалить</button>
+        <button id="ctx-save-btn" class="btn btn-primary" style="padding:8px; font-size:12px; margin-bottom:4px;">Сохранить изменения</button>
+        <button id="ctx-delete-item" class="btn btn-secondary" style="padding:8px; font-size:12px; background:#ff4757; color:#fff;">Удалить токен</button>
     </div>
 
     <script>
-        // ИНИЦИАЛИЗАЦИЯ FIREBASE (Вставь свои ключи сюда)
-const firebaseConfig = {
+        // ВСТАВЛЕННЫЕ ТОБОЙ КЛЮЧИ ТВОЕЙ БАЗЫ FIREBASE
+        const firebaseConfig = {
             apiKey: "AIzaSyA6SbXuWwTo4V1Ys5uvoPdrb64WRyITiWc",
             authDomain: "nrii-803a6.firebaseapp.com",
             databaseURL: "https://nrii-803a6-default-rtdb.asia-southeast1.firebasedatabase.app", 
@@ -180,19 +198,22 @@ const firebaseConfig = {
         
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
+        const storage = firebase.storage();
 
         let roomId = ''; let userId = ''; let userName = 'Игрок'; let isHost = false;
-        let currentTool = 'select'; let selectedTokenId = null; let currentActiveLayer = 'token';
-        let panX = 0; let panY = 0; let scale = 1; let isPanning = false; let startPanX = 0; let startPanY = 0;
-        let drawingWall = null;
+        let currentTool = 'select'; let selectedTokenId = null;
+        let panX = 0; let panY = 0; let scale = 1; let isPanning = false;
+        let startX = 0; let startY = 0;
+        let rulerStart = null; let rulerEnd = null;
+        let wallStart = null;
+        let walls = []; let lights = [];
 
         const boardWrapper = document.getElementById('board-wrapper');
         const gameBoard = document.getElementById('game-board');
         const mapImg = document.getElementById('game-map');
-        const gridCanvas = document.getElementById('grid-canvas');
-        const wallsCanvas = document.getElementById('walls-canvas');
+        const lightingCanvas = document.getElementById('lighting-canvas');
+        const rulerCanvas = document.getElementById('ruler-canvas');
         const tokensContainer = document.getElementById('tokens-container');
-        const aurasContainer = document.getElementById('auras-container');
         const contextMenu = document.getElementById('context-menu');
 
         document.getElementById('btn-create-host').addEventListener('click', () => { proceedAuth(true); });
@@ -207,8 +228,7 @@ const firebaseConfig = {
             roomId = roomInput || 'rm_' + Math.random().toString(36).substr(2, 6);
             
             if (isHost) {
-                database.ref('sessions/' + roomId).set({ hostId: userId, currentMapIdx: 0 });
-                database.ref(`sessions/${roomId}/maps/0`).set({ name: "Стартовая локация", src: mapImg.src, width:1200, height:800, gridSize:40 });
+                database.ref('sessions/' + roomId).update({ hostId: userId, mapWidth: 1200, mapHeight: 800 });
             }
             runVTT();
         }
@@ -216,11 +236,11 @@ const firebaseConfig = {
         function runVTT() {
             document.getElementById('auth-screen').style.display = 'none';
             document.getElementById('room-display-id').innerHTML = `Комната: <strong>${roomId}</strong>`;
-            if (isHost) {
-                document.getElementById('btn-add-map').style.display = 'block';
-                document.getElementById('tool-wall-btn').style.display = 'flex';
-                document.getElementById('tool-light-btn').style.display = 'flex';
-                document.getElementById('gm-layer-selector').style.display = 'block';
+            
+            if (isHost) { 
+                document.getElementById('gm-map-controls').style.display = 'flex';
+                document.getElementById('player-map-status').style.display = 'none';
+                document.querySelectorAll('.gm-only').forEach(el => el.classList.remove('hidden'));
             }
             
             database.ref(`sessions/${roomId}/players/${userId}`).set({ name: userName, isHost: isHost });
@@ -236,159 +256,110 @@ const firebaseConfig = {
                 if(s.exists()) { Object.values(s.val()).forEach(p => { plist.innerHTML += `<div>${p.isHost ? '👑' : '⚔️'} ${p.name}</div>`; }); }
             });
 
-            database.ref(`sessions/${roomId}/currentMapIdx`).on('value', s => {
-                if(s.exists()) { listenToMapData(s.val()); }
+            database.ref(`sessions/${roomId}`).on('value', s => {
+                const data = s.val(); if(!data) return;
+                if(data.mapSrc) mapImg.src = data.mapSrc;
+                
+                const w = data.mapWidth || 1200;
+                const h = data.mapHeight || 800;
+                mapImg.style.width = w + 'px';
+                mapImg.style.height = h + 'px';
+                lightingCanvas.width = w;
+                lightingCanvas.height = h;
+                
+                walls = data.walls ? Object.values(data.walls) : [];
+                lights = data.lights ? Object.values(data.lights) : [];
+                updateLightingSystem();
             });
 
-            database.ref(`sessions/${roomId}/chat`).on('child_added', s => {
-                const msg = s.val();
-                const log = document.getElementById('chat-log'); const el = document.createElement('div');
-                el.className = 'chat-msg'; el.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}`;
-                log.appendChild(el); log.scrollTop = log.scrollHeight;
-            });
-        }
+            database.ref(`sessions/${roomId}/tokens`).on('value', s => { renderTokens(s.val()); });
 
-        let mapTokensRef, mapWallsRef, mapDataRef;
-        function listenToMapData(mapIdx) {
-            if(mapTokensRef) mapTokensRef.off();
-            if(mapWallsRef) mapWallsRef.off();
-            
-            mapDataRef = database.ref(`sessions/${roomId}/maps/${mapIdx}`);
-            mapTokensRef = database.ref(`sessions/${roomId}/maps/${mapIdx}/tokens`);
-            mapWallsRef = database.ref(`sessions/${roomId}/maps/${mapIdx}/walls`);
-
-            mapDataRef.on('value', s => {
-                const map = s.val(); if(!map) return;
-                mapImg.src = map.src; mapImg.style.width = map.width + 'px'; mapImg.style.height = map.height + 'px';
-                drawGridLayer(map.gridSize || 40);
-            });
-
-            mapTokensRef.on('value', s => { renderTokensAndAuras(s.val()); });
-            mapWallsRef.on('value', s => { renderWalls(s.val()); });
-            
-            database.ref(`sessions/${roomId}/maps`).once('value', snapshot => {
-                const container = document.getElementById('maps-list-container'); container.innerHTML = '';
-                if(!snapshot.exists()) return;
-                snapshot.val().forEach((m, idx) => {
-                    if(!m) return;
-                    const card = document.createElement('div'); card.className = `map-selector-card ${idx === mapIdx ? 'active' : ''}`;
-                    card.innerHTML = `<span>${m.name}</span>`;
-                    if(isHost) { card.onclick = () => database.ref(`sessions/${roomId}/currentMapIdx`).set(idx); }
-                    container.appendChild(card);
-                });
+            database.ref(`sessions/${roomId}/chat`).on('value', s => {
+                const log = document.getElementById('chat-log'); log.innerHTML = '';
+                if(s.exists()) {
+                    Object.values(s.val()).forEach(msg => {
+                        const el = document.createElement('div'); el.className = 'chat-msg';
+                        el.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}`;
+                        log.appendChild(el);
+                    });
+                    log.scrollTop = log.scrollHeight;
+                }
             });
         }
 
-        function drawGridLayer(size) {
-            const w = mapImg.offsetWidth || 1200; const h = mapImg.offsetHeight || 800;
-            gridCanvas.width = w; gridCanvas.height = h; const ctx = gridCanvas.getContext('2d');
-            ctx.clearRect(0,0,w,h); ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
-            for(let x=0; x<w; x+=size) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
-            for(let y=0; y<h; y+=size) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
-        }
-
-        let currentWallsGlobal = {};
-        function renderWalls(wallsData) {
-            currentWallsGlobal = wallsData || {};
-            const w = mapImg.offsetWidth || 1200; const h = mapImg.offsetHeight || 800;
-            wallsCanvas.width = w; wallsCanvas.height = h; const ctx = wallsCanvas.getContext('2d');
+        // ДИНАМИЧЕСКИЙ СВЕТ И ТУМАН ВОЙНЫ (БЕЗ СЕТКИ)
+        function updateLightingSystem() {
+            const w = lightingCanvas.width; const h = lightingCanvas.height;
+            const ctx = lightingCanvas.getContext('2d');
             ctx.clearRect(0,0,w,h);
             
-            if (isHost) {
+            // Если источников света нет — карта полностью видна (чтобы не было черноты на старте)
+            if (lights.length === 0) return;
+
+            ctx.fillStyle = "rgba(10, 12, 18, 0.92)"; // Плотный туман войны
+            ctx.fillRect(0, 0, w, h);
+
+            lights.forEach(light => {
+                ctx.save();
+                let gradient = ctx.createRadialGradient(light.x, light.y, 10, light.x, light.y, light.radius || 250);
+                gradient.addColorStop(0, 'rgba(255,255,255,1)');
+                gradient.addColorStop(1, 'rgba(255,255,255,0)');
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.fillStyle = gradient;
+                ctx.beginPath(); ctx.arc(light.x, light.y, light.radius || 250, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
+            });
+
+            // Отрисовка стен для Мастера (чтобы видеть их линии)
+            if (isHost && walls.length > 0) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'source-over';
                 ctx.strokeStyle = 'rgba(255, 71, 87, 0.6)'; ctx.lineWidth = 4;
-                Object.values(currentWallsGlobal).forEach(wall => {
+                walls.forEach(wall => {
                     ctx.beginPath(); ctx.moveTo(wall.x1, wall.y1); ctx.lineTo(wall.x2, wall.y2); ctx.stroke();
                 });
+                ctx.restore();
             }
-            updateVisibility();
         }
 
-        let currentTokensGlobal = {};
-        function renderTokensAndAuras(tokensData) {
-            currentTokensGlobal = tokensData || {};
-            tokensContainer.innerHTML = ''; aurasContainer.innerHTML = '';
-            
-            Object.keys(currentTokensGlobal).forEach(id => {
-                const t = currentTokensGlobal[id];
-                if(t.layer === 'gm' && !isHost) return;
-
+        function renderTokens(tokensData) {
+            tokensContainer.innerHTML = ''; if(!tokensData) return;
+            Object.keys(tokensData).forEach(id => {
+                const t = tokensData[id]; const size = t.size || 40;
                 const el = document.createElement('div'); el.className = `token ${selectedTokenId === id ? 'selected' : ''}`;
-                el.style.left = t.x + 'px'; el.style.top = t.y + 'px'; el.style.width = '40px'; el.style.height = '40px';
+                el.style.left = t.x + 'px'; el.style.top = t.y + 'px'; el.style.width = size + 'px'; el.style.height = size + 'px';
                 el.style.backgroundImage = `url('${t.img}')`;
-                if(t.layer === 'gm') el.style.opacity = '0.4';
 
                 el.innerHTML = `<div class="token-label">${t.name}</div>`;
                 if (t.hpMax > 0) {
                     const pct = Math.max(0, Math.min(100, (t.hpVal / t.hpMax) * 100));
-                    el.innerHTML += `<div class="token-hp-bar"><div class="token-hp-fill" style="width:${pct}%;"></div></div>`;
-                }
-
-                if (t.statuses) {
-                    let mContainer = '<div class="token-status-markers">';
-                    if (t.statuses.wounded) mContainer += '<div class="status-dot" style="background:#ff4757"></div>';
-                    if (t.statuses.poisoned) mContainer += '<div class="status-dot" style="background:#2ed573"></div>';
-                    if (t.statuses.dead) mContainer += '<div class="status-dot" style="background:#747d8c"></div>';
-                    mContainer += '</div>'; el.innerHTML += mContainer;
-                }
-
-                const centerX = t.x + 20; const centerY = t.y + 20;
-                for(let i=1; i<=3; i++) {
-                    const r = t[`aura${i}R`]; const c = t[`aura${i}C`];
-                    if(r > 0) {
-                        const aEl = document.createElement('div'); aEl.className = 'aura-visual';
-                        aEl.style.left = centerX + 'px'; aEl.style.top = centerY + 'px';
-                        aEl.style.width = (r * 2) + 'px'; aEl.style.height = (r * 2) + 'px';
-                        aEl.style.background = c || '#ff4757';
-                        aurasContainer.appendChild(aEl);
-                    }
+                    let hpColor = '#2ed573';
+                    if(pct <= 50 && pct > 20) hpColor = '#ffa502';
+                    if(pct <= 20) hpColor = '#ff4757';
+                    el.innerHTML += `<div class="token-hp-bar"><div class="token-hp-fill" style="width:${pct}%; background:${hpColor};"></div></div>`;
                 }
 
                 el.onmousedown = function(e) {
                     if (currentTool !== 'select' || e.button !== 0) return; e.stopPropagation();
                     selectedTokenId = id;
-                    let startX = e.clientX; let startY = e.clientY;
-                    let origX = t.x; let origY = t.y;
-                    
+                    let sX = e.clientX; let sY = e.clientY; let oX = t.x; let oY = t.y;
                     document.onmousemove = function(me) {
-                        let dx = (me.clientX - startX) / scale; let dy = (me.clientY - startY) / scale;
-                        let nx = Math.round((origX + dx) / 40) * 40; let ny = Math.round((origY + dy) / 40) * 40;
-                        mapTokensRef.child(id).update({ x: nx, y: ny });
-                    }
+                        let dx = (me.clientX - sX) / scale; let dy = (me.clientY - sY) / scale;
+                        // Свободное перемещение без жесткой привязки к клеткам
+                        database.ref(`sessions/${roomId}/tokens/${id}`).update({ x: Math.round(oX + dx), y: Math.round(oY + dy) });
+                    };
                     document.onmouseup = function() { document.onmousemove = null; document.onmouseup = null; };
                 };
 
                 el.oncontextmenu = function(e) {
                     e.preventDefault(); e.stopPropagation(); selectedTokenId = id;
-                    openContextMenu(e.clientX, e.clientY, t);
+                    contextMenu.style.display = 'block'; contextMenu.style.left = e.clientX + 'px'; contextMenu.style.top = e.clientY + 'px';
+                    document.getElementById('ctx-token-name').value = t.name;
+                    document.getElementById('ctx-token-size').value = size;
+                    document.getElementById('ctx-hp-val').value = t.hpVal || 0;
+                    document.getElementById('ctx-hp-max').value = t.hpMax || 0;
                 };
-
                 tokensContainer.appendChild(el);
-            });
-            updateVisibility();
-        }
-
-        function updateVisibility() {
-            const fog = document.getElementById('fog-canvas'); if (!fog) return;
-            const fCtx = fog.getContext('2d'); const w = mapImg.offsetWidth || 1200; const h = mapImg.offsetHeight || 800;
-            fog.width = w; fog.height = h; fCtx.clearRect(0,0,w,h);
-
-            if (isHost) return;
-
-            fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h);
-
-            Object.values(currentTokensGlobal).forEach(t => {
-                if(t.layer === 'gm') return;
-                const tx = t.x + 20; const ty = t.y + 20;
-                
-                fCtx.save();
-                fCtx.globalCompositeOperation = 'destination-out';
-                
-                const grad = fCtx.createRadialGradient(tx, ty, 20, tx, ty, 240);
-                grad.addColorStop(0, 'rgba(0,0,0,1)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
-                fCtx.fillStyle = grad;
-                fCtx.beginPath(); fCtx.arc(tx, ty, 240, 0, Math.PI*2); fCtx.fill();
-                
-                fCtx.restore();
             });
         }
 
@@ -408,141 +379,140 @@ const firebaseConfig = {
                 };
             });
 
-            document.getElementById('gm-layer-selector').onchange = (e) => { currentActiveLayer = e.target.value; };
-
+            // ИСПРАВЛЕННЫЙ ТРЭКИНГ МЫШИ
             boardWrapper.onmousedown = function(e) {
                 const rect = gameBoard.getBoundingClientRect();
-                const clickX = (e.clientX - rect.left) / scale;
-                const clickY = (e.clientY - rect.top) / scale;
+                const mX = (e.clientX - rect.left) / scale; const mY = (e.clientY - rect.top) / scale;
 
-                if (currentTool === 'wall' && isHost && e.button === 0) {
-                    isPanning = false;
-                    drawingWall = { x1: clickX, y1: clickY, x2: clickX, y2: clickY };
-                    return;
-                }
-                if (e.button === 1 || currentTool === 'select') {
-                    isPanning = true; startPanX = e.clientX - panX; startPanY = e.clientY - startPanY;
+                if (currentTool === 'ruler') {
+                    rulerStart = { x: mX, y: mY }; rulerEnd = { x: mX, y: mY };
+                } else if (currentTool === 'wall' && isHost) {
+                    wallStart = { x: mX, y: mY };
+                } else if (currentTool === 'light' && isHost) {
+                    database.ref(`sessions/${roomId}/lights`).push({ x: Math.round(mX), y: Math.round(mY), radius: 250 });
+                } else if (currentTool === 'select' && e.button === 0) {
+                    isPanning = true; startX = e.clientX - panX; startY = e.clientY - panY;
                 }
             };
 
             boardWrapper.onmousemove = function(e) {
-                if (isPanning) {
-                    panX = e.clientX - startPanX; panY = e.clientY - startPanY;
+                const rect = gameBoard.getBoundingClientRect();
+                const mX = (e.clientX - rect.left) / scale; const mY = (e.clientY - rect.top) / scale;
+
+                if (isPanning && currentTool === 'select') {
+                    panX = e.clientX - startX; panY = e.clientY - startY;
                     gameBoard.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
                 }
-                if (drawingWall && isHost) {
-                    const rect = gameBoard.getBoundingClientRect();
-                    drawingWall.x2 = (e.clientX - rect.left) / scale;
-                    drawingWall.y2 = (e.clientY - rect.top) / scale;
-                    
-                    const ctx = wallsCanvas.getContext('2d');
-                    renderWalls(currentWallsGlobal);
-                    ctx.strokeStyle = '#ff4757'; ctx.lineWidth = 3;
-                    ctx.beginPath(); ctx.moveTo(drawingWall.x1, drawingWall.y1); ctx.lineTo(drawingWall.x2, drawingWall.y2); ctx.stroke();
+                if (rulerStart && currentTool === 'ruler') {
+                    rulerEnd = { x: mX, y: mY }; drawRuler();
                 }
             };
 
-            boardWrapper.onmouseup = function() {
-                if (drawingWall && isHost) {
-                    mapWallsRef.push(drawingWall);
-                    drawingWall = null;
+            boardWrapper.onmouseup = function(e) {
+                const rect = gameBoard.getBoundingClientRect();
+                const mX = (e.clientX - rect.left) / scale; const mY = (e.clientY - rect.top) / scale;
+
+                if (wallStart && currentTool === 'wall' && isHost) {
+                    database.ref(`sessions/${roomId}/walls`).push({ x1: Math.round(wallStart.x), y1: Math.round(wallStart.y), x2: Math.round(mX), y2: Math.round(mY) });
+                    wallStart = null;
                 }
-                isPanning = false;
+                isPanning = false; rulerStart = null; rulerEnd = null; clearRulerCanvas();
             };
 
             boardWrapper.onwheel = function(e) {
                 e.preventDefault(); const zoom = e.deltaY < 0 ? 1.1 : 0.9;
-                scale = Math.max(0.2, Math.min(3, scale * zoom));
+                scale = Math.max(0.1, Math.min(4, scale * zoom));
                 gameBoard.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
             };
 
-            document.querySelectorAll('.library-item').forEach(item => {
-                item.onclick = () => {
-                    mapTokensRef.push({
-                        name: item.dataset.name, img: item.style.backgroundImage.slice(5, -2).replace(/"/g, ""),
-                        x: 200, y: 200, hpVal: 10, hpMax: 10, layer: currentActiveLayer,
-                        aura1R: 0, aura1C: '#ff4757', aura2R: 0, aura2C: '#2ed573', aura3R: 0, aura3C: '#1e90ff',
-                        statuses: { wounded: false, poisoned: false, dead: false }
+            // ЗАГРУЗКА КАРТЫ С УСТРОЙСТВА В ОБЛАКО FIREBASE
+            document.getElementById('file-map-upload').onchange = function(e) {
+                const file = e.target.files[0]; if (!file) return;
+                const ref = storage.ref(`rooms/${roomId}/map_${Date.now()}`);
+                ref.put(file).then(() => ref.getDownloadURL()).then(url => {
+                    database.ref(`sessions/${roomId}`).update({ mapSrc: url });
+                });
+            };
+
+            // ЗАГРУЗКА ТОКЕНА С УСТРОЙСТВА В ОБЛАКО FIREBASE
+            document.getElementById('file-token-upload').onchange = function(e) {
+                const file = e.target.files[0]; if (!file) return;
+                const ref = storage.ref(`rooms/${roomId}/token_${Date.now()}`);
+                ref.put(file).then(() => ref.getDownloadURL()).then(url => {
+                    database.ref(`sessions/${roomId}/tokens`).push({
+                        name: "Новый токен", img: url, x: 150, y: 150, size: 50, hpVal: 10, hpMax: 10
+                    });
+                });
+            };
+
+            // БЫСТРЫЙ СПАВН СТАНДАРТНЫХ ТОКЕНОВ
+            document.querySelectorAll('.spawn-token-btn').forEach(b => {
+                b.onclick = () => {
+                    database.ref(`sessions/${roomId}/tokens`).push({
+                        name: b.dataset.name, img: b.dataset.img, x: 100, y: 100, size: 40, hpVal: 10, hpMax: 10
                     });
                 };
             });
+
+            document.getElementById('btn-clear-walls').onclick = () => {
+                database.ref(`sessions/${roomId}/walls`).remove();
+                database.ref(`sessions/${roomId}/lights`).remove();
+            };
+
+            document.getElementById('btn-clear-chat').onclick = () => { database.ref(`sessions/${roomId}/chat`).remove(); };
+
+            if (isHost) {
+                document.getElementById('btn-save-map-settings').onclick = () => {
+                    database.ref(`sessions/${roomId}`).update({
+                        mapWidth: parseInt(document.getElementById('input-map-w').value) || 1200,
+                        mapHeight: parseInt(document.getElementById('input-map-h').value) || 800
+                    });
+                };
+            }
+
+            document.querySelectorAll('.d-btn').forEach(b => {
+                b.onclick = () => {
+                    const d = parseInt(b.dataset.dice); const r = Math.floor(Math.random() * d) + 1;
+                    database.ref(`sessions/${roomId}/chat`).push({ sender: userName, text: `Бросок D${d}: 🎲 <strong>${r}</strong>` });
+                };
+            });
+
+            const cInput = document.getElementById('chat-input');
+            cInput.onkeydown = function(e) {
+                if(e.key === 'Enter' && cInput.value.trim()) {
+                    database.ref(`sessions/${roomId}/chat`).push({ sender: userName, text: cInput.value.trim() });
+                    cInput.value = '';
+                }
+            };
 
             window.onclick = function() { contextMenu.style.display = 'none'; };
             contextMenu.onclick = function(e) { e.stopPropagation(); };
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const btn = document.getElementById('btn-add-map'); const input = document.getElementById('map-library-upload');
-            if(btn && input) {
-                btn.onclick = () => input.click();
-                input.onchange = function(e) {
-                    const f = e.target.files[0]; if(!f) return;
-                    const reader = new FileReader(); reader.onload = function(ev) {
-                        database.ref(`sessions/${roomId}/maps`).once('value', snap => {
-                            const size = snap.exists() ? snap.val().length : 0;
-                            database.ref(`sessions/${roomId}/maps/${size}`).set({ name: `Локация ${size+1}`, src: ev.target.result, width:1200, height:800, gridSize:40 });
-                            database.ref(`sessions/${roomId}/currentMapIdx`).set(size);
-                        });
-                    }; reader.readAsDataURL(f);
-                };
-            }
-        });
-
-        function openContextMenu(x, y, token) {
-            contextMenu.style.display = 'block'; contextMenu.style.left = x + 'px'; contextMenu.style.top = y + 'px';
-            document.getElementById('ctx-title').innerText = token.name;
-            document.getElementById('ctx-hp-val').value = token.hpVal || 0;
-            document.getElementById('ctx-hp-max').value = token.hpMax || 0;
-            
-            document.getElementById('ctx-aura1-r').value = token.aura1R || 0;
-            document.getElementById('ctx-aura1-c').value = token.aura1C || '#ff4757';
-            document.getElementById('ctx-aura2-r').value = token.aura2R || 0;
-            document.getElementById('ctx-aura2-c').value = token.aura2C || '#2ed573';
-            document.getElementById('ctx-aura3-r').value = token.aura3R || 0;
-            document.getElementById('ctx-aura3-c').value = token.aura3C || '#1e90ff';
-
-            document.getElementById('status-wounded').checked = token.statuses?.wounded || false;
-            document.getElementById('status-poisoned').checked = token.statuses?.poisoned || false;
-            document.getElementById('status-dead').checked = token.statuses?.dead || false;
+        function drawRuler() {
+            rulerCanvas.width = mapImg.offsetWidth; rulerCanvas.height = mapImg.offsetHeight;
+            const ctx = rulerCanvas.getContext('2d'); ctx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height);
+            ctx.strokeStyle = '#ff4757'; ctx.lineWidth = 3; ctx.getLineDash || ctx.beginPath();
+            ctx.moveTo(rulerStart.x, rulerStart.y); ctx.lineTo(rulerEnd.x, rulerEnd.y); ctx.stroke();
+            const dist = Math.round(Math.sqrt(Math.pow(rulerEnd.x - rulerStart.x, 2) + Math.pow(rulerEnd.y - rulerStart.y, 2)) / 40) * 1.5;
+            ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif'; ctx.fillText(`${dist} м`, rulerEnd.x + 10, rulerEnd.y - 10);
         }
+        function clearRulerCanvas() { const ctx = rulerCanvas.getContext('2d'); ctx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height); }
 
         document.getElementById('ctx-save-btn').onclick = function() {
             if (!selectedTokenId) return;
-            mapTokensRef.child(selectedTokenId).update({
+            database.ref(`sessions/${roomId}/tokens/${selectedTokenId}`).update({
+                name: document.getElementById('ctx-token-name').value,
+                size: parseInt(document.getElementById('ctx-token-size').value) || 40,
                 hpVal: parseInt(document.getElementById('ctx-hp-val').value) || 0,
-                hpMax: parseInt(document.getElementById('ctx-hp-max').value) || 0,
-                aura1R: parseInt(document.getElementById('ctx-aura1-r').value) || 0,
-                aura1C: document.getElementById('ctx-aura1-c').value,
-                aura2R: parseInt(document.getElementById('ctx-aura2-r').value) || 0,
-                aura2C: document.getElementById('ctx-aura2-c').value,
-                aura3R: parseInt(document.getElementById('ctx-aura3-r').value) || 0,
-                aura3C: document.getElementById('ctx-aura3-c').value,
-                statuses: {
-                    wounded: document.getElementById('status-wounded').checked,
-                    poisoned: document.getElementById('status-poisoned').checked,
-                    dead: document.getElementById('status-dead').checked
-                }
+                hpMax: parseInt(document.getElementById('ctx-hp-max').value) || 0
             });
             contextMenu.style.display = 'none';
         };
 
         document.getElementById('ctx-delete-item').onclick = function() {
-            if (selectedTokenId) mapTokensRef.child(selectedTokenId).remove();
+            if (selectedTokenId) database.ref(`sessions/${roomId}/tokens/${selectedTokenId}`).remove();
             contextMenu.style.display = 'none';
-        };
-
-        document.querySelectorAll('.d-btn').forEach(b => {
-            b.onclick = () => {
-                const d = parseInt(b.dataset.dice); const r = Math.floor(Math.random() * d) + 1;
-                database.ref(`sessions/${roomId}/chat`).push({ sender: userName, text: `Бросок D${d}: 🎲 <strong>${r}</strong>` });
-            };
-        });
-        const cInput = document.getElementById('chat-input');
-        cInput.onkeydown = function(e) {
-            if(e.key === 'Enter' && cInput.value.trim()) {
-                database.ref(`sessions/${roomId}/chat`).push({ sender: userName, text: cInput.value.trim() });
-                cInput.value = '';
-            }
         };
     </script>
 </body>
