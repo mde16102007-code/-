@@ -1,0 +1,13 @@
+{
+  "name": "vtt-core",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'No build step required'",
+    "start": "npx http-server . -p $PORT --entry-file index.html"
+  },
+  "dependencies": {
+    "http-server": "^14.1.1"
+  }
+}
