@@ -39,7 +39,7 @@
         .token-status-markers { position: absolute; top: -5px; right: -5px; display: flex; gap: 2px; z-index: 5; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #fff; }
         
-        /* Исправлено: Окно информации ВСЕГДА поверх всех остальных элементов */
+        /* Меню информации всегда поверх всего */
         #context-menu { position: fixed; z-index: 999999 !important; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; width: 260px; box-shadow: 0 15px 35px rgba(0,0,0,0.7); padding: 12px; display: none; }
         
         .aura-visual { position: absolute; border-radius: 50%; pointer-events: none; opacity: 0.25; z-index: 1; transform: translate(-50%, -50%); }
@@ -135,7 +135,7 @@
         </div>
     </div>
 
-    <!-- Контекстное меню (Настройки Токена) -->
+    <!-- Контекстное меню (Чистое, без опечаток и лишних чекбоксов) -->
     <div id="context-menu">
         <div id="ctx-title" style="font-weight:700; margin-bottom:8px; font-size:14px;">Токен</div>
         <div class="form-group">
@@ -146,7 +146,6 @@
             </div>
         </div>
         
-        <!-- Добавлено 3 Ауры -->
         <div class="form-group">
             <label>Настройка 3-х Аур (Радиус в px)</label>
             <div style="display:flex; flex-direction:column; gap:4px;">
@@ -156,9 +155,14 @@
             </div>
         </div>
 
+        <!-- Исправленные статусы: ровно 3 штуки, без дубликатов -->
         <div class="form-group">
             <label>Статусы</label>
-            <div style="display:flex; gap:10px;"><label><input type="checkbox" id="status-wounded"> 🩸</label><label><input type="checkbox" id="status-dead"> 💀</label></div>
+            <div style="display:flex; gap:12px; background: #1e2230; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                <label style="cursor:pointer;"><input type="checkbox" id="status-wounded"> 🩸</label>
+                <label style="cursor:pointer;"><input type="checkbox" id="status-poisoned"> 🤢</label>
+                <label style="cursor:pointer;"><input type="checkbox" id="status-dead"> 💀</label>
+            </div>
         </div>
         <button id="ctx-save-btn" class="btn btn-primary" style="padding:6px; font-size:12px; margin-bottom:4px;">Сохранить параметры</button>
         <button id="ctx-delete-item" class="btn btn-secondary" style="padding:6px; font-size:12px; background:#ff4757; color:#fff;">Удалить</button>
@@ -192,7 +196,6 @@
             
             if (isHost) {
                 database.ref('sessions/' + roomId).set({ hostId: userId, currentMapIdx: 0 });
-                // Дефолтная карта
                 database.ref(`sessions/${roomId}/maps/0`).set({ name: "Стартовая локация", src: mapImg.src, width:1200, height:800, gridSize:40 });
             }
             runVTT();
@@ -208,7 +211,6 @@
                 document.getElementById('gm-layer-selector').style.display = 'block';
             }
             
-            // Регистрируем игрока в базе отдельно, чтобы они не затирали друг друга
             database.ref(`sessions/${roomId}/players/${userId}`).set({ name: userName, isHost: isHost });
             database.ref(`sessions/${roomId}/players/${userId}`).onDisconnect().remove();
 
@@ -217,21 +219,15 @@
         }
 
         function initDatabaseListeners() {
-            // Слушаем игроков
             database.ref(`sessions/${roomId}/players`).on('value', s => {
                 const plist = document.getElementById('players-list'); plist.innerHTML = '';
                 if(s.exists()) { Object.values(s.val()).forEach(p => { plist.innerHTML += `<div>${p.isHost ? '👑' : '⚔️'} ${p.name}</div>`; }); }
             });
 
-            // Слушаем изменение текущей карты
             database.ref(`sessions/${roomId}/currentMapIdx`).on('value', s => {
-                if(s.exists()) {
-                    const idx = s.val();
-                    listenToMapData(idx);
-                }
+                if(s.exists()) { listenToMapData(s.val()); }
             });
 
-            // Чат
             database.ref(`sessions/${roomId}/chat`).on('child_added', s => {
                 const msg = s.val();
                 const log = document.getElementById('chat-log'); const el = document.createElement('div');
@@ -258,7 +254,6 @@
             mapTokensRef.on('value', s => { renderTokensAndAuras(s.val()); });
             mapWallsRef.on('value', s => { renderWalls(s.val()); });
             
-            // Обновляем список карт в сайдбаре
             database.ref(`sessions/${roomId}/maps`).once('value', snapshot => {
                 const container = document.getElementById('maps-list-container'); container.innerHTML = '';
                 if(!snapshot.exists()) return;
@@ -280,7 +275,6 @@
             for(let y=0; y<h; y+=size) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
         }
 
-        // Рендеринг стен и расчет Тьмы/Блокировки видимости
         let currentWallsGlobal = {};
         function renderWalls(wallsData) {
             currentWallsGlobal = wallsData || {};
@@ -288,7 +282,6 @@
             wallsCanvas.width = w; wallsCanvas.height = h; const ctx = wallsCanvas.getContext('2d');
             ctx.clearRect(0,0,w,h);
             
-            // ДМ видит стены полупрозрачными красными линиями
             if (isHost) {
                 ctx.strokeStyle = 'rgba(255, 71, 87, 0.6)'; ctx.lineWidth = 4;
                 Object.values(currentWallsGlobal).forEach(wall => {
@@ -298,7 +291,6 @@
             updateVisibility();
         }
 
-        // Рендеринг токенов + Фикс Слоя ДМ-а
         let currentTokensGlobal = {};
         function renderTokensAndAuras(tokensData) {
             currentTokensGlobal = tokensData || {};
@@ -306,11 +298,8 @@
             
             Object.keys(currentTokensGlobal).forEach(id => {
                 const t = currentTokensGlobal[id];
-                
-                // КРИТИЧЕСКИЙ ФИКС СЛОЯ ДМ-а: Игроки вообще не получают эти элементы
                 if(t.layer === 'gm' && !isHost) return;
 
-                // Создание токена
                 const el = document.createElement('div'); el.className = `token ${selectedTokenId === id ? 'selected' : ''}`;
                 el.style.left = t.x + 'px'; el.style.top = t.y + 'px'; el.style.width = '40px'; el.style.height = '40px';
                 el.style.backgroundImage = `url('${t.img}')`;
@@ -322,7 +311,16 @@
                     el.innerHTML += `<div class="token-hp-bar"><div class="token-hp-fill" style="width:${pct}%;"></div></div>`;
                 }
 
-                // Отрисовка 3-х Аур на спец-подслое под токенами
+                // Отрисовка статус-точек на самом токене
+                if (t.statuses) {
+                    let mContainer = '<div class="token-status-markers">';
+                    if (t.statuses.wounded) mContainer += '<div class="status-dot" style="background:#ff4757"></div>';
+                    if (t.statuses.poisoned) mContainer += '<div class="status-dot" style="background:#2ed573"></div>';
+                    if (t.statuses.dead) mContainer += '<div class="status-dot" style="background:#747d8c"></div>';
+                    mContainer += '</div>'; el.innerHTML += mContainer;
+                }
+
+                // Отрисовка 3-х Аур
                 const centerX = t.x + 20; const centerY = t.y + 20;
                 for(let i=1; i<=3; i++) {
                     const r = t[`aura${i}R`]; const c = t[`aura${i}C`];
@@ -335,7 +333,6 @@
                     }
                 }
 
-                // Перетаскивание мыши
                 el.onmousedown = function(e) {
                     if (currentTool !== 'select' || e.button !== 0) return; e.stopPropagation();
                     selectedTokenId = id;
@@ -360,18 +357,15 @@
             updateVisibility();
         }
 
-        // Динамический просчет динамического освещения и тумана войны с учетом стен
         function updateVisibility() {
             const fog = document.getElementById('fog-canvas'); if (!fog) return;
             const fCtx = fog.getContext('2d'); const w = mapImg.offsetWidth || 1200; const h = mapImg.offsetHeight || 800;
             fog.width = w; fog.height = h; fCtx.clearRect(0,0,w,h);
 
-            if (isHost) return; // ДМ всегда всё видит
+            if (isHost) return;
 
-            // Игроки: Полная темнота по дефолту
             fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h);
 
-            // Источники света от токенов игроков
             Object.values(currentTokensGlobal).forEach(t => {
                 if(t.layer === 'gm') return;
                 const tx = t.x + 20; const ty = t.y + 20;
@@ -379,7 +373,6 @@
                 fCtx.save();
                 fCtx.globalCompositeOperation = 'destination-out';
                 
-                // Отрисовка базовой видимости (простой конус/круг света, маскируемый стенами)
                 const grad = fCtx.createRadialGradient(tx, ty, 20, tx, ty, 240);
                 grad.addColorStop(0, 'rgba(0,0,0,1)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
                 fCtx.fillStyle = grad;
@@ -389,7 +382,6 @@
             });
         }
 
-        // Инструменты Стен и Логика Рисования
         function initEngineCoreUI() {
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.onclick = () => {
@@ -408,7 +400,6 @@
 
             document.getElementById('gm-layer-selector').onchange = (e) => { currentActiveLayer = e.target.value; };
 
-            // Клик и рисование на доске (Правка багов инструментов Стен и Тьмы)
             boardWrapper.onmousedown = function(e) {
                 const rect = gameBoard.getBoundingClientRect();
                 const clickX = (e.clientX - rect.left) / scale;
@@ -434,7 +425,6 @@
                     drawingWall.x2 = (e.clientX - rect.left) / scale;
                     drawingWall.y2 = (e.clientY - rect.top) / scale;
                     
-                    // Временная отрисовка линии при перетаскивании
                     const ctx = wallsCanvas.getContext('2d');
                     renderWalls(currentWallsGlobal);
                     ctx.strokeStyle = '#ff4757'; ctx.lineWidth = 3;
@@ -456,13 +446,13 @@
                 gameBoard.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
             };
 
-            // Галерея спавна токенов
             document.querySelectorAll('.library-item').forEach(item => {
                 item.onclick = () => {
                     mapTokensRef.push({
                         name: item.dataset.name, img: item.style.backgroundImage.slice(5, -2).replace(/"/g, ""),
                         x: 200, y: 200, hpVal: 10, hpMax: 10, layer: currentActiveLayer,
-                        aura1R: 0, aura1C: '#ff4757', aura2R: 0, aura2C: '#2ed573', aura3R: 0, aura3C: '#1e90ff'
+                        aura1R: 0, aura1C: '#ff4757', aura2R: 0, aura2C: '#2ed573', aura3R: 0, aura3C: '#1e90ff',
+                        statuses: { wounded: false, poisoned: false, dead: false }
                     });
                 };
             });
@@ -471,7 +461,6 @@
             contextMenu.onclick = function(e) { e.stopPropagation(); };
         }
 
-        // Работа с картами
         window.addEventListener('DOMContentLoaded', () => {
             const btn = document.getElementById('btn-add-map'); const input = document.getElementById('map-library-upload');
             if(btn && input) {
@@ -489,7 +478,6 @@
             }
         });
 
-        // Контекстное меню
         function openContextMenu(x, y, token) {
             contextMenu.style.display = 'block'; contextMenu.style.left = x + 'px'; contextMenu.style.top = y + 'px';
             document.getElementById('ctx-title').innerText = token.name;
@@ -502,6 +490,10 @@
             document.getElementById('ctx-aura2-c').value = token.aura2C || '#2ed573';
             document.getElementById('ctx-aura3-r').value = token.aura3R || 0;
             document.getElementById('ctx-aura3-c').value = token.aura3C || '#1e90ff';
+
+            document.getElementById('status-wounded').checked = token.statuses?.wounded || false;
+            document.getElementById('status-poisoned').checked = token.statuses?.poisoned || false;
+            document.getElementById('status-dead').checked = token.statuses?.dead || false;
         }
 
         document.getElementById('ctx-save-btn').onclick = function() {
@@ -514,7 +506,12 @@
                 aura2R: parseInt(document.getElementById('ctx-aura2-r').value) || 0,
                 aura2C: document.getElementById('ctx-aura2-c').value,
                 aura3R: parseInt(document.getElementById('ctx-aura3-r').value) || 0,
-                aura3C: document.getElementById('ctx-aura3-c').value
+                aura3C: document.getElementById('ctx-aura3-c').value,
+                statuses: {
+                    wounded: document.getElementById('status-wounded').checked,
+                    poisoned: document.getElementById('status-poisoned').checked,
+                    dead: document.getElementById('status-dead').checked
+                }
             });
             contextMenu.style.display = 'none';
         };
@@ -524,7 +521,6 @@
             contextMenu.style.display = 'none';
         };
 
-        // Кубы и Чат
         document.querySelectorAll('.d-btn').forEach(b => {
             b.onclick = () => {
                 const d = parseInt(b.dataset.dice); const r = Math.floor(Math.random() * d) + 1;
