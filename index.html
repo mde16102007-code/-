@@ -125,8 +125,8 @@
         .perm-btn.all-players-btn { border-color: #38bdf8; font-weight: bold; }
         .perm-btn.all-players-btn.active { background: rgba(56, 189, 248, 0.2); }
     </style>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
@@ -327,7 +327,7 @@
         <label>Статусы</label>
         <div class="status-checkboxes">
             <label><input type="checkbox" id="status-dead" onchange="applyContextChanges()"> 💀</label>
-            <label><input type="checkbox" id="status-poisoned" onchange="changeColorAura()"><input type="checkbox" id="status-poisoned" onchange="applyContextChanges()"> 🤢</label>
+            <label><input type="checkbox" id="status-poisoned" onchange="changeColorAura()">🤢</label>
             <label><input type="checkbox" id="status-stunned" onchange="applyContextChanges()"> 💫</label>
         </div>
 
