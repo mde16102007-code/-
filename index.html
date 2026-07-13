@@ -341,11 +341,9 @@
             measurementId: "G-6KPY4NZ603"
         };
         
-        // Запуск сетевого модуля Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Переменные окружения и состояния стола
         let gamesDatabase = [];
         let dmAccounts = {};
         let currentDmUser = null;
@@ -481,11 +479,20 @@
 
         function renderPlayerGameSelect() {
             const select = document.getElementById('player-game-select');
-            select.innerHTML = '';
-            gamesDatabase.forEach(g => {
-                const opt = document.createElement('option');
-                opt.value = g.id; opt.textContent = g.name;
-                select.appendChild(opt);
+            select.innerHTML = '<option>Синхронизация с сервером...</option>';
+            db.ref('shared_games').once('value').then((snapshot) => {
+                select.innerHTML = '';
+                const games = snapshot.val();
+                if (games) {
+                    Object.keys(games).forEach(key => {
+                        const g = games[key];
+                        const opt = document.createElement('option');
+                        opt.value = g.id; opt.textContent = g.name;
+                        select.appendChild(opt);
+                    });
+                } else {
+                    select.innerHTML = '<option>Нет доступных комнат в сети</option>';
+                }
             });
         }
 
@@ -532,6 +539,7 @@
         function deleteGameClick() {
             if(!selectedGameId) { alert("Выберите игру для удаления!"); return; }
             if(confirm("Вы уверены, что хотите удалить этот мир со всеми стенами и токенами?")) {
+                db.ref('shared_games/' + selectedGameId).remove();
                 gamesDatabase = gamesDatabase.filter(x => x.id !== selectedGameId);
                 selectedGameId = null;
                 saveGamesToStorage();
@@ -544,21 +552,24 @@
             isHost = true;
             activeGame = gamesDatabase.find(x => x.id === selectedGameId);
             initVTTTable();
+            startPlayerSync(); 
         }
 
         function launchGamePlayer() {
             const gameId = document.getElementById('player-game-select').value;
             const inputPass = document.getElementById('player-room-password').value;
-            const targetGame = gamesDatabase.find(x => x.id === gameId);
             
-            if(targetGame && targetGame.password === inputPass) {
-                isHost = false;
-                activeGame = targetGame;
-                initVTTTable();
-                startPlayerSync();
-            } else {
-                alert("Неверный пароль комнаты!");
-            }
+            db.ref('shared_games/' + gameId).once('value').then((snapshot) => {
+                const targetGame = snapshot.val();
+                if(targetGame && targetGame.password === inputPass) {
+                    isHost = false;
+                    activeGame = targetGame;
+                    initVTTTable();
+                    startPlayerSync();
+                } else {
+                    alert("Неверный пароль или комната неактивна!");
+                }
+            });
         }
 
         function initVTTTable() {
@@ -577,29 +588,93 @@
         }
 
         function startPlayerSync() {
-            setInterval(() => {
-                const data = localStorage.getItem('vtt_games_data');
-                if(data) {
-                    const parsed = JSON.parse(data);
-                    const fresh = parsed.find(x => x.id === activeGame.id);
-                    if(fresh && fresh.playerMapIdx !== activeGame.playerMapIdx) {
-                        activeGame = fresh;
-                        activeGame.currentMapIdx = activeGame.playerMapIdx;
+            db.ref('shared_games/' + activeGame.id).on('value', (snapshot) => {
+                const fresh = snapshot.val();
+                if(!fresh) return;
+                
+                if(isHost) {
+                    const freshMap = fresh.maps[fresh.currentMapIdx];
+                    if (freshMap && freshMap.tokens) {
+                        syncTokensOnly(freshMap.tokens);
+                    }
+                } else {
+                    const mapChanged = fresh.currentMapIdx !== activeGame.currentMapIdx;
+                    activeGame = fresh; 
+                    
+                    if (mapChanged) {
                         renderMapSelectorUI();
                         switchMap(true);
+                    } else {
+                        const freshMap = fresh.maps[fresh.currentMapIdx];
+                        if (freshMap) {
+                            syncPlayerTableFromServer(freshMap);
+                        }
                     }
                 }
-            }, 1000);
+            });
+        }
+
+        function syncTokensOnly(serverTokens) {
+            serverTokens.forEach(t => {
+                let el = document.getElementById(t.id);
+                if(!el) {
+                    createTokenDOM(t);
+                    el = document.getElementById(t.id);
+                }
+                if (el && !el.classList.contains('selected')) {
+                    el.style.left = t.left + 'px';
+                    el.style.top = t.top + 'px';
+                    el.style.width = t.sizePx + 'px';
+                    el.style.height = t.sizePx + 'px';
+                    el.querySelector('.token-name').textContent = t.name;
+                    let pct = t.maxHp > 0 ? (t.hp / t.maxHp) * 100 : 0;
+                    el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
+                    el.dataset.hp = t.hp; el.dataset.maxHp = t.maxHp; el.dataset.layer = t.layer;
+                    el.dataset.darkvision = t.darkvision || 0; el.dataset.auras = JSON.stringify(t.auras);
+                    
+                    const sBox = el.querySelector('.status-effects'); sBox.innerHTML = '';
+                    if(t.isDead) sBox.innerHTML += '<div class="status-dot dead"></div>';
+                    if(t.isPoisoned) sBox.innerHTML += '<div class="status-dot poisoned"></div>';
+                    if(t.isStunned) sBox.innerHTML += '<div class="status-dot stunned"></div>';
+                }
+            });
+            document.querySelectorAll('.token').forEach(el => {
+                if(!serverTokens.find(t => t.id === el.id)) el.remove();
+            });
+            updateVisibility();
+        }
+
+        function syncPlayerTableFromServer(freshMapObj) {
+            const img = document.getElementById('game-map');
+            if(img.src !== freshMapObj.src) img.src = freshMapObj.src;
+            img.style.width = (freshMapObj.width || 1200) + 'px';
+            img.style.height = (freshMapObj.height || 800) + 'px';
+            scaleUnitFactor = freshMapObj.gridSize || 40;
+
+            syncTokensOnly(freshMapObj.tokens || []);
+
+            document.querySelectorAll('.darkness-zone, .wall-zone').forEach(el => el.remove());
+            (freshMapObj.darknessZones || []).forEach(z => {
+                const el = document.createElement('div'); el.className = 'darkness-zone';
+                el.style.left = z.left; el.style.top = z.top; el.style.width = z.width; el.style.height = z.height;
+                mapContainer.appendChild(el);
+            });
+            (freshMapObj.walls || []).forEach(w => {
+                const el = document.createElement('div'); el.className = 'wall-zone';
+                el.style.left = w.left; el.style.top = w.top; el.style.width = w.width; el.style.height = w.height;
+                mapContainer.appendChild(el);
+            });
+            updateVisibility();
         }
 
         function syncActiveGameStorage() {
             if(activeGame && activeGame.maps[activeGame.currentMapIdx]) {
                 const currentMap = activeGame.maps[activeGame.currentMapIdx];
-                currentMap.tokens = [];
+                const tokensArray = [];
                 document.querySelectorAll('.token').forEach(el => {
                     const img = el.querySelector('img');
                     const auras = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{rPx:0, c:'#ff0000'}, {rPx:0, c:'#00ff00'}];
-                    currentMap.tokens.push({
+                    tokensArray.push({
                         id: el.id, name: el.querySelector('.token-name').textContent, src: img.src,
                         left: parseFloat(el.style.left), top: parseFloat(el.style.top),
                         sizePx: parseFloat(el.style.width), 
@@ -612,20 +687,29 @@
                     });
                 });
                 
-                currentMap.darknessZones = [];
-                document.querySelectorAll('.darkness-zone').forEach(z => {
-                    currentMap.darknessZones.push({ left: z.style.left, top: z.style.top, width: z.style.width, height: z.style.height });
-                });
+                currentMap.tokens = tokensArray;
 
-                currentMap.walls = [];
-                document.querySelectorAll('.wall-zone').forEach(w => {
-                    currentMap.walls.push({ left: w.style.left, top: w.style.top, width: w.style.width, height: w.style.height });
-                });
+                if (isHost) {
+                    currentMap.darknessZones = [];
+                    document.querySelectorAll('.darkness-zone').forEach(z => {
+                        currentMap.darknessZones.push({ left: z.style.left, top: z.style.top, width: z.style.width, height: z.style.height });
+                    });
 
-                const img = document.getElementById('game-map');
-                currentMap.width = parseFloat(img.style.width) || 1200;
-                currentMap.height = parseFloat(img.style.height) || 800;
-                currentMap.gridSize = scaleUnitFactor;
+                    currentMap.walls = [];
+                    document.querySelectorAll('.wall-zone').forEach(w => {
+                        currentMap.walls.push({ left: w.style.left, top: w.style.top, width: w.style.width, height: w.style.height });
+                    });
+
+                    const img = document.getElementById('game-map');
+                    currentMap.width = parseFloat(img.style.width) || 1200;
+                    currentMap.height = parseFloat(img.style.height) || 800;
+                    currentMap.gridSize = scaleUnitFactor;
+
+                    db.ref('shared_games/' + activeGame.id).set(activeGame);
+                } else {
+                    db.ref('shared_games/' + activeGame.id + '/maps/' + activeGame.currentMapIdx + '/tokens').set(tokensArray);
+                }
+                
                 saveGamesToStorage();
             }
         }
@@ -694,12 +778,17 @@
 
         document.getElementById('map-library-upload').addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
-            const title = `Карта ${activeGame.maps.length + 1}`; 
-            const src = URL.createObjectURL(file);
-            activeGame.maps.push({ name: title, src: src, width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 });
-            activeGame.currentMapIdx = activeGame.maps.length - 1;
-            renderMapSelectorUI();
-            switchMap(true);
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const src = event.target.result; 
+                const title = `Карта ${activeGame.maps.length + 1}`; 
+                activeGame.maps.push({ name: title, src: src, width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 });
+                activeGame.currentMapIdx = activeGame.maps.length - 1;
+                renderMapSelectorUI();
+                switchMap(true);
+                syncActiveGameStorage();
+            };
+            reader.readAsDataURL(file);
         });
 
         function renameCurrentMap() {
@@ -709,17 +798,17 @@
             if (newName && newName.trim()) {
                 mapObj.name = newName.trim();
                 renderMapSelectorUI();
-                saveGamesToStorage();
+                syncActiveGameStorage();
             }
         }
 
         function deleteCurrentMap() {
             if (!isHost) return;
             if (activeGame.maps.length <= 1) {
-                alert("Нельзя удалить последнюю карту в мире!");
+                alert("Нельзя удалить последнюю карту!");
                 return;
             }
-            if (confirm("Вы точно хотите удалить эту карту со всеми элементами на ней?")) {
+            if (confirm("Вы точно хотите удалить эту карту?")) {
                 activeGame.maps.splice(activeGame.currentMapIdx, 1);
                 if (activeGame.currentMapIdx >= activeGame.maps.length) {
                     activeGame.currentMapIdx = activeGame.maps.length - 1;
@@ -729,7 +818,7 @@
                 }
                 renderMapSelectorUI();
                 switchMap(true);
-                saveGamesToStorage();
+                syncActiveGameStorage();
             }
         }
 
@@ -737,7 +826,7 @@
             if (!isHost) return;
             activeGame.playerMapIdx = activeGame.currentMapIdx;
             renderMapSelectorUI();
-            saveGamesToStorage();
+            syncActiveGameStorage();
         }
 
         function updateRibbonUI() {
@@ -854,9 +943,7 @@
             const maskCanvas = document.createElement('canvas');
             maskCanvas.width = w; maskCanvas.height = h;
             const mCtx = maskCanvas.getContext('2d');
-            
-            mCtx.fillStyle = '#000000';
-            mCtx.fillRect(0, 0, w, h);
+            mCtx.fillStyle = '#000000'; mCtx.fillRect(0, 0, w, h);
 
             const tokens = document.querySelectorAll('.token:not(.layer-gm):not(.layer-item)');
             const darkZones = document.querySelectorAll('.darkness-zone');
@@ -866,16 +953,13 @@
                 const tl = parseFloat(t.style.left) || 0;
                 const tt = parseFloat(t.style.top) || 0;
                 const ts = parseFloat(t.style.width) || 40;
-                const cx = tl + ts / 2;
-                const cy = tt + ts / 2;
+                const cx = tl + ts / 2; const cy = tt + ts / 2;
                 const dv = parseFloat(t.dataset.darkvision) || 0;
 
                 const tCanvas = document.createElement('canvas');
                 tCanvas.width = w; tCanvas.height = h;
                 const tCtx = tCanvas.getContext('2d');
-
-                tCtx.fillStyle = '#ffffff';
-                tCtx.fillRect(0, 0, w, h);
+                tCtx.fillStyle = '#ffffff'; tCtx.fillRect(0, 0, w, h);
 
                 tCtx.fillStyle = '#000000';
                 darkZones.forEach(z => {
@@ -894,11 +978,7 @@
                     const ww = parseFloat(wall.style.width) || 0;
                     const wh = parseFloat(wall.style.height) || 0;
 
-                    const corners = [
-                        {x: wl, y: wt}, {x: wl + ww, y: wt},
-                        {x: wl + ww, y: wt + wh}, {x: wl, y: wt + wh}
-                    ];
-
+                    const corners = [{x: wl, y: wt}, {x: wl + ww, y: wt}, {x: wl + ww, y: wt + wh}, {x: wl, y: wt + wh}];
                     const projected = corners.map(p => {
                         const dx = p.x - cx; const dy = p.y - cy;
                         return { x: p.x + dx * 100, y: p.y + dy * 100 };
@@ -907,43 +987,37 @@
                     for (let i = 0; i < 4; i++) {
                         const p1 = corners[i]; const p2 = corners[(i + 1) % 4];
                         const pr1 = projected[i]; const pr2 = projected[(i + 1) % 4];
-
-                        tCtx.beginPath();
-                        tCtx.moveTo(p1.x, p1.y); tCtx.lineTo(p2.x, p2.y);
+                        tCtx.beginPath(); tCtx.moveTo(p1.x, p1.y); tCtx.lineTo(p2.x, p2.y);
                         tCtx.lineTo(pr2.x, pr2.y); tCtx.lineTo(pr1.x, pr1.y);
                         tCtx.closePath(); tCtx.fill();
                     }
-
-                    tCtx.fillStyle = '#ffffff';
-                    tCtx.fillRect(wl, wt, ww, wh);
+                    tCtx.fillStyle = '#ffffff'; tCtx.fillRect(wl, wt, ww, wh);
                 });
 
-                mCtx.save();
-                mCtx.globalCompositeOperation = 'screen';
-                mCtx.drawImage(tCanvas, 0, 0);
-                mCtx.restore();
+                mCtx.save(); mCtx.globalCompositeOperation = 'screen'; mCtx.drawImage(tCanvas, 0, 0); mCtx.restore();
             });
 
-            fCtx.fillStyle = '#121212';
-            fCtx.fillRect(0, 0, w, h);
-            fCtx.globalCompositeOperation = 'destination-out';
-            fCtx.drawImage(maskCanvas, 0, 0);
+            fCtx.fillStyle = '#121212'; fCtx.fillRect(0, 0, w, h);
+            fCtx.globalCompositeOperation = 'destination-out'; fCtx.drawImage(maskCanvas, 0, 0);
         }
 
         document.getElementById('token-upload').addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
-            let targetLayer = isHost ? document.getElementById('active-layer-select').value : 'token';
-            const src = URL.createObjectURL(file);
-            
-            const tokenData = { 
-                id: 't_' + Date.now(), name: "Токен", src: src, 
-                left: Math.abs(surfaceX/cameraZoom) + 200, top: Math.abs(surfaceY/cameraZoom) + 200, 
-                sizePx: 50, hp: 10, maxHp: 10, layer: targetLayer, darkvision: 0,
-                isDead: false, isPoisoned: false, isStunned: false,
-                auras: [{rPx:0, c:'#ff0000'}, {rPx:0, c:'#00ff00'}] 
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const src = event.target.result;
+                let targetLayer = isHost ? document.getElementById('active-layer-select').value : 'token';
+                const tokenData = { 
+                    id: 't_' + Date.now(), name: "Токен", src: src, 
+                    left: Math.abs(surfaceX/cameraZoom) + 200, top: Math.abs(surfaceY/cameraZoom) + 200, 
+                    sizePx: 50, hp: 10, maxHp: 10, layer: targetLayer, darkvision: 0,
+                    isDead: false, isPoisoned: false, isStunned: false,
+                    auras: [{rPx:0, c:'#ff0000'}, {rPx:0, c:'#00ff00'}] 
+                };
+                createTokenDOM(tokenData);
+                syncActiveGameStorage();
             };
-            createTokenDOM(tokenData);
-            syncActiveGameStorage();
+            reader.readAsDataURL(file);
         });
 
         function createTokenDOM(data) {
