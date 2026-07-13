@@ -37,15 +37,11 @@
         .tools-grid { display: flex; flex-direction: column; gap: 4px; }
         .tools-grid button { width: 100%; text-align: left; padding: 6px 10px; }
 
-        /* Панель Игроков (Онлайн) */
-        .player-status-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #e4e4e7; padding: 2px 0; }
-        .player-status-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 6px #22c55e; }
-
-        /* ПРАВАЯ БОКОВАЯ ПАНЕЛЬ (ЗУМ) */
-        .right-sidebar { position: absolute; right: 15px; top: 15px; width: 90px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; pointer-events: none; }
+        /* ПРАВАЯ БОКОВАЯ ПАНЕЛЬ */
+        .right-sidebar { position: absolute; right: 15px; top: 15px; bottom: 15px; width: 175px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; pointer-events: none; }
         .right-sidebar .sidebar-block { pointer-events: auto; }
-        .zoom-block-content { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 2px 0; }
-        .zoom-slider-vert { writing-mode: vertical-lr; direction: rtl; width: 10px; height: 110px; cursor: pointer; }
+        .zoom-block-content { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 5px 0; }
+        .zoom-slider-horiz { width: 100%; cursor: pointer; margin: 0; }
         
         /* Лог кубов */
         .dice-container { display: flex; flex-direction: column; gap: 5px; }
@@ -57,6 +53,10 @@
         .dice-log p { margin: 6px 0; border-bottom: 1px solid #27272a; padding-bottom: 5px; line-height: 1.4; }
         .crit-max { color: #22c55e; font-weight: bold; background: rgba(34, 197, 94, 0.1); padding: 1px 3px; border-radius: 3px; }
         .crit-min { color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 1px 3px; border-radius: 3px; }
+
+        /* Панель Игроков (Справа снизу) */
+        .player-status-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #e4e4e7; padding: 2px 0; }
+        .player-status-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 6px #22c55e; }
 
         /* Игровое поле */
         #game-viewport { width: 100vw; height: 100vh; position: relative; background: #080808; overflow: hidden; }
@@ -76,7 +76,7 @@
         .dm-mode .wall-zone { border: 2px solid #ef4444; background: rgba(239, 68, 68, 0.15); pointer-events: auto; cursor: pointer; }
         .dm-mode .darkness-zone:hover, .dm-mode .wall-zone:hover { background: rgba(239, 68, 68, 0.4); }
         
-        /* Полная невидимость управляющих блоков для игроков */
+        /* Полная невидимость для игроков */
         .player-mode .darkness-zone, .player-mode .wall-zone { opacity: 0 !important; pointer-events: none !important; }
 
         /* === ТОКЕНЫ И СТАТУСЫ === */
@@ -109,13 +109,21 @@
         .token-hp-bar-container { width: 44px; height: 6px; background: #27272a; border: 1px solid #000; margin-top: 2px; border-radius: 2px; overflow: hidden; }
         .token-hp-bar { width: 100%; height: 100%; background: #22c55e; }
 
-        /* Контекстное меню */
-        .token-context-menu { position: absolute; top: 105%; left: 50%; transform: translateX(-50%); background: rgba(24, 24, 27, 0.98); border: 1px solid #38bdf8; border-radius: 6px; padding: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); z-index: 2000; display: none; flex-direction: column; gap: 6px; width: 220px; cursor: default; }
+        /* Контекстное меню (Roll20 Style) */
+        .token-context-menu { position: absolute; top: 105%; left: 50%; transform: translateX(-50%); background: rgba(24, 24, 27, 0.98); border: 1px solid #38bdf8; border-radius: 6px; padding: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); z-index: 2000; display: none; flex-direction: column; gap: 6px; width: 230px; cursor: default; }
         .token-context-menu label { font-size: 10px; color: #a1a1aa; margin-bottom: -2px; display: block;}
         .token-context-menu input, .token-context-menu select { background: #18181b; color: #fff; border: 1px solid #52525b; padding: 4px; border-radius: 3px; font-size: 12px; width: 100%; box-sizing: border-box; }
         .context-row { display: flex; gap: 5px; align-items: center; }
         .status-checkboxes { display: flex; gap: 10px; font-size: 11px; margin: 4px 0; }
         .status-checkboxes label { display: flex; align-items: center; gap: 3px; color: #fff; cursor: pointer; }
+
+        /* ROLL20 СТИЛЬ УПРАВЛЕНИЯ ПРАВАМИ */
+        .roll20-permissions-box { background: #141416; border: 1px solid #3f3f46; border-radius: 4px; padding: 6px; display: flex; flex-direction: column; gap: 4px; max-height: 110px; overflow-y: auto; }
+        .perm-btn { background: #27272a; border: 1px solid #52525b; color: #e4e4e7; border-radius: 3px; padding: 4px 6px; text-align: left; font-size: 11px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .perm-btn:hover { background: #3f3f46; }
+        .perm-btn.active { border-color: #22c55e; background: rgba(34, 197, 94, 0.15); }
+        .perm-btn.all-players-btn { border-color: #38bdf8; font-weight: bold; }
+        .perm-btn.all-players-btn.active { background: rgba(56, 189, 248, 0.2); }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -262,37 +270,36 @@
             <h4>📜 Лог кубов <span style="cursor:pointer; color:#ef4444; float:right;" onclick="clearDiceLog()">🧹</span></h4>
             <div class="dice-log" id="dice-log-box" style="height: calc(100% - 20px);"></div>
         </div>
+    </div>
 
-        <!-- РАЗВЕРТЫВАЕМЫЙ СПИСОК ИГРОКОВ (СЛЕВА СНИЗУ) -->
+    <!-- ПРАВАЯ БОКОВАЯ ПАНЕЛЬ (ЗУМ И ИГРОКИ С ПРАВОЙ СТОРОНЫ) -->
+    <div class="right-sidebar">
+        <div class="sidebar-block">
+            <h4>Масштаб</h4>
+            <div class="zoom-block-content">
+                <input type="range" id="zoomRangeSide" class="zoom-slider-horiz" min="0.15" max="4" step="0.05" value="1" oninput="changeZoomSlider(this.value)">
+                <span id="zoomValueSide" style="font-size:11px; color:#bfa15f; white-space: nowrap;">100%</span>
+            </div>
+        </div>
+
+        <!-- СПИСОК ИГРОКОВ (ПРАВАЯ СТОРОНА) -->
         <div class="sidebar-block" id="players-sidebar-block">
             <h4 onclick="togglePlayersPanel()" style="cursor:pointer; margin:0; display:flex; justify-content:space-between; width:100%;">
                 <span>👥 Игроки (<span id="online-count">0</span>)</span>
                 <span id="players-arrow">▼</span>
             </h4>
-            <div id="players-online-list" style="display:none; margin-top:5px; max-height:110px; overflow-y:auto; flex-direction:column; gap:4px;"></div>
+            <div id="players-online-list" style="display:none; margin-top:5px; max-height:200px; overflow-y:auto; flex-direction:column; gap:4px;"></div>
         </div>
     </div>
 
-    <!-- ПРАВАЯ БОКОВАЯ ПАНЕЛЬ (ЗУМ) -->
-    <div class="right-sidebar">
-        <div class="sidebar-block">
-            <h4>Масштаб</h4>
-            <div class="zoom-block-content">
-                <input type="range" id="zoomRangeSide" class="zoom-slider-vert" min="0.15" max="4" step="0.05" value="1" oninput="changeZoomSlider(this.value)">
-                <span id="zoomValueSide" style="font-size:11px; color:#bfa15f;">100%</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Настройки токена -->
+    <!-- НАСТРОЙКИ ТОКЕНА (Roll20 Style) -->
     <div id="token-menu" class="token-context-menu" onmousedown="event.stopPropagation()">
-        <!-- УПРАВЛЕНИЕ КОНТРОЛЕМ (КОНКРЕТНЫЙ ИЛИ ВСЕ) -->
-        <label style="color:#22c55e; font-weight:bold;">Управление (Контроль):</label>
-        <select id="ctx-owner" onchange="applyContextChanges()">
-            <option value="none">❌ Нет контроля</option>
-            <option value="all">🌐 Все игроки</option>
-        </select>
-        <hr style="border:0; border-top:1px solid #3f3f46; margin: 2px 0;">
+        <!-- УПРАВЛЕНИЕ КОНТРОЛЕМ (СПИСОК ТЕГОВ / ВЫБОР) -->
+        <label style="color:#38bdf8; font-weight:bold; margin-bottom: 2px;">Контролируется (Controlled by):</label>
+        <div class="roll20-permissions-box" id="ctx-permissions-list">
+            <!-- Сюда динамически генерируются кнопки -->
+        </div>
+        <hr style="border:0; border-top:1px solid #3f3f46; margin: 4px 0;">
 
         <label>Имя токена</label>
         <input type="text" id="ctx-name" oninput="applyContextChanges()">
@@ -314,18 +321,18 @@
         <select id="ctx-layer" class="dm-only" onchange="applyContextChanges()">
             <option value="item">Предмет</option>
             <option value="token">Токен</option>
-            <option value="gm">GM (Скрыт)</option>
+            <option value="gm">GM (Скрыто)</option>
         </select>
         
         <label>Статусы</label>
         <div class="status-checkboxes">
             <label><input type="checkbox" id="status-dead" onchange="applyContextChanges()"> 💀</label>
-            <label><input type="checkbox" id="status-poisoned" onchange="applyContextChanges()"> 🤢</label>
+            <label><input type="checkbox" id="status-poisoned" onchange="changeColorAura()"><input type="checkbox" id="status-poisoned" onchange="applyContextChanges()"> 🤢</label>
             <label><input type="checkbox" id="status-stunned" onchange="applyContextChanges()"> 💫</label>
         </div>
 
         <label style="color:#22c55e;" id="lbl-auras">Ауры (Радиус)</label>
-        <div class="context-row"><input type="number" id="aura1-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura1-col" value="#ff0000" onchange="changeColorAura(1)"></div>
+        <div class="context-row"><input type="number" id="aura1-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura1-col" value="#ff0000" onchange="applyContextChanges()"></div>
         <button onclick="deleteSelectedTokens()" style="background:#ef4444; color:#fff; font-size:11px; margin-top:4px; width:100%;">❌ Удалить</button>
     </div>
 
@@ -370,6 +377,7 @@
         let localNickname = "Игрок";
         let systemUnit = 'ft'; 
         let scaleUnitFactor = 40; 
+        let currentOnlinePlayers = {}; // Хранилище всех игроков в онлайне
 
         const viewport = document.getElementById('game-viewport');
         const surface = document.getElementById('table-surface');
@@ -511,16 +519,18 @@
             renderMapSelectorUI(); switchMap(true);
         }
 
-        // РАБОТА С ПРИСУТСТВИЕМ И ИГРОКАМИ СЛЕВА СНИЗУ
+        // РАБОТА С ПРИСУТСТВИЕМ И ИГРОКАМИ (СПРАВА СНИЗУ)
         function setupPresence() {
             const myPresenceRef = db.ref(`shared_games/${activeGame.id}/online_players/${localNickname}`);
             myPresenceRef.set(true);
             myPresenceRef.onDisconnect().remove();
 
             db.ref(`shared_games/${activeGame.id}/online_players`).on('value', (snapshot) => {
-                const players = snapshot.val() || {};
-                updatePlayersListUI(players);
-                updateOwnerDropdownOptions(players);
+                currentOnlinePlayers = snapshot.val() || {};
+                updatePlayersListUI(currentOnlinePlayers);
+                if (selectedTokens.length > 0) {
+                    renderPermissionsListDOM(selectedTokens[0]);
+                }
             });
         }
 
@@ -545,26 +555,75 @@
             });
         }
 
-        function updateOwnerDropdownOptions(players) {
-            const select = document.getElementById('ctx-owner');
-            const savedValue = select.value || 'none';
-            select.innerHTML = `
-                <option value="none">❌ Нет контроля</option>
-                <option value="all">🌐 Все игроки</option>
-            `;
-            Object.keys(players).forEach(name => {
-                if (name !== localNickname || isHost) { // не добавляем себя если мы игрок, себя мы контролируем через 'all' или имя
-                    const opt = document.createElement('option'); opt.value = name; opt.textContent = `👤 ${name}`;
-                    select.appendChild(opt);
+        // ГЕНЕРАЦИЯ ИНТЕРФЕЙСА КОНТРОЛЯ (ROLL20 STYLE)
+        function renderPermissionsListDOM(tokenElement) {
+            const container = document.getElementById('ctx-permissions-list');
+            container.innerHTML = '';
+
+            let allowedOwners = [];
+            try {
+                allowedOwners = JSON.parse(tokenElement.dataset.owners || "[]");
+            } catch(e) {
+                if(tokenElement.dataset.owner) {
+                    allowedOwners = tokenElement.dataset.owner === 'all' ? ['all'] : [tokenElement.dataset.owner];
                 }
+            }
+
+            // Кнопка "Всем Игрокам"
+            const allBtn = document.createElement('div');
+            allBtn.className = `perm-btn all-players-btn ${allowedOwners.includes('all') ? 'active' : ''}`;
+            allBtn.innerHTML = `<span>🌐 Всем игрокам (All)</span><span>${allowedOwners.includes('all') ? '✓' : ''}</span>`;
+            allBtn.onclick = () => togglePermission(tokenElement, 'all');
+            container.appendChild(allBtn);
+
+            // Кнопки для каждого конкретного игрока
+            Object.keys(currentOnlinePlayers).forEach(playerName => {
+                const isSelected = allowedOwners.includes(playerName);
+                const btn = document.createElement('div');
+                btn.className = `perm-btn ${isSelected ? 'active' : ''}`;
+                btn.innerHTML = `<span>👤 ${playerName}</span><span>${isSelected ? '✓' : ''}</span>`;
+                btn.onclick = () => togglePermission(tokenElement, playerName);
+                container.appendChild(btn);
             });
-            select.value = savedValue;
+        }
+
+        function togglePermission(tokenElement, name) {
+            let allowedOwners = [];
+            try { allowedOwners = JSON.parse(tokenElement.dataset.owners || "[]"); } catch(e) {}
+
+            if (name === 'all') {
+                if (allowedOwners.includes('all')) {
+                    allowedOwners = [];
+                } else {
+                    allowedOwners = ['all']; // Если выдаем всем, сбрасываем точечные, оставляя макро-доступ
+                }
+            } else {
+                // Если был включен доступ 'all', при клике на конкретного — отключаем 'all'
+                if (allowedOwners.includes('all')) {
+                    allowedOwners = allowedOwners.filter(x => x !== 'all');
+                }
+                if (allowedOwners.includes(name)) {
+                    allowedOwners = allowedOwners.filter(x => x !== name);
+                } else {
+                    allowedOwners.push(name);
+                }
+            }
+
+            tokenElement.dataset.owners = JSON.stringify(allowedOwners);
+            // Обратная совместимость
+            tokenElement.dataset.owner = allowedOwners.includes('all') ? 'all' : (allowedOwners[0] || 'none');
+
+            renderPermissionsListDOM(tokenElement);
+            syncActiveGameStorage();
         }
 
         function hasControl(el) {
             if (isHost) return true;
-            const owner = el.dataset.owner || 'none';
-            return owner === 'all' || owner === localNickname;
+            let allowedOwners = [];
+            try { allowedOwners = JSON.parse(el.dataset.owners || "[]"); } catch(e) {
+                if(el.dataset.owner) allowedOwners = el.dataset.owner === 'all' ? ['all'] : [el.dataset.owner];
+            }
+            return allowedOwners.includes('all') || allowedOwners.includes(localNickname);
         }
 
         function startPlayerSync() {
@@ -597,7 +656,10 @@
                     el.style.left = t.left + 'px'; el.style.top = t.top + 'px';
                     el.style.width = t.sizePx + 'px'; el.style.height = t.sizePx + 'px';
                     el.querySelector('.token-name').textContent = t.name;
+                    
+                    el.dataset.owners = JSON.stringify(t.owners || (t.owner === 'all' ? ['all'] : (t.owner && t.owner !== 'none' ? [t.owner] : [])));
                     el.dataset.owner = t.owner || 'none';
+                    
                     let pct = t.maxHp > 0 ? (t.hp / t.maxHp) * 100 : 0;
                     el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
                     el.dataset.hp = t.hp; el.dataset.maxHp = t.maxHp; el.dataset.layer = t.layer;
@@ -632,11 +694,15 @@
             const arr = [];
             document.querySelectorAll('.token').forEach(el => {
                 const au = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{rPx:0, c:'#ff0000'}];
+                let ownersList = [];
+                try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
+                
                 arr.push({
                     id: el.id, name: el.querySelector('.token-name').textContent, src: el.querySelector('img').src,
                     left: parseFloat(el.style.left), top: parseFloat(el.style.top), sizePx: parseFloat(el.style.width),
                     hp: parseInt(el.dataset.hp)||10, maxHp: parseInt(el.dataset.maxHp)||10, layer: el.dataset.layer||'token',
                     owner: el.dataset.owner || 'none',
+                    owners: ownersList,
                     isDead: !!el.querySelector('.status-dot.dead'), isPoisoned: !!el.querySelector('.status-dot.poisoned'), isStunned: !!el.querySelector('.status-dot.stunned'),
                     auras: au, darkvision: parseFloat(el.dataset.darkvision)||0
                 });
@@ -738,7 +804,7 @@
         }
         function resetRulerCanvas() { rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height); }
 
-        /* === ДВИЖОК ВИДИМОСТИ С ПРИВЯЗКОЙ К ПРАВАМ ВЛАДЕНИЯ === */
+        /* === ДВИЖОК ВИДИМОСТИ === */
         function updateVisibility() {
             const fog = document.getElementById('fog-canvas'); if (!fog) return;
             const fCtx = fog.getContext('2d'); const img = document.getElementById('game-map');
@@ -746,12 +812,11 @@
             if (fog.width !== w || fog.height !== h) { fog.width = w; fog.height = h; }
             fCtx.clearRect(0, 0, w, h);
             
-            if (isHost) return; // Мастер видит всю карту
+            if (isHost) return; 
 
             const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
             const mCtx = mask.getContext('2d');
 
-            // Фильтруем токены, к которым у ТЕКУЩЕГО игрока есть права контроля
             const myTokens = Array.from(document.querySelectorAll('.token')).filter(t => hasControl(t) && t.dataset.layer !== 'gm');
             if (myTokens.length === 0) { 
                 fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h); 
@@ -824,7 +889,7 @@
             const file = e.target.files[0]; if (!file) return;
             const r = new FileReader(); r.onload = function(ev) {
                 let tl = isHost ? document.getElementById('active-layer-select').value : 'token';
-                createTokenDOM({ id: 't_'+Date.now(), name: "Токен", src: ev.target.result, left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 50, hp: 10, maxHp: 10, layer: tl, darkvision: 0, owner: 'none', auras: [{rPx:0, c:'#ff0000'}] });
+                createTokenDOM({ id: 't_'+Date.now(), name: "Токен", src: ev.target.result, left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 50, hp: 10, maxHp: 10, layer: tl, darkvision: 0, owner: 'none', owners: [], auras: [{rPx:0, c:'#ff0000'}] });
                 syncActiveGameStorage();
             }; r.readAsDataURL(file);
         });
@@ -840,7 +905,10 @@
             el.className = `token layer-${d.layer} ${el.classList.contains('selected') ? 'selected' : ''}`;
             el.style.left = d.left + 'px'; el.style.top = d.top + 'px'; el.style.width = d.sizePx + 'px'; el.style.height = d.sizePx + 'px';
             el.querySelector('.token-name').textContent = d.name;
+            
+            el.dataset.owners = JSON.stringify(d.owners || (d.owner === 'all' ? ['all'] : (d.owner && d.owner !== 'none' ? [d.owner] : [])));
             el.dataset.owner = d.owner || 'none';
+            
             let pct = d.maxHp > 0 ? (d.hp / d.maxHp) * 100 : 0; el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
             el.dataset.hp = d.hp; el.dataset.maxHp = d.maxHp; el.dataset.layer = d.layer; el.dataset.darkvision = d.darkvision || 0; el.dataset.auras = JSON.stringify(d.auras);
 
@@ -861,7 +929,8 @@
             t.appendChild(tokenMenu); tokenMenu.style.display = 'flex';
             const au = t.dataset.auras ? JSON.parse(t.dataset.auras) : [{rPx:0, c:'#ff0000'}];
             
-            document.getElementById('ctx-owner').value = t.dataset.owner || 'none';
+            renderPermissionsListDOM(t);
+            
             document.getElementById('ctx-name').value = t.querySelector('.token-name').textContent;
             document.getElementById('ctx-hp').value = t.dataset.hp || 10; document.getElementById('ctx-max-hp').value = t.dataset.maxHp || 10;
             document.getElementById('ctx-size').value = fromPx(parseFloat(t.style.width)||40);
@@ -877,12 +946,16 @@
         function applyContextChanges() {
             if (selectedTokens.length === 0) return;
             selectedTokens.forEach(el => {
+                let ownersList = [];
+                try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
+
                 let d = {
                     id: el.id, name: document.getElementById('ctx-name').value,
                     hp: parseInt(document.getElementById('ctx-hp').value)||0, maxHp: parseInt(document.getElementById('ctx-max-hp').value)||0,
                     sizePx: toPx(parseFloat(document.getElementById('ctx-size').value)||40),
                     darkvision: toPx(parseFloat(document.getElementById('ctx-darkvision').value)||0),
-                    owner: document.getElementById('ctx-owner').value,
+                    owner: el.dataset.owner || 'none',
+                    owners: ownersList,
                     isDead: document.getElementById('status-dead').checked, isPoisoned: document.getElementById('status-poisoned').checked, isStunned: document.getElementById('status-stunned').checked,
                     layer: isHost ? document.getElementById('ctx-layer').value : 'token',
                     auras: [{ rPx: toPx(parseFloat(document.getElementById('aura1-rad').value)||0), c: document.getElementById('aura1-col').value }]
@@ -892,7 +965,6 @@
             syncActiveGameStorage();
         }
 
-        function changeColorAura(n) { applyContextChanges(); }
         function deleteSelectedTokens() { selectedTokens.forEach(el => el.remove()); deselectAllTokens(); syncActiveGameStorage(); }
         function deselectAllTokens() { tokenMenu.style.display = 'none'; document.body.appendChild(tokenMenu); selectedTokens.forEach(t => t.classList.remove('selected')); selectedTokens = []; }
 
@@ -993,7 +1065,7 @@
 
         viewport.addEventListener('wheel', function(e) { e.preventDefault(); cameraZoom = Math.min(Math.max(cameraZoom + (e.deltaY < 0 ? 0.07 : -0.07), 0.15), 4); document.getElementById('zoomRangeSide').value = cameraZoom; document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom * 100) + '%'; updateTransform(); }, { passive: false });
         function updateTransform() { surface.style.transform = `translate(${surfaceX}px, ${surfaceY}px) scale(${cameraZoom})`; }
-        setTimeout(() => { surfaceX = (window.innerWidth - 1200)/2; surfaceY = 60; updateTransform(); resizeRulerCanvas(); }, 150);
+        setTimeout(() => { surfaceX = (window.innerWidth - 1200)/2 - 80; surfaceY = 60; updateTransform(); resizeRulerCanvas(); }, 150);
     </script>
 </body>
 </html>
