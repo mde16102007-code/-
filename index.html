@@ -1067,5 +1067,9 @@
         function updateTransform() { surface.style.transform = `translate(${surfaceX}px, ${surfaceY}px) scale(${cameraZoom})`; }
         setTimeout(() => { surfaceX = (window.innerWidth - 1200)/2 - 80; surfaceY = 60; updateTransform(); resizeRulerCanvas(); }, 150);
     </script>
+<script src="/socket.io/socket.io.js"></script>
+    
+    <!-- Затем твой файл с логикой -->
+    <script src="client.js"></script>
 </body>
 </html>
