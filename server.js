@@ -7,81 +7,77 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Хранилище состояния игры на сервере
+// Единое состояние игры на сервере (сохраняется, пока сервер запущен)
 let gameState = {
-    map: null,
-    tiles: [],
-    hostId: null
+    tiles: [], // Массив всех тайлов на карте
+    gmId: null // ID игрока-Мастера
 };
 
 app.use(express.static(path.join(__dirname)));
 
 wss.on('connection', (ws) => {
-    const clientId = Math.random().toString(36).substring(2, 9);
+    // Назначаем уникальный ID клиенту
+    ws.id = Math.random().toString(36).substring(2, 9);
     
-    // Первый подключившийся становится Мастером (Хостом)
-    let isHost = false;
-    if (!gameState.hostId) {
-        gameState.hostId = clientId;
-        isHost = true;
+    // Если Мастера еще нет, первый подключившийся становится Мастером
+    if (!gameState.gmId) {
+        gameState.gmId = ws.id;
+        ws.isGm = true;
+    } else {
+        ws.isGm = false;
     }
 
-    // Отправляем текущее состояние новому клиенту
+    // Отправляем новому игроку текущее состояние карты и его роль
     ws.send(JSON.stringify({
-        type: 'init',
-        clientId: clientId,
-        isHost: isHost,
-        state: gameState
+        type: 'INIT',
+        tiles: gameState.tiles,
+        isGm: ws.isGm,
+        id: ws.id
     }));
 
-    ws.on('message', (message) => {
+    // Обработка входящих сообщений
+    ws.on('message', (data) => {
         try {
-            const data = JSON.parse(message);
+            const message = JSON.parse(data);
 
-            if (data.type === 'set_map' && data.isHost) {
-                gameState.map = data.mapData;
-            } else if (data.type === 'add_tile' && data.isHost) {
-                gameState.tiles.push(data.tile);
-            } else if (data.type === 'move_tile') {
-                const tile = gameState.tiles.find(t => t.id === data.id);
-                if (tile) {
-                    // Проверяем права: двигать может либо хост, либо игрок с доступом
-                    if (data.isHost || (tile.allowed && tile.allowed.includes(data.clientId))) {
-                        tile.x = data.x;
-                        tile.y = data.y;
-                    }
+            if (message.type === 'ADD_TILE') {
+                // Проверяем: только Мастер может добавлять новые тайлы
+                if (!ws.isGm) return; 
+                gameState.tiles.push(message.tile);
+                broadcast({ type: 'UPDATE_TILES', tiles: gameState.tiles });
+            } 
+            else if (message.type === 'MOVE_TILE') {
+                // Проверяем доступ: двигать могут только Мастер или тот, кому разрешено
+                const tile = gameState.tiles.find(t => t.id === message.tileId);
+                if (tile && (ws.isGm || tile.allowedUsers?.includes(ws.id))) {
+                    tile.x = message.x;
+                    tile.y = message.y;
+                    broadcast({ type: 'UPDATE_TILES', tiles: gameState.tiles });
                 }
-            } else if (data.type === 'update_permission' && data.isHost) {
-                const tile = gameState.tiles.find(t => t.id === data.id);
-                if (tile) {
-                    tile.allowed = data.allowed; // Массив ID игроков, которым разрешено
-                }
-            } else if (data.type === 'delete_tile' && data.isHost) {
-                gameState.tiles = gameState.tiles.filter(t => t.id !== data.id);
             }
-
-            // Рассылаем обновленное состояние всем
-            broadcastState();
+            else if (message.type === 'SYNC_ALL') {
+                // Полное обновление карты (если Мастер загружает/перезаписывает всё)
+                if (!ws.isGm) return;
+                gameState.tiles = message.tiles || [];
+                broadcast({ type: 'UPDATE_TILES', tiles: gameState.tiles });
+            }
         } catch (e) {
-            console.error(e);
+            console.error('Ошибка обработки сообщения:', e);
         }
     });
 
     ws.on('close', () => {
-        if (gameState.hostId === clientId) {
-            gameState.hostId = null; // Если мастер вышел, слот освобождается
+        if (ws.id === gameState.gmId) {
+            gameState.gmId = null; // Если Мастер вышел, освобождаем роль
         }
     });
 });
 
-function broadcastState() {
-    const dataString = JSON.stringify({
-        type: 'state_update',
-        state: gameState
-    });
+function broadcast(data) {
+    const json = JSON.stringify(data);
     wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-            client.send(dataString);
+            client.send(json);
         }
     });
 }
