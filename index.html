@@ -3,20 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Архивный НРИ Стол — Карты, Лента Игроков и Сетка</title>
+    <title>Архивный НРИ Стол — Профессиональный движок видимости</title>
     <style>
         /* === БАЗА И ИНТЕРФЕЙС === */
         body { margin: 0; padding: 0; background-color: #121212; font-family: 'Segoe UI', Arial, sans-serif; color: #e0e0e0; overflow: hidden; user-select: none; }
         
-        /* Многоуровневое Лобби */
+        /* Лобби */
         #lobby-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(18, 18, 18, 0.98); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
         .lobby-box { background: #18181b; padding: 25px; border-radius: 12px; border: 1px solid #bfa15f; box-shadow: 0 10px 40px rgba(0,0,0,0.8); width: 360px; display: flex; flex-direction: column; gap: 12px; }
         .lobby-box h2 { text-align: center; color: #bfa15f; margin: 0 0 5px 0; font-size: 20px; }
-        .lobby-box h3 { margin: 5px 0; font-size: 14px; color: #a1a1aa; text-align: center;}
         .lobby-box input, .lobby-box select { background: #27272a; border: 1px solid #52525b; color: #fff; padding: 10px; border-radius: 6px; font-size: 14px; width: 100%; box-sizing: border-box; }
         .lobby-box button { background: #bfa15f; color: #121212; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.2s; width: 100%;}
         .lobby-box button:hover { background: #d4af37; }
-        .game-item { background: #27272a; border: 1px solid #3f3f46; padding: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;}
+        .game-item { background: #27272a; border: 1px solid #3f3f46; padding: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; cursor: pointer;}
         .game-item.selected { border-color: #bfa15f; background: #3f3f46; }
         .games-list { max-height: 180px; overflow-y: auto; background: #111; padding: 5px; border-radius: 6px; border: 1px solid #27272a;}
 
@@ -35,7 +34,6 @@
         .left-sidebar { position: absolute; left: 15px; top: 15px; bottom: 15px; width: 165px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; pointer-events: none; }
         .sidebar-block { background: rgba(24, 24, 27, 0.96); border: 1px solid #3f3f46; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.8); }
         .sidebar-block h4 { margin: 0; color: #bfa15f; font-size: 12px; text-align: center; border-bottom: 1px solid #3f3f46; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
-        
         .tools-grid { display: flex; flex-direction: column; gap: 4px; }
         .tools-grid button { width: 100%; text-align: left; padding: 6px 10px; }
 
@@ -44,46 +42,39 @@
         .right-sidebar .sidebar-block { pointer-events: auto; }
         .zoom-block-content { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 2px 0; }
         .zoom-slider-vert { writing-mode: vertical-lr; direction: rtl; width: 10px; height: 110px; cursor: pointer; }
-
-        /* Компоненты кубов */
-        .dice-container { transition: max-height 0.3s ease, opacity 0.2s; overflow: hidden; display: flex; flex-direction: column; gap: 5px; }
-        .dice-container.collapsed { max-height: 0; opacity: 0; pointer-events: none; margin: 0; }
-        .dice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-        .dice-grid button { padding: 5px 0; text-align: center; justify-content: center; font-weight: bold; font-size: 11px; }
         
         /* Лог кубов */
+        .dice-container { display: flex; flex-direction: column; gap: 5px; }
+        .dice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+        .dice-grid button { padding: 5px 0; text-align: center; justify-content: center; font-weight: bold; font-size: 11px; }
         .dice-log { background: #18181b; border: 1px solid #3f3f46; overflow-y: auto; font-size: 11px; padding: 5px; border-radius: 4px; font-family: monospace; color: #a1a1aa; }
         .dice-log p { margin: 3px 0; border-bottom: 1px solid #27272a; padding-bottom: 2px; line-height: 1.3; }
-
-        .crit-max { color: #22c55e; font-weight: bold; text-shadow: 0 0 8px rgba(34,197,94,0.6); }
-        .crit-min { color: #ef4444; font-weight: bold; text-shadow: 0 0 8px rgba(239,68,68,0.6); }
-
-        /* Зоны Тьмы и Стен */
-        .darkness-zone { position: absolute; background: #000; z-index: 60; box-sizing: border-box; pointer-events: none; }
-        .wall-zone { position: absolute; border: 2px solid #ef4444; background: transparent; z-index: 65; box-sizing: border-box; pointer-events: none; }
-        
-        .dm-mode .darkness-zone { opacity: 0.35; border: 1px dashed #fff; background: #1a1a1a; }
-        .dm-mode .wall-zone { border-color: #f43f5e; }
-        
-        .player-mode .darkness-zone, .player-mode .wall-zone { display: none !important; }
-
-        .mode-darkness .darkness-zone { pointer-events: auto; cursor: pointer; }
-        .mode-wall .wall-zone { pointer-events: auto; cursor: pointer; }
-        .mode-darkness .darkness-zone:hover { background: rgba(239, 68, 68, 0.4); }
-        .mode-wall .wall-zone:hover { background: rgba(239, 68, 68, 0.2); }
+        .crit-max { color: #22c55e; font-weight: bold; }
+        .crit-min { color: #ef4444; font-weight: bold; }
 
         /* Игровое поле */
-        #game-viewport { width: 100vw; height: 100vh; position: relative; background: #111; overflow: hidden; }
+        #game-viewport { width: 100vw; height: 100vh; position: relative; background: #080808; overflow: hidden; }
         #table-surface { position: absolute; top: 0; left: 0; transform-origin: top left; will-change: transform; }
         #map-container { position: relative; display: inline-block; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
         #game-map { display: block; width: 1200px; height: 800px; pointer-events: none; background: #27272a; object-fit: fill; }
         
+        /* Слои видимости */
         #fog-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 25; }
         #ruler-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 500; }
 
+        /* Зоны Тьмы и Стен */
+        .darkness-zone, .wall-zone { position: absolute; box-sizing: border-box; z-index: 26; }
+        
+        /* Отображение геометрии для DM */
+        .dm-mode .darkness-zone { opacity: 0.35; border: 1px dashed #fff; background: #1a1a1a; pointer-events: auto; cursor: pointer; }
+        .dm-mode .wall-zone { border: 2px solid #ef4444; background: rgba(239, 68, 68, 0.15); pointer-events: auto; cursor: pointer; }
+        .dm-mode .darkness-zone:hover, .dm-mode .wall-zone:hover { background: rgba(239, 68, 68, 0.4); }
+        
+        /* Полная невидимость управляющих блоков для игроков (только через холст) */
+        .player-mode .darkness-zone, .player-mode .wall-zone { opacity: 0 !important; pointer-events: none !important; }
+
         /* === ТОКЕНЫ И СТАТУСЫ === */
         .token { position: absolute; touch-action: none; box-sizing: border-box; }
-        .mode-select .token { cursor: move; }
         .token img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block; position: relative; z-index: 3; }
         .token.selected img { filter: drop-shadow(0 0 10px #38bdf8) drop-shadow(0 0 2px #38bdf8); }
 
@@ -136,44 +127,37 @@
 
         <div class="lobby-box" id="lobby-dm-auth" style="display:none;">
             <h2>Аккаунт Мастера</h2>
-            <label style="font-size:11px; color:#a1a1aa;">Имя Мастера (Логин)</label>
-            <input type="text" id="dm-auth-user" placeholder="Введите имя аккаунта">
-            <label style="font-size:11px; color:#a1a1aa;">Пароль аккаунта</label>
-            <input type="password" id="dm-auth-pass" placeholder="Введите пароль">
-            <button onclick="handleDmAuth()" style="background:#22c55e; color:white;">Войти / Создать</button>
+            <input type="text" id="dm-auth-user" placeholder="Логин Мастера">
+            <input type="password" id="dm-auth-pass" placeholder="Пароль">
+            <button onclick="handleDmAuth()" style="background:#22c55e; color:white;">Войти</button>
             <button onclick="switchLobbyStep('1')" style="background:transparent; color:#a1a1aa; font-size:11px;">Назад</button>
         </div>
 
         <div class="lobby-box" id="lobby-dm-dashboard" style="display:none; width: 400px;">
-            <h2 id="dm-dashboard-title">Мои Миры / Игры</h2>
+            <h2 id="dm-dashboard-title">Миры Мастера</h2>
             <div class="games-list" id="games-list-container"></div>
-            <button onclick="openGameEditor(false)" style="background:#0f766e;">+ Создать новую игру</button>
+            <button onclick="openGameEditor(false)" style="background:#0f766e;">+ Создать мир</button>
             <div style="display:flex; gap: 5px;">
                 <button onclick="openGameEditor(true)" style="background:#374151;">Изменить</button>
                 <button onclick="deleteGameClick()" style="background:#7f1d1d;">Удалить</button>
             </div>
             <hr style="border:0; border-top:1px solid #3f3f46; margin: 5px 0;">
-            <button onclick="launchGameDM()" style="background:#bfa15f; color:#121212; font-size:16px; padding:12px;">Запустить Мир 🚀</button>
-            <button onclick="switchLobbyStep('dm-auth')" style="background:transparent; color:#a1a1aa; font-size:11px;">Сменить аккаунт</button>
+            <button onclick="launchGameDM()" style="background:#bfa15f; color:#121212; font-size:16px; padding:12px;">Запустить Стол 🚀</button>
         </div>
 
         <div class="lobby-box" id="lobby-dm-edit" style="display:none;">
-            <h2 id="edit-title">Настройка Мира</h2>
-            <label style="font-size:11px; color:#a1a1aa;">Название игры</label>
-            <input type="text" id="edit-game-name" placeholder="Например: Проклятие Страда">
-            <label style="font-size:11px; color:#a1a1aa;">Пароль для входа игроков</label>
-            <input type="text" id="edit-game-password" placeholder="Введите пароль">
-            <button onclick="saveGameChanges()" style="background:#22c55e; color:white;">Сохранить мир</button>
+            <h2>Настройка Мира</h2>
+            <input type="text" id="edit-game-name" placeholder="Название игры">
+            <input type="text" id="edit-game-password" placeholder="Пароль для игроков">
+            <button onclick="saveGameChanges()" style="background:#22c55e; color:white;">Сохранить</button>
             <button onclick="switchLobbyStep('dm-dashboard')" style="background:#3f3f46; color:white;">Отмена</button>
         </div>
 
         <div class="lobby-box" id="lobby-player-join" style="display:none;">
-            <h2>Подключение к DM</h2>
-            <label style="font-size:11px; color:#a1a1aa;">Выберите доступную игру</label>
+            <h2>Подключение к игре</h2>
             <select id="player-game-select"></select>
-            <label style="font-size:11px; color:#a1a1aa;">Введите пароль комнаты</label>
-            <input type="password" id="player-room-password" placeholder="Пароль от Мастера">
-            <button onclick="launchGamePlayer()">Войти в комнату</button>
+            <input type="password" id="player-room-password" placeholder="Пароль от комнаты">
+            <button onclick="launchGamePlayer()">Войти в мир</button>
             <button onclick="switchLobbyStep('1')" style="background:transparent; color:#a1a1aa; font-size:11px;">Назад</button>
         </div>
     </div>
@@ -181,25 +165,26 @@
     <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
     <div class="top-panel">
         <div class="panel-section">
-            <span style="font-size:11px; color:#a1a1aa;">Карта:</span>
+            <span style="font-size:11px; color:#a1a1aa;">Локация:</span>
+            <span id="map-name-display" style="display:none; font-size:12px; font-weight:bold; color:#bfa15f; margin: 0 5px;"></span>
             <select id="map-selector" style="max-width:100px;" onchange="switchMap()"></select>
             <input type="file" id="map-library-upload" accept="image/*" style="display:none;">
-            <button class="dm-only" style="background: #0f766e; padding: 3px 5px;" onclick="document.getElementById('map-library-upload').click()" title="Добавить карту">+</button>
-            <button class="dm-only" style="background: #374151; padding: 3px 5px;" onclick="renameCurrentMap()" title="Переименовать карту">✏️</button>
-            <button class="dm-only" style="background: #7f1d1d; padding: 3px 5px;" onclick="deleteCurrentMap()" title="Удалить карту">🗑️</button>
-            <button class="dm-only" id="btn-ribbon" style="background: #bfa15f; color:#121212; padding: 3px 5px; font-weight:bold;" onclick="movePlayerRibbon()" title="Перенести ленту игроков на эту карту">🚩 Игроки</button>
-            <button class="dm-only" style="background: #374151; font-size:11px; padding: 3px 5px;" onclick="clearAllDarknessAndWalls()">🧹</button>
+            <button class="dm-only" style="background: #0f766e;" onclick="document.getElementById('map-library-upload').click()">+</button>
+            <button class="dm-only" style="background: #374151;" onclick="renameCurrentMap()">✏️</button>
+            <button class="dm-only" style="background: #7f1d1d;" onclick="deleteCurrentMap()">🗑️</button>
+            <button class="dm-only" id="btn-ribbon" style="background: #bfa15f; color:#121212; font-weight:bold;" onclick="movePlayerRibbon()" title="Перенести игроков на эту карту">🚩 Игроки</button>
+            <button class="dm-only" style="background: #374151;" onclick="clearAllDarknessAndWalls()">🧹</button>
         </div>
         
         <div class="panel-section dm-only">
             <span style="font-size:11px; color:#a1a1aa;">Разм:</span>
-            <input type="number" id="map-width-input" value="1200" min="400" max="5000" style="width:45px;" oninput="applyMapSize()"> ×
-            <input type="number" id="map-height-input" value="800" min="300" max="5000" style="width:45px;" oninput="applyMapSize()">
+            <input type="number" id="map-width-input" value="1200" style="width:45px;" oninput="applyMapSize()"> ×
+            <input type="number" id="map-height-input" value="800" style="width:45px;" oninput="applyMapSize()">
         </div>
 
         <div class="panel-section dm-only">
             <span style="font-size:11px; color:#a1a1aa;">Сетка:</span>
-            <input type="number" id="grid-size-input" value="40" min="15" max="150" style="width:38px;" oninput="applyGridSize()">px
+            <input type="number" id="grid-size-input" value="40" style="width:38px;" oninput="applyGridSize()">px
         </div>
 
         <div class="panel-section dm-only">
@@ -219,7 +204,7 @@
 
         <div class="panel-section">
             <input type="file" id="token-upload" accept="image/*" style="display:none;">
-            <button style="background: #7f1d1d; border-color: #991b1b; padding: 4px 6px;" onclick="document.getElementById('token-upload').click()">+ Токен</button>
+            <button style="background: #22c55e; color: black;" onclick="document.getElementById('token-upload').click()">+ Токен</button>
         </div>
     </div>
 
@@ -237,19 +222,16 @@
         </div>
 
         <div class="sidebar-block">
-            <h4>
-                <span>🎲 Кубы</span>
-                <span id="toggle-dice-btn" style="cursor:pointer; color:#38bdf8;" onclick="toggleDiceWindow()">[➖]</span>
-            </h4>
-            <div id="dice-container-block" class="dice-container">
+            <h4>🎲 Броски кубов</h4>
+            <div class="dice-container">
                 <div style="display:flex; gap:5px; justify-content:space-between;">
-                    <label style="font-size: 10px; color:#a1a1aa;">К-во: <input type="number" id="dice-count" value="1" min="1" style="width:32px; padding:2px;"></label>
-                    <label style="font-size: 10px; color:#22c55e;">Бонус: <input type="number" id="dice-bonus" value="0" style="width:35px; padding:2px;"></label>
+                    <label style="font-size: 10px;">К-во: <input type="number" id="dice-count" value="1" style="width:32px; padding:2px;"></label>
+                    <label style="font-size: 10px;">Бонус: <input type="number" id="dice-bonus" value="0" style="width:35px; padding:2px;"></label>
                 </div>
                 <div class="dice-grid">
                     <button onclick="rollDice(4)">d4</button>
                     <button onclick="rollDice(6)">d6</button>
-                    <button onclick="rollDice(8)">d8</button>
+                    <button onclick="rollDice(8)    ">d8</button>
                     <button onclick="rollDice(10)">d10</button>
                     <button onclick="rollDice(12)">d12</button>
                     <button onclick="rollDice(20)" style="color:#bfa15f;">d20</button>
@@ -258,11 +240,8 @@
         </div>
 
         <div class="sidebar-block" style="flex: 1; min-height: 120px;">
-            <h4>
-                <span>📜 Лог кубов</span>
-                <span style="cursor:pointer; color:#ef4444;" onclick="clearDiceLog()">🧹</span>
-            </h4>
-            <div class="dice-log" id="dice-log-box" style="height: 100%;"></div>
+            <h4>📜 Лог кубов <span style="cursor:pointer; color:#ef4444; float:right;" onclick="clearDiceLog()">🧹</span></h4>
+            <div class="dice-log" id="dice-log-box" style="height: calc(100% - 20px);"></div>
         </div>
     </div>
 
@@ -272,13 +251,18 @@
             <h4>Масштаб</h4>
             <div class="zoom-block-content">
                 <input type="range" id="zoomRangeSide" class="zoom-slider-vert" min="0.15" max="4" step="0.05" value="1" oninput="changeZoomSlider(this.value)">
-                <span id="zoomValueSide" style="font-size:11px; font-weight:bold; color:#bfa15f;">100%</span>
+                <span id="zoomValueSide" style="font-size:11px; color:#bfa15f;">100%</span>
             </div>
         </div>
     </div>
 
     <!-- Настройки токена -->
     <div id="token-menu" class="token-context-menu" onmousedown="event.stopPropagation()">
+        <label class="dm-only" style="color:#22c55e; font-weight:bold; margin-bottom:3px;">
+            <input type="checkbox" id="ctx-player-owned" onchange="applyContextChanges()"> Доступ игрокам (Управление)
+        </label>
+        <hr class="dm-only" style="border:0; border-top:1px solid #3f3f46; margin: 2px 0;">
+
         <label>Имя токена</label>
         <input type="text" id="ctx-name" oninput="applyContextChanges()">
         
@@ -289,13 +273,13 @@
             </div>
         </div>
 
-        <label style="color:#38bdf8;" id="lbl-size">Размер</label>
+        <label id="lbl-size">Размер</label>
         <input type="number" id="ctx-size" oninput="applyContextChanges()">
 
-        <label style="color:#eab308;" id="lbl-darkvision">Тёмное зрение (радиус)</label>
+        <label style="color:#eab308;" id="lbl-darkvision">Тёмное зрение (Радиус)</label>
         <input type="number" id="ctx-darkvision" placeholder="0" oninput="applyContextChanges()">
 
-        <label style="color:#a855f7;" class="dm-only">Слой</label>
+        <label class="dm-only" style="color:#a855f7;">Слой</label>
         <select id="ctx-layer" class="dm-only" onchange="applyContextChanges()">
             <option value="item">Предмет</option>
             <option value="token">Токен</option>
@@ -309,11 +293,9 @@
             <label><input type="checkbox" id="status-stunned" onchange="applyContextChanges()"> 💫</label>
         </div>
 
-        <label style="color:#22c55e;" id="lbl-auras">Ауры (радиус)</label>
+        <label style="color:#22c55e;" id="lbl-auras">Ауры (Радиус)</label>
         <div class="context-row"><input type="number" id="aura1-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura1-col" value="#ff0000" onchange="changeColorAura(1)"></div>
-        <div class="context-row"><input type="number" id="aura2-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura2-col" value="#00ff00" onchange="changeColorAura(2)"></div>
-
-        <button onclick="deleteSelectedTokens()" style="background:#ef4444; color:#fff; font-size:11px; margin-top:4px; justify-content:center; width:100%;">❌ Удалить</button>
+        <button onclick="deleteSelectedTokens()" style="background:#ef4444; color:#fff; font-size:11px; margin-top:4px; width:100%;">❌ Удалить</button>
     </div>
 
     <div id="selection-box" class="selection-box"></div>
@@ -403,7 +385,7 @@
                     dmOwner: 'admin',
                     name: "Стартовое приключение",
                     password: "123",
-                    maps: [{ name: "Основная локация", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 }],
+                    maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 }],
                     currentMapIdx: 0,
                     playerMapIdx: 0
                 }];
@@ -424,191 +406,90 @@
 
             if(step === '1') document.getElementById('lobby-step-1').style.display = 'flex';
             if(step === 'dm-auth') document.getElementById('lobby-dm-auth').style.display = 'flex';
-            if(step === 'dm-dashboard') {
-                renderGamesList();
-                document.getElementById('lobby-dm-dashboard').style.display = 'flex';
-            }
+            if(step === 'dm-dashboard') { renderGamesList(); document.getElementById('lobby-dm-dashboard').style.display = 'flex'; }
             if(step === 'dm-edit') document.getElementById('lobby-dm-edit').style.display = 'flex';
-            if(step === 'player-join') {
-                renderPlayerGameSelect();
-                document.getElementById('lobby-player-join').style.display = 'flex';
-            }
+            if(step === 'player-join') { renderPlayerGameSelect(); document.getElementById('lobby-player-join').style.display = 'flex'; }
         }
 
         function handleDmAuth() {
             const user = document.getElementById('dm-auth-user').value.trim();
             const pass = document.getElementById('dm-auth-pass').value.trim();
-
-            if(!user || !pass) {
-                alert("Введите имя и пароль аккаунта!");
-                return;
-            }
-
-            if(dmAccounts[user]) {
-                if(dmAccounts[user] !== pass) {
-                    alert("Неверный пароль для этого Мастера!");
-                    return;
-                }
-            } else {
-                dmAccounts[user] = pass;
-                saveDmAccountsToStorage();
-            }
-
-            currentDmUser = user;
-            document.getElementById('dm-dashboard-title').textContent = `Миры Мастера: ${user}`;
+            if(!user || !pass) return;
+            if(dmAccounts[user] && dmAccounts[user] !== pass) { alert("Неверный пароль!"); return; }
+            if(!dmAccounts[user]) dmAccounts[user] = pass;
+            saveDmAccountsToStorage(); currentDmUser = user;
             switchLobbyStep('dm-dashboard');
         }
 
         function renderGamesList() {
-            const container = document.getElementById('games-list-container');
-            container.innerHTML = '';
-            const filteredGames = gamesDatabase.filter(g => !g.dmOwner || g.dmOwner === currentDmUser);
-            
-            filteredGames.forEach(g => {
+            const container = document.getElementById('games-list-container'); container.innerHTML = '';
+            gamesDatabase.filter(g => !g.dmOwner || g.dmOwner === currentDmUser).forEach(g => {
                 const div = document.createElement('div');
                 div.className = `game-item ${selectedGameId === g.id ? 'selected' : ''}`;
-                div.innerHTML = `<strong>${g.name}</strong> <span style="font-size:10px; color:#71717a;">Пароль: ${g.password}</span>`;
+                div.innerHTML = `<strong>${g.name}</strong>`;
                 div.onclick = () => { selectedGameId = g.id; renderGamesList(); };
                 container.appendChild(div);
             });
-            if(filteredGames.length === 0) {
-                container.innerHTML = '<div style="text-align:center; color:#71717a; font-size:12px; padding:10px;">У вас пока нет созданных миров</div>';
-                selectedGameId = null;
-            }
         }
 
         function renderPlayerGameSelect() {
             const select = document.getElementById('player-game-select');
-            select.innerHTML = '<option>Синхронизация с сервером...</option>';
-            db.ref('shared_games').once('value').then((snapshot) => {
-                select.innerHTML = '';
-                const games = snapshot.val();
-                if (games) {
-                    Object.keys(games).forEach(key => {
-                        const g = games[key];
-                        const opt = document.createElement('option');
-                        opt.value = g.id; opt.textContent = g.name;
-                        select.appendChild(opt);
-                    });
-                } else {
-                    select.innerHTML = '<option>Нет доступных комнат в сети</option>';
-                }
+            select.innerHTML = '<option>Загрузка комнат...</option>';
+            db.ref('shared_games').once('value').then((sn) => {
+                select.innerHTML = ''; const val = sn.val();
+                if(val) Object.keys(val).forEach(k => { const opt = document.createElement('option'); opt.value = k; opt.textContent = val[k].name; select.appendChild(opt); });
             });
         }
 
-        function openGameEditor(editExisting) {
-            isEditingMode = editExisting;
-            if(editExisting) {
-                if(!selectedGameId) { alert("Выберите игру из списка для изменения!"); return; }
-                const g = gamesDatabase.find(x => x.id === selectedGameId);
-                document.getElementById('edit-title').textContent = "Изменить мир";
-                document.getElementById('edit-game-name').value = g.name;
-                document.getElementById('edit-game-password').value = g.password;
-            } else {
-                document.getElementById('edit-title').textContent = "Создать новый мир";
-                document.getElementById('edit-game-name').value = "";
-                document.getElementById('edit-game-password').value = "";
-            }
+        function openGameEditor(ex) {
+            isEditingMode = ex;
+            if(ex) { const g = gamesDatabase.find(x => x.id === selectedGameId); document.getElementById('edit-game-name').value = g.name; document.getElementById('edit-game-password').value = g.password; }
             switchLobbyStep('dm-edit');
         }
 
         function saveGameChanges() {
-            const name = document.getElementById('edit-game-name').value.trim() || "Без названия";
-            const pass = document.getElementById('edit-game-password').value.trim() || "123";
-
-            if(isEditingMode) {
-                const g = gamesDatabase.find(x => x.id === selectedGameId);
-                if(g) { g.name = name; g.password = pass; }
-            } else {
-                const newGame = {
-                    id: 'g_' + Date.now(),
-                    dmOwner: currentDmUser,
-                    name: name,
-                    password: pass,
-                    maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 }],
-                    currentMapIdx: 0,
-                    playerMapIdx: 0
-                };
-                gamesDatabase.push(newGame);
-                selectedGameId = newGame.id;
-            }
-            saveGamesToStorage();
-            switchLobbyStep('dm-dashboard');
+            const name = document.getElementById('edit-game-name').value || "Без названия";
+            const pass = document.getElementById('edit-game-password').value || "123";
+            if(isEditingMode) { const g = gamesDatabase.find(x => x.id === selectedGameId); g.name = name; g.password = pass; }
+            else { const n = { id: 'g_'+Date.now(), dmOwner: currentDmUser, name: name, password: pass, maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 }], currentMapIdx: 0, playerMapIdx: 0 }; gamesDatabase.push(n); selectedGameId = n.id; }
+            saveGamesToStorage(); switchLobbyStep('dm-dashboard');
         }
 
-        function deleteGameClick() {
-            if(!selectedGameId) { alert("Выберите игру для удаления!"); return; }
-            if(confirm("Вы уверены, что хотите удалить этот мир со всеми стенами и токенами?")) {
-                db.ref('shared_games/' + selectedGameId).remove();
-                gamesDatabase = gamesDatabase.filter(x => x.id !== selectedGameId);
-                selectedGameId = null;
-                saveGamesToStorage();
-                renderGamesList();
-            }
-        }
+        function deleteGameClick() { if(selectedGameId) { db.ref('shared_games/'+selectedGameId).remove(); gamesDatabase = gamesDatabase.filter(x => x.id !== selectedGameId); saveGamesToStorage(); renderGamesList(); } }
 
-        function launchGameDM() {
-            if(!selectedGameId) { alert("Выберите мир перед запуском!"); return; }
-            isHost = true;
-            activeGame = gamesDatabase.find(x => x.id === selectedGameId);
-            initVTTTable();
-            startPlayerSync(); 
-        }
-
+        function launchGameDM() { isHost = true; activeGame = gamesDatabase.find(x => x.id === selectedGameId); initVTTTable(); startPlayerSync(); }
         function launchGamePlayer() {
-            const gameId = document.getElementById('player-game-select').value;
-            const inputPass = document.getElementById('player-room-password').value;
-            
-            db.ref('shared_games/' + gameId).once('value').then((snapshot) => {
-                const targetGame = snapshot.val();
-                if(targetGame && targetGame.password === inputPass) {
-                    isHost = false;
-                    activeGame = targetGame;
-                    initVTTTable();
-                    startPlayerSync();
-                } else {
-                    alert("Неверный пароль или комната неактивна!");
-                }
+            const id = document.getElementById('player-game-select').value;
+            const p = document.getElementById('player-room-password').value;
+            db.ref('shared_games/'+id).once('value').then((sn) => {
+                const g = sn.val(); if(g && g.password === p) { isHost = false; activeGame = g; initVTTTable(); startPlayerSync(); } else alert("Ошибка входа!");
             });
         }
 
         function initVTTTable() {
             document.getElementById('lobby-screen').style.display = 'none';
-            if (isHost) {
-                document.body.classList.add('dm-mode');
-                changeActiveLayer(); 
-            } else {
-                document.body.classList.add('player-mode');
-                activeGame.currentMapIdx = activeGame.playerMapIdx || 0;
-            }
-            
-            renderMapSelectorUI();
-            switchMap(true); 
-            resizeRulerCanvas();
+            if(isHost) { document.body.classList.add('dm-mode'); changeActiveLayer(); }
+            else { document.body.classList.add('player-mode'); activeGame.currentMapIdx = activeGame.playerMapIdx || 0; }
+            renderMapSelectorUI(); switchMap(true);
         }
 
         function startPlayerSync() {
             db.ref('shared_games/' + activeGame.id).on('value', (snapshot) => {
-                const fresh = snapshot.val();
-                if(!fresh) return;
+                const fresh = snapshot.val(); if(!fresh) return;
                 
                 if(isHost) {
-                    const freshMap = fresh.maps[fresh.currentMapIdx];
-                    if (freshMap && freshMap.tokens) {
-                        syncTokensOnly(freshMap.tokens);
-                    }
+                    const fm = fresh.maps[fresh.currentMapIdx];
+                    if (fm && fm.tokens) syncTokensOnly(fm.tokens);
                 } else {
-                    const mapChanged = fresh.currentMapIdx !== activeGame.currentMapIdx;
-                    activeGame = fresh; 
+                    const mapChanged = fresh.playerMapIdx !== activeGame.currentMapIdx;
+                    activeGame = fresh;
+                    activeGame.currentMapIdx = fresh.playerMapIdx || 0; // Жёсткое следование за Мастером
                     
                     if (mapChanged) {
-                        renderMapSelectorUI();
-                        switchMap(true);
+                        renderMapSelectorUI(); switchMap(true);
                     } else {
-                        const freshMap = fresh.maps[fresh.currentMapIdx];
-                        if (freshMap) {
-                            syncPlayerTableFromServer(freshMap);
-                        }
+                        const fm = fresh.maps[fresh.currentMapIdx];
+                        if (fm) syncPlayerTableFromServer(fm);
                     }
                 }
             });
@@ -617,648 +498,359 @@
         function syncTokensOnly(serverTokens) {
             serverTokens.forEach(t => {
                 let el = document.getElementById(t.id);
-                if(!el) {
-                    createTokenDOM(t);
-                    el = document.getElementById(t.id);
-                }
-                if (el && !el.classList.contains('selected')) {
-                    el.style.left = t.left + 'px';
-                    el.style.top = t.top + 'px';
-                    el.style.width = t.sizePx + 'px';
-                    el.style.height = t.sizePx + 'px';
+                if(!el) { createTokenDOM(t); el = document.getElementById(t.id); }
+                if (el && !(el.classList.contains('selected') && isDraggingToken)) {
+                    el.style.left = t.left + 'px'; el.style.top = t.top + 'px';
+                    el.style.width = t.sizePx + 'px'; el.style.height = t.sizePx + 'px';
                     el.querySelector('.token-name').textContent = t.name;
+                    el.dataset.playerOwned = t.playerOwned ? 'true' : 'false';
                     let pct = t.maxHp > 0 ? (t.hp / t.maxHp) * 100 : 0;
                     el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
                     el.dataset.hp = t.hp; el.dataset.maxHp = t.maxHp; el.dataset.layer = t.layer;
                     el.dataset.darkvision = t.darkvision || 0; el.dataset.auras = JSON.stringify(t.auras);
                     
-                    const sBox = el.querySelector('.status-effects'); sBox.innerHTML = '';
-                    if(t.isDead) sBox.innerHTML += '<div class="status-dot dead"></div>';
-                    if(t.isPoisoned) sBox.innerHTML += '<div class="status-dot poisoned"></div>';
-                    if(t.isStunned) sBox.innerHTML += '<div class="status-dot stunned"></div>';
+                    const sb = el.querySelector('.status-effects'); sb.innerHTML = '';
+                    if(t.isDead) sb.innerHTML += '<div class="status-dot dead"></div>';
+                    if(t.isPoisoned) sb.innerHTML += '<div class="status-dot poisoned"></div>';
+                    if(t.isStunned) sb.innerHTML += '<div class="status-dot stunned"></div>';
                 }
             });
-            document.querySelectorAll('.token').forEach(el => {
-                if(!serverTokens.find(t => t.id === el.id)) el.remove();
-            });
+            document.querySelectorAll('.token').forEach(el => { if(!serverTokens.find(t => t.id === el.id)) el.remove(); });
             updateVisibility();
         }
 
-        function syncPlayerTableFromServer(freshMapObj) {
+        function syncPlayerTableFromServer(fm) {
             const img = document.getElementById('game-map');
-            if(img.src !== freshMapObj.src) img.src = freshMapObj.src;
-            img.style.width = (freshMapObj.width || 1200) + 'px';
-            img.style.height = (freshMapObj.height || 800) + 'px';
-            scaleUnitFactor = freshMapObj.gridSize || 40;
-
-            syncTokensOnly(freshMapObj.tokens || []);
+            if(img.src !== fm.src) img.src = fm.src;
+            img.style.width = (fm.width || 1200) + 'px'; img.style.height = (fm.height || 800) + 'px';
+            scaleUnitFactor = fm.gridSize || 40;
+            syncTokensOnly(fm.tokens || []);
 
             document.querySelectorAll('.darkness-zone, .wall-zone').forEach(el => el.remove());
-            (freshMapObj.darknessZones || []).forEach(z => {
-                const el = document.createElement('div'); el.className = 'darkness-zone';
-                el.style.left = z.left; el.style.top = z.top; el.style.width = z.width; el.style.height = z.height;
-                mapContainer.appendChild(el);
-            });
-            (freshMapObj.walls || []).forEach(w => {
-                const el = document.createElement('div'); el.className = 'wall-zone';
-                el.style.left = w.left; el.style.top = w.top; el.style.width = w.width; el.style.height = w.height;
-                mapContainer.appendChild(el);
-            });
+            (fm.darknessZones || []).forEach(z => { const el = document.createElement('div'); el.className = 'darkness-zone'; el.style.left = z.left; el.style.top = z.top; el.style.width = z.width; el.style.height = z.height; mapContainer.appendChild(el); });
+            (fm.walls || []).forEach(w => { const el = document.createElement('div'); el.className = 'wall-zone'; el.style.left = w.left; el.style.top = w.top; el.style.width = w.width; el.style.height = w.height; mapContainer.appendChild(el); });
             updateVisibility();
         }
 
         function syncActiveGameStorage() {
-            if(activeGame && activeGame.maps[activeGame.currentMapIdx]) {
-                const currentMap = activeGame.maps[activeGame.currentMapIdx];
-                const tokensArray = [];
-                document.querySelectorAll('.token').forEach(el => {
-                    const img = el.querySelector('img');
-                    const auras = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{rPx:0, c:'#ff0000'}, {rPx:0, c:'#00ff00'}];
-                    tokensArray.push({
-                        id: el.id, name: el.querySelector('.token-name').textContent, src: img.src,
-                        left: parseFloat(el.style.left), top: parseFloat(el.style.top),
-                        sizePx: parseFloat(el.style.width), 
-                        hp: parseInt(el.dataset.hp) || 10, maxHp: parseInt(el.dataset.maxHp) || 10, 
-                        layer: el.dataset.layer || 'token',
-                        isDead: el.querySelector('.status-dot.dead') ? true : false,
-                        isPoisoned: el.querySelector('.status-dot.poisoned') ? true : false,
-                        isStunned: el.querySelector('.status-dot.stunned') ? true : false,
-                        auras: auras, darkvision: parseFloat(el.dataset.darkvision) || 0
-                    });
+            if(!activeGame || !activeGame.maps[activeGame.currentMapIdx]) return;
+            const cm = activeGame.maps[activeGame.currentMapIdx];
+            const arr = [];
+            document.querySelectorAll('.token').forEach(el => {
+                const au = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{rPx:0, c:'#ff0000'}];
+                arr.push({
+                    id: el.id, name: el.querySelector('.token-name').textContent, src: el.querySelector('img').src,
+                    left: parseFloat(el.style.left), top: parseFloat(el.style.top), sizePx: parseFloat(el.style.width),
+                    hp: parseInt(el.dataset.hp)||10, maxHp: parseInt(el.dataset.maxHp)||10, layer: el.dataset.layer||'token',
+                    playerOwned: el.dataset.playerOwned === 'true',
+                    isDead: !!el.querySelector('.status-dot.dead'), isPoisoned: !!el.querySelector('.status-dot.poisoned'), isStunned: !!el.querySelector('.status-dot.stunned'),
+                    auras: au, darkvision: parseFloat(el.dataset.darkvision)||0
                 });
-                
-                currentMap.tokens = tokensArray;
+            });
+            cm.tokens = arr;
 
-                if (isHost) {
-                    currentMap.darknessZones = [];
-                    document.querySelectorAll('.darkness-zone').forEach(z => {
-                        currentMap.darknessZones.push({ left: z.style.left, top: z.style.top, width: z.style.width, height: z.style.height });
-                    });
-
-                    currentMap.walls = [];
-                    document.querySelectorAll('.wall-zone').forEach(w => {
-                        currentMap.walls.push({ left: w.style.left, top: w.style.top, width: w.style.width, height: w.style.height });
-                    });
-
-                    const img = document.getElementById('game-map');
-                    currentMap.width = parseFloat(img.style.width) || 1200;
-                    currentMap.height = parseFloat(img.style.height) || 800;
-                    currentMap.gridSize = scaleUnitFactor;
-
-                    db.ref('shared_games/' + activeGame.id).set(activeGame);
-                } else {
-                    db.ref('shared_games/' + activeGame.id + '/maps/' + activeGame.currentMapIdx + '/tokens').set(tokensArray);
-                }
-                
-                saveGamesToStorage();
+            if (isHost) {
+                cm.darknessZones = []; document.querySelectorAll('.darkness-zone').forEach(z => cm.darknessZones.push({ left: z.style.left, top: z.style.top, width: z.style.width, height: z.style.height }));
+                cm.walls = []; document.querySelectorAll('.wall-zone').forEach(w => cm.walls.push({ left: w.style.left, top: w.style.top, width: w.style.width, height: w.style.height }));
+                cm.width = parseFloat(document.getElementById('game-map').style.width)||1200;
+                cm.height = parseFloat(document.getElementById('game-map').style.height)||800;
+                cm.gridSize = scaleUnitFactor;
+                db.ref('shared_games/' + activeGame.id).set(activeGame);
+            } else {
+                db.ref('shared_games/' + activeGame.id + '/maps/' + activeGame.currentMapIdx + '/tokens').set(arr);
             }
+            saveGamesToStorage();
         }
 
         function renderMapSelectorUI() {
             const select = document.getElementById('map-selector');
-            select.innerHTML = '';
-            activeGame.maps.forEach((map, idx) => {
-                const opt = document.createElement('option');
-                opt.value = idx; 
-                let ribbonMark = (idx === activeGame.playerMapIdx) ? ' [🚩 Игроки]' : '';
-                opt.textContent = map.name + ribbonMark;
-                if(idx === activeGame.currentMapIdx) opt.selected = true;
-                select.appendChild(opt);
-            });
+            const display = document.getElementById('map-name-display');
+            if(!isHost) {
+                select.style.display = 'none'; display.style.display = 'inline';
+                display.textContent = activeGame.maps[activeGame.currentMapIdx].name;
+            } else {
+                select.style.display = 'inline'; display.style.display = 'none'; select.innerHTML = '';
+                activeGame.maps.forEach((m, idx) => {
+                    const opt = document.createElement('option'); opt.value = idx;
+                    opt.textContent = m.name + (idx === activeGame.playerMapIdx ? ' [🚩 Игроки]' : '');
+                    if(idx === activeGame.currentMapIdx) opt.selected = true; select.appendChild(opt);
+                });
+            }
             updateRibbonUI();
         }
 
-        function switchMap(isInitial = false) {
-            if(!isInitial) {
-                syncActiveGameStorage(); 
-            }
-
-            document.querySelectorAll('.token').forEach(el => el.remove());
-            document.querySelectorAll('.darkness-zone, .wall-zone').forEach(el => el.remove());
+        function switchMap(initial = false) {
+            if(!initial) syncActiveGameStorage();
+            document.querySelectorAll('.token, .darkness-zone, .wall-zone').forEach(el => el.remove());
             deselectAllTokens();
 
-            if(!isInitial) {
-                const select = document.getElementById('map-selector');
-                activeGame.currentMapIdx = parseInt(select.value) || 0;
-            }
+            if(!initial && isHost) activeGame.currentMapIdx = parseInt(document.getElementById('map-selector').value) || 0;
+            const mo = activeGame.maps[activeGame.currentMapIdx];
 
-            const mapObj = activeGame.maps[activeGame.currentMapIdx];
-            if(!mapObj.tokens) mapObj.tokens = [];
-            if(!mapObj.darknessZones) mapObj.darknessZones = [];
-            if(!mapObj.walls) mapObj.walls = [];
+            const img = document.getElementById('game-map'); img.src = mo.src;
+            img.style.width = (mo.width || 1200) + 'px'; img.style.height = (mo.height || 800) + 'px';
+            if(isHost) { document.getElementById('map-width-input').value = mo.width; document.getElementById('map-height-input').value = mo.height; }
+            scaleUnitFactor = mo.gridSize || 40; document.getElementById('grid-size-input').value = scaleUnitFactor;
 
-            const img = document.getElementById('game-map');
-            img.src = mapObj.src;
-            const targetW = mapObj.width || 1200;
-            const targetH = mapObj.height || 800;
-            img.style.width = targetW + 'px';
-            img.style.height = targetH + 'px';
-            document.getElementById('map-width-input').value = targetW;
-            document.getElementById('map-height-input').value = targetH;
-            
-            scaleUnitFactor = mapObj.gridSize || 40;
-            document.getElementById('grid-size-input').value = scaleUnitFactor;
-            updateUnitsUI();
+            (mo.tokens || []).forEach(t => createTokenDOM(t));
+            (mo.darknessZones || []).forEach(z => { const el = document.createElement('div'); el.className = 'darkness-zone'; el.style.left = z.left; el.style.top = z.top; el.style.width = z.width; el.style.height = z.height; mapContainer.appendChild(el); });
+            (mo.walls || []).forEach(w => { const el = document.createElement('div'); el.className = 'wall-zone'; el.style.left = w.left; el.style.top = w.top; el.style.width = w.width; el.style.height = w.height; mapContainer.appendChild(el); });
 
-            mapObj.tokens.forEach(t => createTokenDOM(t));
-            mapObj.darknessZones.forEach(z => {
-                const el = document.createElement('div'); el.className = 'darkness-zone';
-                el.style.left = z.left; el.style.top = z.top; el.style.width = z.width; el.style.height = z.height;
-                mapContainer.appendChild(el);
-            });
-            mapObj.walls.forEach(w => {
-                const el = document.createElement('div'); el.className = 'wall-zone';
-                el.style.left = w.left; el.style.top = w.top; el.style.width = w.width; el.style.height = w.height;
-                mapContainer.appendChild(el);
-            });
-
-            img.onload = () => { resizeRulerCanvas(); };
-            resizeRulerCanvas();
+            img.onload = () => resizeRulerCanvas(); resizeRulerCanvas();
         }
 
         document.getElementById('map-library-upload').addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const src = event.target.result; 
-                const title = `Карта ${activeGame.maps.length + 1}`; 
-                activeGame.maps.push({ name: title, src: src, width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 });
-                activeGame.currentMapIdx = activeGame.maps.length - 1;
-                renderMapSelectorUI();
-                switchMap(true);
-                syncActiveGameStorage();
-            };
-            reader.readAsDataURL(file);
+            const r = new FileReader(); r.onload = function(ev) {
+                activeGame.maps.push({ name: `Карта ${activeGame.maps.length + 1}`, src: ev.target.result, width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 });
+                activeGame.currentMapIdx = activeGame.maps.length - 1; renderMapSelectorUI(); switchMap(true); syncActiveGameStorage();
+            }; r.readAsDataURL(file);
         });
 
-        function renameCurrentMap() {
-            if (!isHost) return;
-            const mapObj = activeGame.maps[activeGame.currentMapIdx];
-            const newName = prompt("Новое название локации:", mapObj.name);
-            if (newName && newName.trim()) {
-                mapObj.name = newName.trim();
-                renderMapSelectorUI();
-                syncActiveGameStorage();
-            }
-        }
+        function renameCurrentMap() { if(!isHost)return; const n = prompt("Имя карты:", activeGame.maps[activeGame.currentMapIdx].name); if(n){ activeGame.maps[activeGame.currentMapIdx].name=n; renderMapSelectorUI(); syncActiveGameStorage(); } }
+        function deleteCurrentMap() { if(!isHost || activeGame.maps.length <= 1) return; if(confirm("Удалить карту?")) { activeGame.maps.splice(activeGame.currentMapIdx, 1); activeGame.currentMapIdx=0; activeGame.playerMapIdx=0; renderMapSelectorUI(); switchMap(true); syncActiveGameStorage(); } }
+        function movePlayerRibbon() { if(!isHost) return; activeGame.playerMapIdx = activeGame.currentMapIdx; renderMapSelectorUI(); syncActiveGameStorage(); }
+        function updateRibbonUI() { const b = document.getElementById('btn-ribbon'); if(b) b.style.opacity = (activeGame.playerMapIdx === activeGame.currentMapIdx) ? '1' : '0.5'; }
+        function applyMapSize() { if(!isHost) return; const w = document.getElementById('map-width-input').value; const h = document.getElementById('map-height-input').value; const img = document.getElementById('game-map'); img.style.width = w+'px'; img.style.height = h+'px'; resizeRulerCanvas(); syncActiveGameStorage(); }
+        function applyGridSize() { if(!isHost) return; scaleUnitFactor = parseInt(document.getElementById('grid-size-input').value)||40; syncActiveGameStorage(); }
+        function changeZoomSlider(v) { cameraZoom = parseFloat(v); updateTransform(); document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom*100)+'%'; }
+        function changeActiveLayer() { if(!isHost) return; mapContainer.className = `active-layer-${document.getElementById('active-layer-select').value}`; deselectAllTokens(); }
 
-        function deleteCurrentMap() {
-            if (!isHost) return;
-            if (activeGame.maps.length <= 1) {
-                alert("Нельзя удалить последнюю карту!");
-                return;
-            }
-            if (confirm("Вы точно хотите удалить эту карту?")) {
-                activeGame.maps.splice(activeGame.currentMapIdx, 1);
-                if (activeGame.currentMapIdx >= activeGame.maps.length) {
-                    activeGame.currentMapIdx = activeGame.maps.length - 1;
-                }
-                if (activeGame.playerMapIdx >= activeGame.maps.length) {
-                    activeGame.playerMapIdx = 0;
-                }
-                renderMapSelectorUI();
-                switchMap(true);
-                syncActiveGameStorage();
-            }
+        function rollDice(f) {
+            const c = parseInt(document.getElementById('dice-count').value)||1; const b = parseInt(document.getElementById('dice-bonus').value)||0;
+            let s = 0; let str = [];
+            for(let i=0; i<c; i++) { let r = Math.floor(Math.random()*f)+1; s+=r; if(r===f) str.push(`<span class="crit-max">${r}</span>`); else if(r===1) str.push(`<span class="crit-min">${r}</span>`); else str.push(r); }
+            const p = document.createElement('p'); p.innerHTML = `<strong>${c}d${f}${b?(' + '+b):''}</strong>: [${str.join(', ')}] = <strong>${s+b}</strong>`;
+            const box = document.getElementById('dice-log-box'); box.insertBefore(p, box.firstChild);
         }
-
-        function movePlayerRibbon() {
-            if (!isHost) return;
-            activeGame.playerMapIdx = activeGame.currentMapIdx;
-            renderMapSelectorUI();
-            syncActiveGameStorage();
-        }
-
-        function updateRibbonUI() {
-            const btn = document.getElementById('btn-ribbon');
-            if (btn) {
-                btn.style.opacity = (activeGame.playerMapIdx === activeGame.currentMapIdx) ? '1' : '0.5';
-            }
-        }
-
-        function applyMapSize() {
-            if (!isHost) return;
-            const w = parseInt(document.getElementById('map-width-input').value) || 1200;
-            const h = parseInt(document.getElementById('map-height-input').value) || 800;
-            const img = document.getElementById('game-map');
-            img.style.width = w + 'px';
-            img.style.height = h + 'px';
-            setTimeout(() => { resizeRulerCanvas(); syncActiveGameStorage(); }, 50);
-        }
-
-        function applyGridSize() {
-            if (!isHost) return;
-            scaleUnitFactor = parseInt(document.getElementById('grid-size-input').value) || 40;
-            if(activeGame && activeGame.maps[activeGame.currentMapIdx]) {
-                activeGame.maps[activeGame.currentMapIdx].gridSize = scaleUnitFactor;
-            }
-            syncActiveGameStorage();
-        }
-
-        function changeZoomSlider(val) {
-            cameraZoom = parseFloat(val);
-            updateTransform();
-            document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom * 100) + '%';
-        }
-
-        function changeActiveLayer() {
-            if (!isHost) return;
-            const layer = document.getElementById('active-layer-select').value;
-            mapContainer.className = `active-layer-${layer}`;
-            deselectAllTokens();
-        }
-
-        function toggleDiceWindow() {
-            const container = document.getElementById('dice-container-block');
-            const btn = document.getElementById('toggle-dice-btn');
-            container.classList.toggle('collapsed');
-            btn.textContent = container.classList.contains('collapsed') ? '[➕]' : '[➖]';
-        }
-
-        function rollDice(faces) {
-            const count = parseInt(document.getElementById('dice-count').value) || 1;
-            const bonus = parseInt(document.getElementById('dice-bonus').value) || 0;
-            let sum = 0; let resStrings = [];
-            
-            for(let i=0; i<count; i++) {
-                let r = Math.floor(Math.random() * faces) + 1;
-                sum += r;
-                if (r === faces) resStrings.push(`<span class="crit-max">${r}</span>`);
-                else if (r === 1) resStrings.push(`<span class="crit-min">${r}</span>`);
-                else resStrings.push(r);
-            }
-            
-            let total = sum + bonus;
-            let bonusText = bonus !== 0 ? (bonus > 0 ? ` + ${bonus}` : ` - ${Math.abs(bonus)}`) : '';
-            const logBox = document.getElementById('dice-log-box');
-            const p = document.createElement('p');
-            p.innerHTML = `<strong>${count}d${faces}${bonusText}</strong>: [${resStrings.join(', ')}] = <strong>${total}</strong>`;
-            logBox.insertBefore(p, logBox.firstChild);
-        }
-
         function clearDiceLog() { document.getElementById('dice-log-box').innerHTML = ''; }
+        function updateUnitsUI() { systemUnit = document.getElementById('unit-system').value; }
+        function toPx(v) { return systemUnit === 'ft' ? (v / 5) * scaleUnitFactor : v; }
+        function fromPx(v) { return systemUnit === 'ft' ? Math.round((v / scaleUnitFactor) * 5) : Math.round(v); }
+        function resizeRulerCanvas() { const img = document.getElementById('game-map'); rulerCanvas.width = img.offsetWidth||1200; rulerCanvas.height = img.offsetHeight||800; updateVisibility(); }
 
-        function updateUnitsUI() {
-            systemUnit = document.getElementById('unit-system').value;
-            const label = systemUnit === 'ft' ? ' (Футы)' : ' (px)';
-            document.getElementById('lbl-size').textContent = 'Размер' + label;
-            document.getElementById('lbl-darkvision').textContent = 'Тёмное зрение' + label;
-            document.getElementById('lbl-auras').textContent = 'Ауры радиус' + label;
-        }
-        function toPx(val) { return systemUnit === 'ft' ? (val / 5) * scaleUnitFactor : val; }
-        function fromPx(val) { return systemUnit === 'ft' ? Math.round((val / scaleUnitFactor) * 5) : Math.round(val); }
-
-        function resizeRulerCanvas() {
-            const img = document.getElementById('game-map');
-            const w = img.offsetWidth || 1200; const h = img.offsetHeight || 800;
-            rulerCanvas.width = w; rulerCanvas.height = h;
-            updateVisibility();
+        function setMode(m) {
+            currentMode = m; document.querySelectorAll('.tools-grid button').forEach(b => b.classList.remove('active'));
+            const activeBtn = document.getElementById(`btn-mode-${m}`); if(activeBtn) activeBtn.classList.add('active');
+            viewport.className = `mode-${m}`; deselectAllTokens(); rCtx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height);
         }
 
-        function setMode(mode) {
-            currentMode = mode;
-            document.getElementById('btn-mode-select').classList.toggle('active', mode === 'select');
-            document.getElementById('btn-mode-pan').classList.toggle('active', mode === 'pan');
-            document.getElementById('btn-mode-ruler').classList.toggle('active', mode === 'ruler');
-            if(document.getElementById('btn-mode-darkness')) document.getElementById('btn-mode-darkness').classList.toggle('active', mode === 'darkness');
-            if(document.getElementById('btn-mode-wall')) document.getElementById('btn-mode-wall').classList.toggle('active', mode === 'wall');
-            viewport.className = `mode-${mode}`;
-            deselectAllTokens();
-            rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height);
-        }
-
+        /* === ПРОФЕССИОНАЛЬНЫЙ ДВИЖОК ДИНАМИЧЕСКОГО СВЕТА И СТЕН === */
         function updateVisibility() {
-            const fogCanvas = document.getElementById('fog-canvas');
-            if (!fogCanvas) return;
-            const fCtx = fogCanvas.getContext('2d');
-            
-            const img = document.getElementById('game-map');
+            const fog = document.getElementById('fog-canvas'); if (!fog) return;
+            const fCtx = fog.getContext('2d'); const img = document.getElementById('game-map');
             const w = img.offsetWidth || 1200; const h = img.offsetHeight || 800;
-            fogCanvas.width = w; fogCanvas.height = h;
+            fog.width = w; fog.height = h; fCtx.clearRect(0, 0, w, h);
             
-            fCtx.clearRect(0, 0, w, h);
-            
-            if (isHost) return;
+            if (isHost) return; // Мастер видит всю карту без ограничений
 
-            const maskCanvas = document.createElement('canvas');
-            maskCanvas.width = w; maskCanvas.height = h;
-            const mCtx = maskCanvas.getContext('2d');
-            mCtx.fillStyle = '#000000'; mCtx.fillRect(0, 0, w, h);
+            // Маска для рендеринга полей зрения
+            const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
+            const mCtx = mask.getContext('2d'); mCtx.fillStyle = '#000000'; mCtx.fillRect(0, 0, w, h);
 
-            const tokens = document.querySelectorAll('.token:not(.layer-gm):not(.layer-item)');
-            const darkZones = document.querySelectorAll('.darkness-zone');
-            const walls = document.querySelectorAll('.wall-zone');
+            // Игроки видят только от лица токенов, которыми им разрешено управлять
+            const myTokens = Array.from(document.querySelectorAll('.token')).filter(t => t.dataset.playerOwned === 'true' && t.dataset.layer !== 'gm');
+            if (myTokens.length === 0) { fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h); return; }
 
-            tokens.forEach(t => {
-                const tl = parseFloat(t.style.left) || 0;
-                const tt = parseFloat(t.style.top) || 0;
-                const ts = parseFloat(t.style.width) || 40;
-                const cx = tl + ts / 2; const cy = tt + ts / 2;
+            const walls = Array.from(document.querySelectorAll('.wall-zone'));
+            const darkZones = Array.from(document.querySelectorAll('.darkness-zone'));
+
+            myTokens.forEach(t => {
+                const cx = (parseFloat(t.style.left) || 0) + (parseFloat(t.style.width) || 40) / 2;
+                const cy = (parseFloat(t.style.top) || 0) + (parseFloat(t.style.height) || 40) / 2;
+                const baseSight = 500; // Обычный радиус взгляда в освещенной комнате
                 const dv = parseFloat(t.dataset.darkvision) || 0;
 
-                const tCanvas = document.createElement('canvas');
-                tCanvas.width = w; tCanvas.height = h;
-                const tCtx = tCanvas.getContext('2d');
-                tCtx.fillStyle = '#ffffff'; tCtx.fillRect(0, 0, w, h);
+                const tCanv = document.createElement('canvas'); tCanv.width = w; tCanv.height = h;
+                const tCtx = tCanv.getContext('2d');
 
+                // 1. Обычный свет вокруг персонажа
+                tCtx.fillStyle = '#ffffff'; tCtx.beginPath(); tCtx.arc(cx, cy, baseSight, 0, Math.PI * 2); tCtx.fill();
+
+                // 2. Накладываем Тьму (Обычный свет тухнет в зонах Тьмы)
                 tCtx.fillStyle = '#000000';
-                darkZones.forEach(z => {
-                    tCtx.fillRect(parseFloat(z.style.left)||0, parseFloat(z.style.top)||0, parseFloat(z.style.width)||0, parseFloat(z.style.height)||0);
-                });
+                darkZones.forEach(z => { tCtx.fillRect(parseFloat(z.style.left)||0, parseFloat(z.style.top)||0, parseFloat(z.style.width)||0, parseFloat(z.style.height)||0); });
 
-                if (dv > 0) {
-                    tCtx.fillStyle = '#ffffff';
-                    tCtx.beginPath(); tCtx.arc(cx, cy, dv, 0, Math.PI * 2); tCtx.fill();
-                }
+                // 3. Прорезаем Тьму Тёмным зрением персонажа (если оно есть)
+                if (dv > 0) { tCtx.fillStyle = '#ffffff'; tCtx.beginPath(); tCtx.arc(cx, cy, dv, 0, Math.PI * 2); tCtx.fill(); }
 
+                // 4. Расчет теней от Стен
                 tCtx.fillStyle = '#000000';
                 walls.forEach(wall => {
-                    const wl = parseFloat(wall.style.left) || 0;
-                    const wt = parseFloat(wall.style.top) || 0;
-                    const ww = parseFloat(wall.style.width) || 0;
-                    const wh = parseFloat(wall.style.height) || 0;
+                    const wl = parseFloat(wall.style.left) || 0; const wt = parseFloat(wall.style.top) || 0;
+                    const ww = parseFloat(wall.style.width) || 0; const wh = parseFloat(wall.style.height) || 0;
+                    tCtx.fillRect(wl, wt, ww, wh); // Закрашиваем внутренность стены
 
                     const corners = [{x: wl, y: wt}, {x: wl + ww, y: wt}, {x: wl + ww, y: wt + wh}, {x: wl, y: wt + wh}];
-                    const projected = corners.map(p => {
-                        const dx = p.x - cx; const dy = p.y - cy;
-                        return { x: p.x + dx * 100, y: p.y + dy * 100 };
-                    });
-
                     for (let i = 0; i < 4; i++) {
                         const p1 = corners[i]; const p2 = corners[(i + 1) % 4];
-                        const pr1 = projected[i]; const pr2 = projected[(i + 1) % 4];
+                        const dx1 = p1.x - cx; const dy1 = p1.y - cy;
+                        const dx2 = p2.x - cx; const dy2 = p2.y - cy;
+
+                        // Бросаем теневые полигоны в бесконечность
                         tCtx.beginPath(); tCtx.moveTo(p1.x, p1.y); tCtx.lineTo(p2.x, p2.y);
-                        tCtx.lineTo(pr2.x, pr2.y); tCtx.lineTo(pr1.x, pr1.y);
+                        tCtx.lineTo(p2.x + dx2 * 150, p2.y + dy2 * 150); tCtx.lineTo(p1.x + dx1 * 150, p1.y + dy1 * 150);
                         tCtx.closePath(); tCtx.fill();
                     }
-                    tCtx.fillStyle = '#ffffff'; tCtx.fillRect(wl, wt, ww, wh);
                 });
 
-                mCtx.save(); mCtx.globalCompositeOperation = 'screen'; mCtx.drawImage(tCanvas, 0, 0); mCtx.restore();
+                mCtx.save(); mCtx.globalCompositeOperation = 'screen'; mCtx.drawImage(tCanv, 0, 0); mCtx.restore();
             });
 
-            fCtx.fillStyle = '#121212'; fCtx.fillRect(0, 0, w, h);
-            fCtx.globalCompositeOperation = 'destination-out'; fCtx.drawImage(maskCanvas, 0, 0);
+            fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h);
+            fCtx.globalCompositeOperation = 'destination-out'; fCtx.drawImage(mask, 0, 0);
         }
 
         document.getElementById('token-upload').addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const src = event.target.result;
-                let targetLayer = isHost ? document.getElementById('active-layer-select').value : 'token';
-                const tokenData = { 
-                    id: 't_' + Date.now(), name: "Токен", src: src, 
-                    left: Math.abs(surfaceX/cameraZoom) + 200, top: Math.abs(surfaceY/cameraZoom) + 200, 
-                    sizePx: 50, hp: 10, maxHp: 10, layer: targetLayer, darkvision: 0,
-                    isDead: false, isPoisoned: false, isStunned: false,
-                    auras: [{rPx:0, c:'#ff0000'}, {rPx:0, c:'#00ff00'}] 
-                };
-                createTokenDOM(tokenData);
+            const r = new FileReader(); r.onload = function(ev) {
+                let tl = isHost ? document.getElementById('active-layer-select').value : 'token';
+                createTokenDOM({ id: 't_'+Date.now(), name: "Токен", src: ev.target.result, left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 50, hp: 10, maxHp: 10, layer: tl, darkvision: 0, playerOwned: isHost?false:true, auras: [{rPx:0, c:'#ff0000'}] });
                 syncActiveGameStorage();
-            };
-            reader.readAsDataURL(file);
+            }; r.readAsDataURL(file);
         });
 
-        function createTokenDOM(data) {
-            const token = document.createElement('div');
-            token.className = `token layer-${data.layer}`; token.id = data.id;
-            token.innerHTML = `
-                <div class="aura aura-1"></div><div class="aura aura-2"></div>
-                <div class="status-effects"></div> <img>
-                <div class="token-info-container">
-                    <div class="token-name"></div>
-                    <div class="token-hp-bar-container"><div class="token-hp-bar"></div></div>
-                </div>
-            `;
-            mapContainer.appendChild(token);
-            token.querySelector('img').src = data.src;
-            updateTokenVisuals(token, data);
-            setupTokenEvents(token);
+        function createTokenDOM(d) {
+            const t = document.createElement('div'); t.className = `token layer-${d.layer}`; t.id = d.id;
+            t.innerHTML = `<div class="aura aura-1"></div><div class="status-effects"></div><img><div class="token-info-container"><div class="token-name"></div><div class="token-hp-bar-container"><div class="token-hp-bar"></div></div></div>`;
+            mapContainer.appendChild(t); t.querySelector('img').src = d.src;
+            updateTokenVisuals(t, d); setupTokenEvents(t);
         }
 
-        function updateTokenVisuals(el, data) {
-            el.className = `token layer-${data.layer} ${el.classList.contains('selected') ? 'selected' : ''}`;
-            el.style.left = data.left + 'px'; el.style.top = data.top + 'px'; 
-            el.style.width = data.sizePx + 'px'; el.style.height = data.sizePx + 'px';
-            el.querySelector('.token-name').textContent = data.name;
-            let pct = data.maxHp > 0 ? (data.hp / data.maxHp) * 100 : 0;
-            el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
-            
-            el.dataset.hp = data.hp; el.dataset.maxHp = data.maxHp; el.dataset.layer = data.layer;
-            el.dataset.darkvision = data.darkvision || 0; el.dataset.auras = JSON.stringify(data.auras);
+        function updateTokenVisuals(el, d) {
+            el.className = `token layer-${d.layer} ${el.classList.contains('selected') ? 'selected' : ''}`;
+            el.style.left = d.left + 'px'; el.style.top = d.top + 'px'; el.style.width = d.sizePx + 'px'; el.style.height = d.sizePx + 'px';
+            el.querySelector('.token-name').textContent = d.name;
+            el.dataset.playerOwned = d.playerOwned ? 'true' : 'false';
+            let pct = d.maxHp > 0 ? (d.hp / d.maxHp) * 100 : 0; el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
+            el.dataset.hp = d.hp; el.dataset.maxHp = d.maxHp; el.dataset.layer = d.layer; el.dataset.darkvision = d.darkvision || 0; el.dataset.auras = JSON.stringify(d.auras);
 
-            const sBox = el.querySelector('.status-effects'); sBox.innerHTML = '';
-            if(data.isDead) sBox.innerHTML += '<div class="status-dot dead"></div>';
-            if(data.isPoisoned) sBox.innerHTML += '<div class="status-dot poisoned"></div>';
-            if(data.isStunned) sBox.innerHTML += '<div class="status-dot stunned"></div>';
+            const sb = el.querySelector('.status-effects'); sb.innerHTML = '';
+            if(d.isDead) sb.innerHTML += '<div class="status-dot dead"></div>';
+            if(d.isPoisoned) sb.innerHTML += '<div class="status-dot poisoned"></div>';
+            if(d.isStunned) sb.innerHTML += '<div class="status-dot stunned"></div>';
 
-            for(let i=1; i<=2; i++) {
-                const aData = data.auras[i-1]; const aEl = el.querySelector(`.aura-${i}`);
-                if (aData && aData.rPx > 0) {
-                    const d = (aData.rPx * 2) + data.sizePx;
-                    aEl.style.width = d + 'px'; aEl.style.height = d + 'px';
-                    aEl.style.backgroundColor = aData.c; aEl.style.display = 'block';
-                } else { aEl.style.display = 'none'; }
-            }
+            const a1 = el.querySelector('.aura-1');
+            if (d.auras && d.auras[0] && d.auras[0].rPx > 0) {
+                const dim = (d.auras[0].rPx * 2) + d.sizePx; a1.style.width = dim+'px'; a1.style.height = dim+'px'; a1.style.backgroundColor = d.auras[0].c; a1.style.display = 'block';
+            } else a1.style.display = 'none';
             updateVisibility();
         }
 
-        function openTokenContextMenu(target) {
-            target.appendChild(tokenMenu); tokenMenu.style.display = 'flex';
-            const auras = target.dataset.auras ? JSON.parse(target.dataset.auras) : [{rPx:0, c:'#ff0000'}, {rPx:0, c:'#00ff00'}];
+        function openTokenContextMenu(t) {
+            if(!isHost && t.dataset.playerOwned !== 'true') return; // Игрок не может настраивать чужое
+            t.appendChild(tokenMenu); tokenMenu.style.display = 'flex';
+            const au = t.dataset.auras ? JSON.parse(t.dataset.auras) : [{rPx:0, c:'#ff0000'}];
             
-            document.getElementById('ctx-name').value = target.querySelector('.token-name').textContent;
-            document.getElementById('ctx-hp').value = target.dataset.hp || 10; 
-            document.getElementById('ctx-max-hp').value = target.dataset.maxHp || 10;
-            document.getElementById('ctx-size').value = fromPx(parseFloat(target.style.width) || 40);
-            document.getElementById('ctx-darkvision').value = fromPx(parseFloat(target.dataset.darkvision) || 0);
-            if(isHost) document.getElementById('ctx-layer').value = target.dataset.layer || 'token';
+            document.getElementById('ctx-player-owned').checked = t.dataset.playerOwned === 'true';
+            document.getElementById('ctx-name').value = t.querySelector('.token-name').textContent;
+            document.getElementById('ctx-hp').value = t.dataset.hp || 10; document.getElementById('ctx-max-hp').value = t.dataset.maxHp || 10;
+            document.getElementById('ctx-size').value = fromPx(parseFloat(t.style.width)||40);
+            document.getElementById('ctx-darkvision').value = fromPx(parseFloat(t.dataset.darkvision)||0);
+            if(isHost) document.getElementById('ctx-layer').value = t.dataset.layer || 'token';
             
-            document.getElementById('status-dead').checked = target.querySelector('.status-dot.dead') ? true : false;
-            document.getElementById('status-poisoned').checked = target.querySelector('.status-dot.poisoned') ? true : false;
-            document.getElementById('status-stunned').checked = target.querySelector('.status-dot.stunned') ? true : false;
-            
-            document.getElementById('aura1-rad').value = fromPx(auras[0]?.rPx || 0);
-            document.getElementById('aura1-col').value = auras[0]?.c || '#ff0000';
-            document.getElementById('aura2-rad').value = fromPx(auras[1]?.rPx || 0);
-            document.getElementById('aura2-col').value = auras[1]?.c || '#00ff00';
+            document.getElementById('status-dead').checked = !!t.querySelector('.status-dot.dead');
+            document.getElementById('status-poisoned').checked = !!t.querySelector('.status-dot.poisoned');
+            document.getElementById('status-stunned').checked = !!t.querySelector('.status-dot.stunned');
+            document.getElementById('aura1-rad').value = fromPx(au[0]?.rPx || 0); document.getElementById('aura1-col').value = au[0]?.c || '#ff0000';
         }
 
         function applyContextChanges() {
             if (selectedTokens.length === 0) return;
             selectedTokens.forEach(el => {
-                const oldAuras = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{rPx:0, c:'#ff0000'}, {rPx:0, c:'#00ff00'}];
                 let d = {
                     id: el.id, name: document.getElementById('ctx-name').value,
-                    hp: parseInt(document.getElementById('ctx-hp').value)||0,
-                    maxHp: parseInt(document.getElementById('ctx-max-hp').value)||0,
+                    hp: parseInt(document.getElementById('ctx-hp').value)||0, maxHp: parseInt(document.getElementById('ctx-max-hp').value)||0,
                     sizePx: toPx(parseFloat(document.getElementById('ctx-size').value)||40),
                     darkvision: toPx(parseFloat(document.getElementById('ctx-darkvision').value)||0),
-                    isDead: document.getElementById('status-dead').checked,
-                    isPoisoned: document.getElementById('status-poisoned').checked,
-                    isStunned: document.getElementById('status-stunned').checked,
+                    playerOwned: document.getElementById('ctx-player-owned').checked,
+                    isDead: document.getElementById('status-dead').checked, isPoisoned: document.getElementById('status-poisoned').checked, isStunned: document.getElementById('status-stunned').checked,
                     layer: isHost ? document.getElementById('ctx-layer').value : 'token',
-                    auras: [
-                        { rPx: toPx(parseFloat(document.getElementById('aura1-rad').value)||0), c: oldAuras[0].c },
-                        { rPx: toPx(parseFloat(document.getElementById('aura2-rad').value)||0), c: oldAuras[1].c }
-                    ]
+                    auras: [{ rPx: toPx(parseFloat(document.getElementById('aura1-rad').value)||0), c: document.getElementById('aura1-col').value }]
                 };
                 updateTokenVisuals(el, d);
             });
             syncActiveGameStorage();
         }
 
-        function changeColorAura(num) {
-            if (selectedTokens.length === 0) return;
-            selectedTokens.forEach(el => {
-                const auras = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{rPx:0, c:'#ff0000'}, {rPx:0, c:'#00ff00'}];
-                auras[num-1].c = document.getElementById(`aura${num}-col`).value;
-                el.dataset.auras = JSON.stringify(auras);
-                updateTokenVisuals(el, {
-                    id: el.id, name: el.querySelector('.token-name').textContent,
-                    hp: parseInt(el.dataset.hp), maxHp: parseInt(el.dataset.maxHp),
-                    sizePx: parseFloat(el.style.width), darkvision: parseFloat(el.dataset.darkvision),
-                    isDead: el.querySelector('.status-dot.dead'), isPoisoned: el.querySelector('.status-dot.poisoned'), isStunned: el.querySelector('.status-dot.stunned'),
-                    layer: el.dataset.layer, auras: auras
-                });
-            });
-            syncActiveGameStorage();
-        }
-
+        function changeColorAura(n) { applyContextChanges(); }
         function deleteSelectedTokens() { selectedTokens.forEach(el => el.remove()); deselectAllTokens(); syncActiveGameStorage(); }
         function deselectAllTokens() { tokenMenu.style.display = 'none'; document.body.appendChild(tokenMenu); selectedTokens.forEach(t => t.classList.remove('selected')); selectedTokens = []; }
 
-        document.addEventListener('keydown', function(e) {
-            if((e.key === 'Delete' || e.key === 'Backspace') && document.activeElement.tagName !== 'INPUT') deleteSelectedTokens();
-        });
-
-        function clearAllDarknessAndWalls() { 
-            if(isHost) {
-                document.querySelectorAll('.darkness-zone').forEach(z => z.remove());
-                document.querySelectorAll('.wall-zone').forEach(w => w.remove());
-                syncActiveGameStorage(); updateVisibility();
-            }
-        }
+        document.addEventListener('keydown', (e) => { if((e.key === 'Delete' || e.key === 'Backspace') && document.activeElement.tagName !== 'INPUT') deleteSelectedTokens(); });
+        function clearAllDarknessAndWalls() { if(isHost) { document.querySelectorAll('.darkness-zone, .wall-zone').forEach(z => z.remove()); syncActiveGameStorage(); updateVisibility(); } }
 
         let isDraggingToken = false, isPanning = false, isSelecting = false, isDrawingDarkness = false, isDrawingWall = false, isRuling = false;
-        let startX, startY, startSurfX, startSurfY, darkZone, wallZone;
-        let dragOffsets = [];
+        let startX, startY, startSurfX, startSurfY, darkZone, wallZone, dragOffsets = [];
 
-        function setupTokenEvents(token) {
-            token.addEventListener('mousedown', function(e) {
+        function setupTokenEvents(t) {
+            t.addEventListener('mousedown', function(e) {
                 if (currentMode !== 'select' || e.button !== 0) return;
+                // Блокировка движения чужих токенов для игроков
+                if (!isHost && t.dataset.playerOwned !== 'true') return;
+                
                 e.stopPropagation();
-                if (!selectedTokens.includes(token)) { deselectAllTokens(); token.classList.add('selected'); selectedTokens.push(token); }
+                if (!selectedTokens.includes(t)) { deselectAllTokens(); t.classList.add('selected'); selectedTokens.push(t); }
                 isDraggingToken = true;
                 const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
-                dragOffsets = selectedTokens.map(t => ({ el: t, ox: mX - parseFloat(t.style.left), oy: mY - parseFloat(t.style.top) }));
+                dragOffsets = selectedTokens.map(tok => ({ el: tok, ox: mX - parseFloat(tok.style.left), oy: mY - parseFloat(tok.style.top) }));
             });
-            token.addEventListener('dblclick', (e) => { e.stopPropagation(); openTokenContextMenu(token); });
+            t.addEventListener('dblclick', (e) => { e.stopPropagation(); openTokenContextMenu(t); });
         }
 
         viewport.addEventListener('mousedown', function(e) {
-            if (e.button !== 0) return;
-            const rect = mapContainer.getBoundingClientRect();
-            
-            if (currentMode === 'pan') { 
-                isPanning = true; startX = e.clientX; startY = e.clientY; startSurfX = surfaceX; startSurfY = surfaceY; 
-            }
-            else if (currentMode === 'select' && e.target !== tokenMenu && !tokenMenu.contains(e.target)) {
-                deselectAllTokens(); isSelecting = true; startX = e.clientX; startY = e.clientY;
-                selectionBox.style.left = startX+'px'; selectionBox.style.top = startY+'px'; selectionBox.style.width = '0px'; selectionBox.style.height = '0px'; selectionBox.style.display = 'block';
-            }
-            else if (currentMode === 'darkness' && isHost) {
-                if(e.target.classList.contains('darkness-zone')) { e.target.remove(); syncActiveGameStorage(); updateVisibility(); return; }
-                isDrawingDarkness = true;
-                startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom;
-                darkZone = document.createElement('div'); darkZone.className = 'darkness-zone';
-                darkZone.style.left = startX + 'px'; darkZone.style.top = startY + 'px';
-                mapContainer.appendChild(darkZone);
-            }
-            else if (currentMode === 'wall' && isHost) {
-                if(e.target.classList.contains('wall-zone')) { e.target.remove(); syncActiveGameStorage(); updateVisibility(); return; }
-                isDrawingWall = true;
-                startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom;
-                wallZone = document.createElement('div'); wallZone.className = 'wall-zone';
-                wallZone.style.left = startX + 'px'; wallZone.style.top = startY + 'px';
-                mapContainer.appendChild(wallZone);
-            }
-            else if (currentMode === 'ruler') {
-                isRuling = true;
-                startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom;
-            }
+            if (e.button !== 0) return; const rect = mapContainer.getBoundingClientRect();
+            if (currentMode === 'pan') { isPanning = true; startX = e.clientX; startY = e.clientY; startSurfX = surfaceX; startSurfY = surfaceY; }
+            else if (currentMode === 'select' && e.target !== tokenMenu && !tokenMenu.contains(e.target)) { deselectAllTokens(); isSelecting = true; startX = e.clientX; startY = e.clientY; selectionBox.style.left = startX+'px'; selectionBox.style.top = startY+'px'; selectionBox.style.width = '0px'; selectionBox.style.height = '0px'; selectionBox.style.display = 'block'; }
+            else if (currentMode === 'darkness' && isHost) { if(e.target.classList.contains('darkness-zone')) { e.target.remove(); syncActiveGameStorage(); updateVisibility(); return; } isDrawingDarkness = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; darkZone = document.createElement('div'); darkZone.className = 'darkness-zone'; darkZone.style.left = startX + 'px'; darkZone.style.top = startY + 'px'; mapContainer.appendChild(darkZone); }
+            else if (currentMode === 'wall' && isHost) { if(e.target.classList.contains('wall-zone')) { e.target.remove(); syncActiveGameStorage(); updateVisibility(); return; } isDrawingWall = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; wallZone = document.createElement('div'); wallZone.className = 'wall-zone'; wallZone.style.left = startX + 'px'; wallZone.style.top = startY + 'px'; mapContainer.appendChild(wallZone); }
+            else if (currentMode === 'ruler') { isRuling = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; }
         });
 
         document.addEventListener('mousemove', function(e) {
             const rect = mapContainer.getBoundingClientRect();
-            
             if (isDraggingToken && currentMode === 'select') {
                 const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
-                dragOffsets.forEach(pos => {
-                    pos.el.style.left = (mX - pos.ox) + 'px'; 
-                    pos.el.style.top = (mY - pos.oy) + 'px';
-                });
+                dragOffsets.forEach(pos => { pos.el.style.left = (mX - pos.ox) + 'px'; pos.el.style.top = (mY - pos.oy) + 'px'; });
                 updateVisibility();
             } else if (isPanning) {
-                surfaceX = startSurfX + (e.clientX - startX); surfaceY = startSurfY + (e.clientY - startY);
-                updateTransform();
+                surfaceX = startSurfX + (e.clientX - startX); surfaceY = startSurfY + (e.clientY - startY); updateTransform();
             } else if (isSelecting) {
                 selectionBox.style.left = Math.min(startX, e.clientX) + 'px'; selectionBox.style.top = Math.min(startY, e.clientY) + 'px';
                 selectionBox.style.width = Math.abs(startX - e.clientX) + 'px'; selectionBox.style.height = Math.abs(startY - e.clientY) + 'px';
-                
                 const boxRect = selectionBox.getBoundingClientRect();
                 document.querySelectorAll('.token').forEach(t => {
-                    if (getComputedStyle(t).pointerEvents === 'none') return;
-                    const tRect = t.getBoundingClientRect();
-                    const overlap = !(tRect.right<boxRect.left || tRect.left>boxRect.right || tRect.bottom<boxRect.top || tRect.top>boxRect.bottom);
+                    if (!isHost && t.dataset.playerOwned !== 'true') return;
+                    const tRect = t.getBoundingClientRect(); const overlap = !(tRect.right<boxRect.left || tRect.left>boxRect.right || tRect.bottom<boxRect.top || tRect.top>boxRect.bottom);
                     if (overlap && !selectedTokens.includes(t)) { t.classList.add('selected'); selectedTokens.push(t); }
                     else if (!overlap && selectedTokens.includes(t)) { t.classList.remove('selected'); selectedTokens = selectedTokens.filter(x => x !== t); }
                 });
             } else if (isDrawingDarkness && darkZone) {
                 const curX = (e.clientX - rect.left) / cameraZoom; const curY = (e.clientY - rect.top) / cameraZoom;
-                darkZone.style.left = Math.min(startX, curX) + 'px'; darkZone.style.top = Math.min(startY, curY) + 'px';
-                darkZone.style.width = Math.abs(startX - curX) + 'px'; darkZone.style.height = Math.abs(startY - curY) + 'px';
+                darkZone.style.left = Math.min(startX, curX) + 'px'; darkZone.style.top = Math.min(startY, curY) + 'px'; darkZone.style.width = Math.abs(startX - curX) + 'px'; darkZone.style.height = Math.abs(startY - curY) + 'px';
             } else if (isDrawingWall && wallZone) {
                 const curX = (e.clientX - rect.left) / cameraZoom; const curY = (e.clientY - rect.top) / cameraZoom;
-                wallZone.style.left = Math.min(startX, curX) + 'px'; wallZone.style.top = Math.min(startY, curY) + 'px';
-                wallZone.style.width = Math.abs(startX - curX) + 'px'; wallZone.style.height = Math.abs(startY - curY) + 'px';
+                wallZone.style.left = Math.min(startX, curX) + 'px'; wallZone.style.top = Math.min(startY, curY) + 'px'; wallZone.style.width = Math.abs(startX - curX) + 'px'; wallZone.style.height = Math.abs(startY - curY) + 'px';
             } else if (isRuling) {
                 const curX = (e.clientX - rect.left) / cameraZoom; const curY = (e.clientY - rect.top) / cameraZoom;
                 rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height);
-                
-                rCtx.beginPath(); rCtx.moveTo(startX, startY); rCtx.lineTo(curX, curY);
-                rCtx.strokeStyle = '#bfa15f'; rCtx.lineWidth = 3 / cameraZoom; rCtx.stroke();
-                
+                rCtx.beginPath(); rCtx.moveTo(startX, startY); rCtx.lineTo(curX, curY); rCtx.strokeStyle = '#bfa15f'; rCtx.lineWidth = 3 / cameraZoom; rCtx.stroke();
                 const distPx = Math.sqrt(Math.pow(curX - startX, 2) + Math.pow(curY - startY, 2));
                 const text = systemUnit === 'ft' ? `${fromPx(distPx)} ft` : `${Math.round(distPx)} px`;
-                
-                rCtx.fillStyle = '#fff'; rCtx.font = `${16 / cameraZoom}px Arial`;
-                rCtx.shadowBlur = 4; rCtx.shadowColor = '#000';
-                rCtx.fillText(text, curX + 10, curY - 10);
+                rCtx.fillStyle = '#fff'; rCtx.font = `${16 / cameraZoom}px Arial`; rCtx.fillText(text, curX + 10, curY - 10);
             }
         });
 
         document.addEventListener('mouseup', function() {
             if(isDraggingToken) { isDraggingToken = false; syncActiveGameStorage(); }
-            isPanning = false; 
-            if (isSelecting) { isSelecting = false; selectionBox.style.display = 'none'; }
+            isPanning = false; if (isSelecting) { isSelecting = false; selectionBox.style.display = 'none'; }
             if (isDrawingDarkness) { isDrawingDarkness = false; darkZone = null; syncActiveGameStorage(); updateVisibility(); }
             if (isDrawingWall) { isDrawingWall = false; wallZone = null; syncActiveGameStorage(); updateVisibility(); }
             if (isRuling) { isRuling = false; rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height); }
         });
 
-        viewport.addEventListener('wheel', function(e) { 
-            e.preventDefault(); 
-            const zoomSpeed = 0.07;
-            cameraZoom = Math.min(Math.max(cameraZoom + (e.deltaY < 0 ? zoomSpeed : -zoomSpeed), 0.15), 4);
-            document.getElementById('zoomRangeSide').value = cameraZoom;
-            document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom * 100) + '%';
-            updateTransform();
-        }, { passive: false });
-        
+        viewport.addEventListener('wheel', function(e) { e.preventDefault(); cameraZoom = Math.min(Math.max(cameraZoom + (e.deltaY < 0 ? 0.07 : -0.07), 0.15), 4); document.getElementById('zoomRangeSide').value = cameraZoom; document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom * 100) + '%'; updateTransform(); }, { passive: false });
         function updateTransform() { surface.style.transform = `translate(${surfaceX}px, ${surfaceY}px) scale(${cameraZoom})`; }
-        
         setTimeout(() => { surfaceX = (window.innerWidth - 1200)/2; surfaceY = 60; updateTransform(); resizeRulerCanvas(); }, 150);
     </script>
 </body>
