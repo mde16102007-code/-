@@ -58,18 +58,15 @@
         .crit-max { color: #22c55e; font-weight: bold; text-shadow: 0 0 8px rgba(34,197,94,0.6); }
         .crit-min { color: #ef4444; font-weight: bold; text-shadow: 0 0 8px rgba(239,68,68,0.6); }
 
-        /* Зоны Тьмы и Стен (DOM) */
+        /* Зоны Тьмы и Стен */
         .darkness-zone { position: absolute; background: #000; z-index: 60; box-sizing: border-box; pointer-events: none; }
         .wall-zone { position: absolute; border: 2px solid #ef4444; background: transparent; z-index: 65; box-sizing: border-box; pointer-events: none; }
         
-        /* Отображение для Мастера */
         .dm-mode .darkness-zone { opacity: 0.35; border: 1px dashed #fff; background: #1a1a1a; }
         .dm-mode .wall-zone { border-color: #f43f5e; }
         
-        /* Скрытие исходных зон для игроков */
         .player-mode .darkness-zone, .player-mode .wall-zone { display: none !important; }
 
-        /* Интерактив при редактировании */
         .mode-darkness .darkness-zone { pointer-events: auto; cursor: pointer; }
         .mode-wall .wall-zone { pointer-events: auto; cursor: pointer; }
         .mode-darkness .darkness-zone:hover { background: rgba(239, 68, 68, 0.4); }
@@ -81,7 +78,6 @@
         #map-container { position: relative; display: inline-block; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
         #game-map { display: block; width: 1200px; height: 800px; pointer-events: none; background: #27272a; object-fit: fill; }
         
-        /* Слои холстов */
         #fog-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 25; }
         #ruler-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 500; }
 
@@ -136,7 +132,6 @@
             <button onclick="switchLobbyStep('player-join')" style="background: #3f3f46; color: white;">Я Игрок</button>
         </div>
 
-        <!-- ОКНО ВХОДА / РЕГИСТРАЦИИ МАСТЕРА -->
         <div class="lobby-box" id="lobby-dm-auth" style="display:none;">
             <h2>Аккаунт Мастера</h2>
             <label style="font-size:11px; color:#a1a1aa;">Имя Мастера (Логин)</label>
@@ -321,7 +316,6 @@
 
     <div id="selection-box" class="selection-box"></div>
 
-    <!-- Игровой мир -->
     <div id="game-viewport" class="mode-select">
         <div id="table-surface">
             <div id="map-container" class="active-layer-token">
@@ -333,7 +327,6 @@
     </div>
 
     <script>
-        // === ГЛОБАЛЬНАЯ БАЗА ДАННЫХ И ПЕРЕМЕННЫЕ ===
         let gamesDatabase = [];
         let dmAccounts = {};
         let currentDmUser = null;
@@ -405,7 +398,6 @@
             localStorage.setItem('vtt_games_data', JSON.stringify(gamesDatabase));
         }
 
-        // === ЛОББИ И АВТОРИЗАЦИЯ ДМ ===
         function switchLobbyStep(step) {
             document.getElementById('lobby-step-1').style.display = 'none';
             document.getElementById('lobby-dm-auth').style.display = 'none';
@@ -565,7 +557,6 @@
             resizeRulerCanvas();
         }
 
-        // Авто-синхронизация для игроков, если мастер двигает ленту игроков
         function startPlayerSync() {
             setInterval(() => {
                 const data = localStorage.getItem('vtt_games_data');
@@ -582,7 +573,6 @@
             }, 1000);
         }
 
-        // === СОХРАНЕНИЕ ДАННЫХ ДЛЯ ТЕКУЩЕЙ КАРТЫ ===
         function syncActiveGameStorage() {
             if(activeGame && activeGame.maps[activeGame.currentMapIdx]) {
                 const currentMap = activeGame.maps[activeGame.currentMapIdx];
@@ -621,7 +611,6 @@
             }
         }
 
-        // === МЕНЕДЖЕР КАРТ ===
         function renderMapSelectorUI() {
             const select = document.getElementById('map-selector');
             select.innerHTML = '';
@@ -758,7 +747,6 @@
             syncActiveGameStorage();
         }
 
-        // Зум через правый вертикальный ползунок
         function changeZoomSlider(val) {
             cameraZoom = parseFloat(val);
             updateTransform();
@@ -779,7 +767,6 @@
             btn.textContent = container.classList.contains('collapsed') ? '[➕]' : '[➖]';
         }
 
-        // === КУБЫ ===
         function rollDice(faces) {
             const count = parseInt(document.getElementById('dice-count').value) || 1;
             const bonus = parseInt(document.getElementById('dice-bonus').value) || 0;
@@ -832,7 +819,6 @@
             rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height);
         }
 
-        // === ВИДИМОСТЬ ===
         function updateVisibility() {
             const fogCanvas = document.getElementById('fog-canvas');
             if (!fogCanvas) return;
@@ -925,7 +911,6 @@
             fCtx.drawImage(maskCanvas, 0, 0);
         }
 
-        // === ТОКЕНЫ ===
         document.getElementById('token-upload').addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
             let targetLayer = isHost ? document.getElementById('active-layer-select').value : 'token';
@@ -1063,7 +1048,6 @@
             }
         }
 
-        // === МЫШЬ И ВЗАИМОДЕЙСТВИЕ ===
         let isDraggingToken = false, isPanning = false, isSelecting = false, isDrawingDarkness = false, isDrawingWall = false, isRuling = false;
         let startX, startY, startSurfX, startSurfY, darkZone, wallZone;
         let dragOffsets = [];
