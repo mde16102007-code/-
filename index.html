@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Архивный НРИ Стол — Карты, Лента Игроков и Сетка</title>
@@ -331,29 +329,23 @@
     </div>
 
     <script>
-    // 1. ВСТАВЛЯЙ НАСТРОЙКИ СЮДА (в самое начало скрипта):
-const firebaseConfig = {
-    apiKey: "AIzaSyA6SbXuWwTo4V1Ys5uvoPdrb64WRyITiWc",
-    authDomain: "nrii-803a6.firebaseapp.com",
-    // СВЕРЬ ЭТУ СТРОКУ: она должна быть точно такой, как на твоем скриншоте!
-    databaseURL: "https://nrii-803a6-default-rtdb.asia-southeast1.firebasedatabase.app", 
-    projectId: "nrii-803a6",
-    storageBucket: "nrii-803a6.firebasestorage.app",
-    messagingSenderId: "463054037338",
-    appId: "1:463054037338:web:f572c17cdccc0f229dd363",
-    measurementId: "G-6KPY4NZ603"
-};
-    // Запуск сетевого модуля
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // 2. ДАЛЬШЕ ИДЕТ ТВОЙ СТАРЫЙ КОД:
-    let gamesDatabase = [];
-    let dmAccounts = {};
-    let currentDmUser = null;
-    // ... и весь остальной код до самого конца файла
-
+        // Конфигурация Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyA6SbXuWwTo4V1Ys5uvoPdrb64WRyITiWc",
+            authDomain: "nrii-803a6.firebaseapp.com",
+            databaseURL: "https://nrii-803a6-default-rtdb.asia-southeast1.firebasedatabase.app", 
+            projectId: "nrii-803a6",
+            storageBucket: "nrii-803a6.firebasestorage.app",
+            messagingSenderId: "463054037338",
+            appId: "1:463054037338:web:f572c17cdccc0f229dd363",
+            measurementId: "G-6KPY4NZ603"
+        };
         
+        // Запуск сетевого модуля Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Переменные окружения и состояния стола
         let gamesDatabase = [];
         let dmAccounts = {};
         let currentDmUser = null;
