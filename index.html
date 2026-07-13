@@ -37,6 +37,10 @@
         .tools-grid { display: flex; flex-direction: column; gap: 4px; }
         .tools-grid button { width: 100%; text-align: left; padding: 6px 10px; }
 
+        /* Панель Игроков (Онлайн) */
+        .player-status-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #e4e4e7; padding: 2px 0; }
+        .player-status-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 6px #22c55e; }
+
         /* ПРАВАЯ БОКОВАЯ ПАНЕЛЬ (ЗУМ) */
         .right-sidebar { position: absolute; right: 15px; top: 15px; width: 90px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; pointer-events: none; }
         .right-sidebar .sidebar-block { pointer-events: auto; }
@@ -48,7 +52,7 @@
         .dice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
         .dice-grid button { padding: 5px 0; text-align: center; justify-content: center; font-weight: bold; font-size: 11px; }
         
-        /* УДОБНЫЙ КРУПНЫЙ ЛОГ */
+        /* КРУПНЫЙ ЛОГ */
         .dice-log { background: #141416; border: 1px solid #3f3f46; overflow-y: auto; font-size: 14px; padding: 8px; border-radius: 4px; font-family: 'Segoe UI', sans-serif; color: #e4e4e7; }
         .dice-log p { margin: 6px 0; border-bottom: 1px solid #27272a; padding-bottom: 5px; line-height: 1.4; }
         .crit-max { color: #22c55e; font-weight: bold; background: rgba(34, 197, 94, 0.1); padding: 1px 3px; border-radius: 3px; }
@@ -72,7 +76,7 @@
         .dm-mode .wall-zone { border: 2px solid #ef4444; background: rgba(239, 68, 68, 0.15); pointer-events: auto; cursor: pointer; }
         .dm-mode .darkness-zone:hover, .dm-mode .wall-zone:hover { background: rgba(239, 68, 68, 0.4); }
         
-        /* Полная невидимость управляющих блоков для игроков (только через холст) */
+        /* Полная невидимость управляющих блоков для игроков */
         .player-mode .darkness-zone, .player-mode .wall-zone { opacity: 0 !important; pointer-events: none !important; }
 
         /* === ТОКЕНЫ И СТАТУСЫ === */
@@ -204,7 +208,6 @@
             </select>
         </div>
 
-        <!-- ТОКЕНЫ ДОБАВЛЯЕТ ТОЛЬКО DM -->
         <div class="panel-section dm-only">
             <input type="file" id="token-upload" accept="image/*" style="display:none;">
             <button style="background: #22c55e; color: black;" onclick="document.getElementById('token-upload').click()">+ Токен</button>
@@ -223,7 +226,6 @@
                 <button id="btn-mode-wall" class="dm-only" onclick="setMode('wall')">🧱 Стена</button>
             </div>
             
-            <!-- ОПЦИИ ЛИНЕЙКИ / ШАБЛОНОВ -->
             <div id="ruler-options" style="display:none; flex-direction:column; gap:4px; margin-top:5px; border-top:1px solid #3f3f46; padding-top:5px;">
                 <label style="font-size:11px; color:#bfa15f;">Шаблон АОЕ:</label>
                 <select id="ruler-shape" onchange="updateRulerShapeUI()">
@@ -260,6 +262,15 @@
             <h4>📜 Лог кубов <span style="cursor:pointer; color:#ef4444; float:right;" onclick="clearDiceLog()">🧹</span></h4>
             <div class="dice-log" id="dice-log-box" style="height: calc(100% - 20px);"></div>
         </div>
+
+        <!-- РАЗВЕРТЫВАЕМЫЙ СПИСОК ИГРОКОВ (СЛЕВА СНИЗУ) -->
+        <div class="sidebar-block" id="players-sidebar-block">
+            <h4 onclick="togglePlayersPanel()" style="cursor:pointer; margin:0; display:flex; justify-content:space-between; width:100%;">
+                <span>👥 Игроки (<span id="online-count">0</span>)</span>
+                <span id="players-arrow">▼</span>
+            </h4>
+            <div id="players-online-list" style="display:none; margin-top:5px; max-height:110px; overflow-y:auto; flex-direction:column; gap:4px;"></div>
+        </div>
     </div>
 
     <!-- ПРАВАЯ БОКОВАЯ ПАНЕЛЬ (ЗУМ) -->
@@ -275,10 +286,13 @@
 
     <!-- Настройки токена -->
     <div id="token-menu" class="token-context-menu" onmousedown="event.stopPropagation()">
-        <label class="dm-only" style="color:#22c55e; font-weight:bold; margin-bottom:3px;">
-            <input type="checkbox" id="ctx-player-owned" onchange="applyContextChanges()"> Доступ игрокам (Управление)
-        </label>
-        <hr class="dm-only" style="border:0; border-top:1px solid #3f3f46; margin: 2px 0;">
+        <!-- УПРАВЛЕНИЕ КОНТРОЛЕМ (КОНКРЕТНЫЙ ИЛИ ВСЕ) -->
+        <label style="color:#22c55e; font-weight:bold;">Управление (Контроль):</label>
+        <select id="ctx-owner" onchange="applyContextChanges()">
+            <option value="none">❌ Нет контроля</option>
+            <option value="all">🌐 Все игроки</option>
+        </select>
+        <hr style="border:0; border-top:1px solid #3f3f46; margin: 2px 0;">
 
         <label>Имя токена</label>
         <input type="text" id="ctx-name" oninput="applyContextChanges()">
@@ -353,6 +367,7 @@
         let currentMode = 'select'; 
         let selectedTokens = []; 
         let isHost = false;
+        let localNickname = "Игрок";
         let systemUnit = 'ft'; 
         let scaleUnitFactor = 40; 
 
@@ -474,12 +489,18 @@
 
         function deleteGameClick() { if(selectedGameId) { db.ref('shared_games/'+selectedGameId).remove(); gamesDatabase = gamesDatabase.filter(x => x.id !== selectedGameId); saveGamesToStorage(); renderGamesList(); } }
 
-        function launchGameDM() { isHost = true; activeGame = gamesDatabase.find(x => x.id === selectedGameId); initVTTTable(); startPlayerSync(); }
+        function launchGameDM() { 
+            isHost = true; 
+            localNickname = document.getElementById('player-nickname').value.trim() || "Мастер DM";
+            activeGame = gamesDatabase.find(x => x.id === selectedGameId); 
+            initVTTTable(); startPlayerSync(); setupPresence();
+        }
         function launchGamePlayer() {
             const id = document.getElementById('player-game-select').value;
             const p = document.getElementById('player-room-password').value;
+            localNickname = document.getElementById('player-nickname').value.trim() || "Игрок";
             db.ref('shared_games/'+id).once('value').then((sn) => {
-                const g = sn.val(); if(g && g.password === p) { isHost = false; activeGame = g; initVTTTable(); startPlayerSync(); } else alert("Ошибка входа!");
+                const g = sn.val(); if(g && g.password === p) { isHost = false; activeGame = g; initVTTTable(); startPlayerSync(); setupPresence(); } else alert("Ошибка входа!");
             });
         }
 
@@ -488,6 +509,62 @@
             if(isHost) { document.body.classList.add('dm-mode'); changeActiveLayer(); }
             else { document.body.classList.add('player-mode'); activeGame.currentMapIdx = activeGame.playerMapIdx || 0; }
             renderMapSelectorUI(); switchMap(true);
+        }
+
+        // РАБОТА С ПРИСУТСТВИЕМ И ИГРОКАМИ СЛЕВА СНИЗУ
+        function setupPresence() {
+            const myPresenceRef = db.ref(`shared_games/${activeGame.id}/online_players/${localNickname}`);
+            myPresenceRef.set(true);
+            myPresenceRef.onDisconnect().remove();
+
+            db.ref(`shared_games/${activeGame.id}/online_players`).on('value', (snapshot) => {
+                const players = snapshot.val() || {};
+                updatePlayersListUI(players);
+                updateOwnerDropdownOptions(players);
+            });
+        }
+
+        function togglePlayersPanel() {
+            const list = document.getElementById('players-online-list');
+            const arrow = document.getElementById('players-arrow');
+            if(list.style.display === 'none') { list.style.display = 'flex'; arrow.textContent = '▲'; }
+            else { list.style.display = 'none'; arrow.textContent = '▼'; }
+        }
+
+        function updatePlayersListUI(players) {
+            const container = document.getElementById('players-online-list');
+            const countSpan = document.getElementById('online-count');
+            container.innerHTML = '';
+            const names = Object.keys(players);
+            countSpan.textContent = names.length;
+            names.forEach(name => {
+                const item = document.createElement('div');
+                item.className = 'player-status-item';
+                item.innerHTML = `<div class="player-status-dot"></div><span>${name}</span>`;
+                container.appendChild(item);
+            });
+        }
+
+        function updateOwnerDropdownOptions(players) {
+            const select = document.getElementById('ctx-owner');
+            const savedValue = select.value || 'none';
+            select.innerHTML = `
+                <option value="none">❌ Нет контроля</option>
+                <option value="all">🌐 Все игроки</option>
+            `;
+            Object.keys(players).forEach(name => {
+                if (name !== localNickname || isHost) { // не добавляем себя если мы игрок, себя мы контролируем через 'all' или имя
+                    const opt = document.createElement('option'); opt.value = name; opt.textContent = `👤 ${name}`;
+                    select.appendChild(opt);
+                }
+            });
+            select.value = savedValue;
+        }
+
+        function hasControl(el) {
+            if (isHost) return true;
+            const owner = el.dataset.owner || 'none';
+            return owner === 'all' || owner === localNickname;
         }
 
         function startPlayerSync() {
@@ -520,7 +597,7 @@
                     el.style.left = t.left + 'px'; el.style.top = t.top + 'px';
                     el.style.width = t.sizePx + 'px'; el.style.height = t.sizePx + 'px';
                     el.querySelector('.token-name').textContent = t.name;
-                    el.dataset.playerOwned = t.playerOwned ? 'true' : 'false';
+                    el.dataset.owner = t.owner || 'none';
                     let pct = t.maxHp > 0 ? (t.hp / t.maxHp) * 100 : 0;
                     el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
                     el.dataset.hp = t.hp; el.dataset.maxHp = t.maxHp; el.dataset.layer = t.layer;
@@ -559,7 +636,7 @@
                     id: el.id, name: el.querySelector('.token-name').textContent, src: el.querySelector('img').src,
                     left: parseFloat(el.style.left), top: parseFloat(el.style.top), sizePx: parseFloat(el.style.width),
                     hp: parseInt(el.dataset.hp)||10, maxHp: parseInt(el.dataset.maxHp)||10, layer: el.dataset.layer||'token',
-                    playerOwned: el.dataset.playerOwned === 'true',
+                    owner: el.dataset.owner || 'none',
                     isDead: !!el.querySelector('.status-dot.dead'), isPoisoned: !!el.querySelector('.status-dot.poisoned'), isStunned: !!el.querySelector('.status-dot.stunned'),
                     auras: au, darkvision: parseFloat(el.dataset.darkvision)||0
                 });
@@ -611,7 +688,7 @@
 
             (mo.tokens || []).forEach(t => createTokenDOM(t));
             (mo.darknessZones || []).forEach(z => { const el = document.createElement('div'); el.className = 'darkness-zone'; el.style.left = z.left; el.style.top = z.top; el.style.width = z.width; el.style.height = z.height; mapContainer.appendChild(el); });
-            (mo.walls || []).forEach(w => { const el = document.createElement('div'); el.className = 'wall-zone'; el.style.left = w.left; el.style.top = w.top; el.style.width = w.width; el.style.height = w.height; mapContainer.appendChild(el); });
+            (mo.walls || []).forEach(w => { const el = document.createElement('div'); el.className = 'wall-zone'; el.style.left = w.left; el.style.top = w.top; w.style.width = w.width; el.style.width = w.width; el.style.height = w.height; mapContainer.appendChild(el); });
 
             img.onload = () => resizeRulerCanvas(); resizeRulerCanvas();
         }
@@ -661,7 +738,7 @@
         }
         function resetRulerCanvas() { rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height); }
 
-        /* === БЕЗУПРЕЧНЫЙ АЛГОРИТМ ВИДИМОСТИ И РАСЧЕТА ТЕНЕЙ === */
+        /* === ДВИЖОК ВИДИМОСТИ С ПРИВЯЗКОЙ К ПРАВАМ ВЛАДЕНИЯ === */
         function updateVisibility() {
             const fog = document.getElementById('fog-canvas'); if (!fog) return;
             const fCtx = fog.getContext('2d'); const img = document.getElementById('game-map');
@@ -669,14 +746,13 @@
             if (fog.width !== w || fog.height !== h) { fog.width = w; fog.height = h; }
             fCtx.clearRect(0, 0, w, h);
             
-            if (isHost) return; // Мастер видит всё игровое поле в исходном качестве
+            if (isHost) return; // Мастер видит всю карту
 
-            // Создаем маску света (изначально всё черное и пустое)
             const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
             const mCtx = mask.getContext('2d');
 
-            // Ищем токены, которыми владеет текущий игрок
-            const myTokens = Array.from(document.querySelectorAll('.token')).filter(t => t.dataset.playerOwned === 'true' && t.dataset.layer !== 'gm');
+            // Фильтруем токены, к которым у ТЕКУЩЕГО игрока есть права контроля
+            const myTokens = Array.from(document.querySelectorAll('.token')).filter(t => hasControl(t) && t.dataset.layer !== 'gm');
             if (myTokens.length === 0) { 
                 fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h); 
                 return; 
@@ -688,33 +764,29 @@
             myTokens.forEach(t => {
                 const cx = (parseFloat(t.style.left) || 0) + (parseFloat(t.style.width) || 40) / 2;
                 const cy = (parseFloat(t.style.top) || 0) + (parseFloat(t.style.height) || 40) / 2;
-                const baseSight = 600; // Радиус обычного зрения
+                const baseSight = 600; 
                 const dv = parseFloat(t.dataset.darkvision) || 0;
 
                 const tCanv = document.createElement('canvas'); tCanv.width = w; tCanv.height = h;
                 const tCtx = tCanv.getContext('2d');
 
-                // 1. Обычное зрение вокруг персонажа
                 tCtx.fillStyle = '#ffffff'; tCtx.beginPath(); tCtx.arc(cx, cy, baseSight, 0, Math.PI * 2); tCtx.fill();
 
-                // 2. Исключаем Тьму из зоны обычного зрения
                 tCtx.globalCompositeOperation = 'destination-out';
                 darkZones.forEach(z => { tCtx.fillRect(parseFloat(z.style.left)||0, parseFloat(z.style.top)||0, parseFloat(z.style.width)||0, parseFloat(z.style.height)||0); });
 
-                // 3. Возвращаем Тёмное Зрение поверх Тьмы
                 if (dv > 0) { 
                     tCtx.globalCompositeOperation = 'source-over';
                     tCtx.fillStyle = '#ffffff';
                     tCtx.beginPath(); tCtx.arc(cx, cy, dv, 0, Math.PI * 2); tCtx.fill(); 
                 }
 
-                // 4. Трассировка и вырезание теней от Стен
                 tCtx.globalCompositeOperation = 'destination-out';
                 tCtx.fillStyle = '#ffffff';
                 walls.forEach(wall => {
                     const wl = parseFloat(wall.style.left) || 0; const wt = parseFloat(wall.style.top) || 0;
                     const ww = parseFloat(wall.style.width) || 0; const wh = parseFloat(wall.style.height) || 0;
-                    tCtx.fillRect(wl, wt, ww, wh); // Закрашиваем саму стену
+                    tCtx.fillRect(wl, wt, ww, wh);
 
                     const edges = [
                         [{x: wl, y: wt}, {x: wl + ww, y: wt}],
@@ -730,7 +802,6 @@
                         const dist1 = Math.sqrt(dx1*dx1 + dy1*dy1) || 1;
                         const dist2 = Math.sqrt(dx2*dx2 + dy2*dy2) || 1;
 
-                        // Бросаем бесконечную тень на 10,000px вглубь карты
                         const proj1x = p1.x + (dx1 / dist1) * 10000;
                         const proj1y = p1.y + (dy1 / dist1) * 10000;
                         const proj2x = p2.x + (dx2 / dist2) * 10000;
@@ -742,11 +813,9 @@
                     });
                 });
 
-                // Накладываем видимость текущего токена в общую маску команды
                 mCtx.globalCompositeOperation = 'source-over'; mCtx.drawImage(tCanv, 0, 0);
             });
 
-            // Заливаем экран туманом и вырезаем видимые регионы
             fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h);
             fCtx.globalCompositeOperation = 'destination-out'; fCtx.drawImage(mask, 0, 0);
         }
@@ -755,7 +824,7 @@
             const file = e.target.files[0]; if (!file) return;
             const r = new FileReader(); r.onload = function(ev) {
                 let tl = isHost ? document.getElementById('active-layer-select').value : 'token';
-                createTokenDOM({ id: 't_'+Date.now(), name: "Токен", src: ev.target.result, left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 50, hp: 10, maxHp: 10, layer: tl, darkvision: 0, playerOwned: false, auras: [{rPx:0, c:'#ff0000'}] });
+                createTokenDOM({ id: 't_'+Date.now(), name: "Токен", src: ev.target.result, left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 50, hp: 10, maxHp: 10, layer: tl, darkvision: 0, owner: 'none', auras: [{rPx:0, c:'#ff0000'}] });
                 syncActiveGameStorage();
             }; r.readAsDataURL(file);
         });
@@ -771,7 +840,7 @@
             el.className = `token layer-${d.layer} ${el.classList.contains('selected') ? 'selected' : ''}`;
             el.style.left = d.left + 'px'; el.style.top = d.top + 'px'; el.style.width = d.sizePx + 'px'; el.style.height = d.sizePx + 'px';
             el.querySelector('.token-name').textContent = d.name;
-            el.dataset.playerOwned = d.playerOwned ? 'true' : 'false';
+            el.dataset.owner = d.owner || 'none';
             let pct = d.maxHp > 0 ? (d.hp / d.maxHp) * 100 : 0; el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
             el.dataset.hp = d.hp; el.dataset.maxHp = d.maxHp; el.dataset.layer = d.layer; el.dataset.darkvision = d.darkvision || 0; el.dataset.auras = JSON.stringify(d.auras);
 
@@ -788,11 +857,11 @@
         }
 
         function openTokenContextMenu(t) {
-            if(!isHost && t.dataset.playerOwned !== 'true') return;
+            if(!hasControl(t)) return;
             t.appendChild(tokenMenu); tokenMenu.style.display = 'flex';
             const au = t.dataset.auras ? JSON.parse(t.dataset.auras) : [{rPx:0, c:'#ff0000'}];
             
-            document.getElementById('ctx-player-owned').checked = t.dataset.playerOwned === 'true';
+            document.getElementById('ctx-owner').value = t.dataset.owner || 'none';
             document.getElementById('ctx-name').value = t.querySelector('.token-name').textContent;
             document.getElementById('ctx-hp').value = t.dataset.hp || 10; document.getElementById('ctx-max-hp').value = t.dataset.maxHp || 10;
             document.getElementById('ctx-size').value = fromPx(parseFloat(t.style.width)||40);
@@ -813,7 +882,7 @@
                     hp: parseInt(document.getElementById('ctx-hp').value)||0, maxHp: parseInt(document.getElementById('ctx-max-hp').value)||0,
                     sizePx: toPx(parseFloat(document.getElementById('ctx-size').value)||40),
                     darkvision: toPx(parseFloat(document.getElementById('ctx-darkvision').value)||0),
-                    playerOwned: document.getElementById('ctx-player-owned').checked,
+                    owner: document.getElementById('ctx-owner').value,
                     isDead: document.getElementById('status-dead').checked, isPoisoned: document.getElementById('status-poisoned').checked, isStunned: document.getElementById('status-stunned').checked,
                     layer: isHost ? document.getElementById('ctx-layer').value : 'token',
                     auras: [{ rPx: toPx(parseFloat(document.getElementById('aura1-rad').value)||0), c: document.getElementById('aura1-col').value }]
@@ -836,7 +905,7 @@
         function setupTokenEvents(t) {
             t.addEventListener('mousedown', function(e) {
                 if (currentMode !== 'select' || e.button !== 0) return;
-                if (!isHost && t.dataset.playerOwned !== 'true') return;
+                if (!hasControl(t)) return;
                 
                 e.stopPropagation();
                 if (!selectedTokens.includes(t)) { deselectAllTokens(); t.classList.add('selected'); selectedTokens.push(t); }
@@ -869,7 +938,7 @@
                 selectionBox.style.width = Math.abs(startX - e.clientX) + 'px'; selectionBox.style.height = Math.abs(startY - e.clientY) + 'px';
                 const boxRect = selectionBox.getBoundingClientRect();
                 document.querySelectorAll('.token').forEach(t => {
-                    if (!isHost && t.dataset.playerOwned !== 'true') return;
+                    if (!hasControl(t)) return;
                     const tRect = t.getBoundingClientRect(); const overlap = !(tRect.right<boxRect.left || tRect.left>boxRect.right || tRect.bottom<boxRect.top || tRect.top>boxRect.bottom);
                     if (overlap && !selectedTokens.includes(t)) { t.classList.add('selected'); selectedTokens.push(t); }
                     else if (!overlap && selectedTokens.includes(t)) { t.classList.remove('selected'); selectedTokens = selectedTokens.filter(x => x !== t); }
