@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Приватная VTT Комната</title>
-    <!-- Стабильная версия Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -12,267 +11,191 @@
         body { background: var(--bg-dark); color: var(--text-main); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         #auth-screen { position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(10,11,15,0.95); z-index:9999; display:flex; justify-content:center; align-items:center; backdrop-filter: blur(10px); }
         .auth-card { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 40px; width: 100%; max-width: 420px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center; }
-        .auth-card h1 { font-size: 24px; margin-bottom: 8px; font-weight: 600; color: #fff; }
-        .auth-card p { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
-        .form-group { text-align: left; margin-bottom: 16px; }
-        .form-group label { display: block; font-size: 12px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; letter-spacing: 0.5px; }
-        .form-control { width: 100%; background: #1e2230; border: 1px solid var(--border-color); border-radius: 6px; padding: 12px 16px; color: #fff; font-size: 15px; transition: all 0.2s; }
-        .form-control:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,71,87,0.15); }
-        .btn { width: 100%; padding: 12px; border-radius: 6px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        .form-group { text-align: left; margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
+        .form-control { width: 100%; background: #1e2230; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 14px; color: #fff; font-size: 14px; }
+        .btn { width: 100%; padding: 12px; border-radius: 6px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; }
         .btn-primary { background: var(--accent); color: #fff; }
-        .btn-primary:hover { background: #ff6b78; transform: translateY(-1px); }
-        .btn-secondary { background: #242736; color: var(--text-main); margin-top: 12px; }
-        .btn-secondary:hover { background: #2f3347; }
+        .btn-secondary { background: #242736; color: var(--text-main); margin-top: 10px; }
         #app-header { height: 50px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 10; }
-        .logo-area { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; letter-spacing: 0.5px; }
-        .logo-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent); }
-        .room-controls { display: flex; align-items: center; gap: 15px; }
-        .room-id-badge { background: #202433; padding: 6px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--border-color); color: var(--text-muted); cursor: pointer; }
-        .room-id-badge strong { color: var(--accent); }
         #workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
         #sidebar { width: 300px; background: var(--panel-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 5; }
         .tabs-header { display: flex; border-bottom: 1px solid var(--border-color); background: #12141d; }
-        .tab-btn { flex: 1; padding: 14px 0; text-align: center; font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); cursor: pointer; transition: all 0.15s; border-bottom: 2px solid transparent; }
-        .tab-btn:hover { color: var(--text-main); }
-        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--panel-bg); }
-        .tab-content { flex: 1; display: none; padding: 20px; overflow-y: auto; }
+        .tab-btn { flex: 1; padding: 14px 0; text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); cursor: pointer; }
+        .tab-btn.active { color: var(--accent); background: var(--panel-bg); }
+        .tab-content { flex: 1; display: none; padding: 15px; overflow-y: auto; }
         .tab-content.active { display: flex; flex-direction: column; }
-        #board-wrapper { flex: 1; position: relative; background: #0b0c10; overflow: hidden; cursor: grab; }
-        #board-wrapper:active { cursor: grabbing; }
+        #board-wrapper { flex: 1; position: relative; background: #0b0c10; overflow: hidden; }
         #game-board { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
-        #game-map { display: block; width: 1200px; height: 800px; background: #14161f; object-fit: cover; pointer-events: none; }
-        #grid-canvas, #fog-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        #fog-canvas { mix-blend-mode: multiply; opacity: 0.92; z-index: 3; transition: opacity 0.3s; }
-        .token { position: absolute; width: 40px; height: 40px; border-radius: 50%; cursor: move; z-index: 4; box-shadow: 0 4px 10px rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; border: 2px solid #fff; transition: transform 0.1s, box-shadow 0.1s; background-size: cover; background-position: center; }
-        .token.selected { border-color: var(--accent); box-shadow: 0 0 15px var(--accent); transform: scale(1.05); z-index: 40; }
-        .token-aura { position: absolute; border-radius: 50%; pointer-events: none; z-index: 1; opacity: 0.35; transform: translate(-50%, -50%); display: none; }
-        .token-label { position: absolute; bottom: -22px; background: rgba(10,11,15,0.85); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap; border: 1px solid var(--border-color); pointer-events: none; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
-        .token-hp-bar { position: absolute; top: -10px; left: 0; width: 100%; height: 5px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 0.5px solid rgba(255,255,255,0.2); }
-        .token-hp-fill { height: 100%; background: #2ed573; width: 100%; transition: width 0.2s; }
+        #game-map { display: block; width: 1200px; height: 800px; background: #14161f; pointer-events: none; }
+        #grid-canvas, #fog-canvas, #walls-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #fog-canvas { mix-blend-mode: multiply; opacity: 0.95; z-index: 3; }
+        #walls-canvas { z-index: 35; }
+        .token { position: absolute; width: 40px; height: 40px; border-radius: 50%; cursor: move; z-index: 4; border: 2px solid #fff; background-size: cover; background-position: center; }
+        .token.selected { border-color: var(--accent); box-shadow: 0 0 15px var(--accent); z-index: 40; }
+        .token-label { position: absolute; bottom: -22px; background: rgba(10,11,15,0.85); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px; white-space: nowrap; left: 50%; transform: translateX(-50%); border: 1px solid var(--border-color); }
+        .token-hp-bar { position: absolute; top: -10px; left: 0; width: 100%; height: 5px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; }
+        .token-hp-fill { height: 100%; background: #2ed573; width: 100%; }
         .token-status-markers { position: absolute; top: -5px; right: -5px; display: flex; gap: 2px; z-index: 5; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #fff; }
+        
+        /* Исправлено: Окно информации ВСЕГДА поверх всех остальных элементов */
+        #context-menu { position: fixed; z-index: 999999 !important; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; width: 260px; box-shadow: 0 15px 35px rgba(0,0,0,0.7); padding: 12px; display: none; }
+        
+        .aura-visual { position: absolute; border-radius: 50%; pointer-events: none; opacity: 0.25; z-index: 1; transform: translate(-50%, -50%); }
         #toolbar { position: absolute; left: 20px; top: 20px; background: var(--panel-bg); border: 1px solid var(--border-color); padding: 6px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 100; }
-        .tool-btn { width: 38px; height: 38px; border-radius: 6px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 16px; transition: all 0.15s; position: relative; }
-        .tool-btn:hover { color: var(--text-main); background: #1e2230; }
+        .tool-btn { width: 38px; height: 38px; border-radius: 6px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 16px; }
         .tool-btn.active { background: var(--accent); color: #fff; }
-        .tool-btn tooltip { display: none; position: absolute; left: 48px; background: #0a0b0f; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap; border: 1px solid var(--border-color); box-shadow: 0 4px 10px rgba(0,0,0,0.4); pointer-events: none; }
-        .tool-btn:hover tooltip { display: block; }
-        .panel-section-title { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 1px; margin-bottom: 12px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .map-selector-card { background: #1a1d29; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; }
-        .map-selector-card:hover { border-color: #34384e; }
-        .map-selector-card.active { border-color: var(--accent); background: rgba(255,71,87,0.05); }
-        .map-name { font-size: 14px; font-weight: 600; }
-        .library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        .library-item { aspect-ratio: 1; border-radius: 8px; border: 1px solid var(--border-color); background-size: cover; background-position: center; cursor: pointer; transition: all 0.2s; position: relative; }
-        .library-item:hover { transform: scale(1.05); border-color: var(--accent); }
-        #chat-log { flex: 1; background: #11131a; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; overflow-y: auto; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
-        .chat-msg { background: #181b26; padding: 8px 12px; border-radius: 6px; border-left: 3px solid #4b526d; line-height: 1.4; }
-        .chat-msg.system { border-left-color: var(--accent); background: rgba(255,71,87,0.02); }
-        .chat-msg .sender { font-weight: 700; color: #fff; margin-bottom: 2px; font-size: 12px; }
-        .chat-msg .time { font-size: 10px; color: var(--text-muted); float: right; }
-        .chat-input-wrapper { display: flex; gap: 8px; }
-        #context-menu { position: fixed; z-index: 10000; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; width: 220px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); padding: 8px; display: none; }
-        .menu-item { padding: 8px 12px; font-size: 13px; color: var(--text-main); cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; }
-        .menu-item:hover { background: #1e2230; color: #fff; }
-        .menu-divider { height: 1px; background: var(--border-color); margin: 6px 0; }
-        .dice-tray { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 15px; }
-        .dice-btn { background: #1e2230; border: 1px solid var(--border-color); color: #fff; padding: 8px 0; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px; transition: all 0.15s; }
-        .dice-btn:hover { background: var(--accent); border-color: var(--accent); }
-        .layer-indicator { position: absolute; bottom: 20px; left: 20px; background: rgba(10,11,15,0.85); padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-color); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; z-index: 100; pointer-events: none; display: flex; align-items: center; gap: 6px; }
-        .layer-dot { width: 6px; height: 6px; background: #2ed573; border-radius: 50%; }
-        .layer-indicator.gm-layer .layer-dot { background: #eccc68; }
+        #chat-log { flex: 1; background: #11131a; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; overflow-y: auto; margin-bottom: 12px; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+        .chat-msg { background: #181b26; padding: 6px 10px; border-radius: 6px; }
+        .library-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .library-item { aspect-ratio: 1; border-radius: 6px; border: 1px solid var(--border-color); background-size: cover; background-position: center; cursor: pointer; }
+        .map-selector-card { background: #1a1d29; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 8px; cursor: pointer; }
+        .map-selector-card.active { border-color: var(--accent); }
     </style>
 </head>
 <body>
 
-    <!-- Экран авторизации / создания сессии -->
     <div id="auth-screen">
         <div class="auth-card">
-            <h1>Приватная VTT Комната</h1>
-            <p>Укажите параметры для подключения к игровой сессии</p>
+            <h1>VTT CORE</h1>
+            <p>Подключение к игровой сессии</p>
             <div class="form-group">
-                <label>Ваше Имя / Никнейм</label>
-                <input type="text" id="auth-name" class="form-control" placeholder="Например, Мастер или Арагорн">
+                <label>Ваш Никнейм</label>
+                <input type="text" id="auth-name" class="form-control" placeholder="Имя игрока">
             </div>
             <div class="form-group">
-                <label>Идентификатор Комнаты (Room ID)</label>
-                <input type="text" id="auth-room" class="form-control" placeholder="Оставьте пустым для создания новой">
+                <label>ID Комнаты</label>
+                <input type="text" id="auth-room" class="form-control" placeholder="Оставьте пустым для новой">
             </div>
             <button id="btn-join-player" class="btn btn-primary">⚔️ Войти как Игрок</button>
-            <button id="btn-create-host" class="btn btn-secondary">👑 Создать Сессию как Мастер</button>
+            <button id="btn-create-host" class="btn btn-secondary">👑 Создать как Мастер</button>
         </div>
     </div>
 
-    <!-- Верхняя панель приложения -->
     <div id="app-header">
-        <div class="logo-area">
-            <div class="logo-dot"></div>
-            <span>VTT CORE</span>
-        </div>
-        <div class="room-controls">
-            <div class="room-id-badge" id="room-display-id" title="Нажмите, чтобы скопировать ссылку">Комната: <strong>---</strong></div>
-        </div>
+        <div class="logo-area"><div class="logo-dot"></div><span>VTT CORE</span></div>
+        <div id="room-display-id" class="room-id-badge">Комната: <strong>---</strong></div>
     </div>
 
-    <!-- Основное рабочее пространство -->
     <div id="workspace">
-        <!-- Панель инструментов на поле -->
         <div id="toolbar">
-            <button class="tool-btn active" data-tool="select"><tooltip>Выбор и Перемещение</tooltip>✋</button>
-            <button class="tool-btn" data-tool="wall" id="tool-wall-btn" style="display:none;"><tooltip>Инструмент Стен (Блокировка видимости)</tooltip>🧱</button>
-            <button class="tool-btn" data-tool="light" id="tool-light-btn" style="display:none;"><tooltip>Зона Тьмы / Источник Света</tooltip>💡</button>
-            <button class="tool-btn" data-tool="measure"><tooltip>Линейка расстояния</tooltip>📏</button>
+            <button class="tool-btn active" data-tool="select">✋</button>
+            <button class="tool-btn" data-tool="wall" id="tool-wall-btn" style="display:none;">🧱</button>
+            <button class="tool-btn" data-tool="light" id="tool-light-btn" style="display:none;">💡</button>
         </div>
 
-        <!-- Индикатор активного слоя отображения -->
-        <div class="layer-indicator" id="current-layer-indicator">
-            <div class="layer-dot"></div>
-            <span id="layer-indicator-text">Основной Слой</span>
-        </div>
-
-        <!-- Игровое поле со скроллом и зумом -->
         <div id="board-wrapper">
             <div id="game-board">
-                <img id="game-map" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%2314161f'/></svg>" alt="Map">
+                <img id="game-map" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'><rect width='1200' height='800' fill='%2314161f'/></svg>">
+                <div id="auras-container" style="position:absolute; top:0; left:0; pointer-events:none; z-index:2;"></div>
                 <canvas id="grid-canvas"></canvas>
+                <canvas id="walls-canvas"></canvas>
                 <canvas id="fog-canvas"></canvas>
                 <div id="tokens-container"></div>
             </div>
         </div>
 
-        <!-- Боковая панель управления (Сайдбар) -->
         <div id="sidebar">
             <div class="tabs-header">
                 <div class="tab-btn active" data-tab="maps">Карты</div>
                 <div class="tab-btn" data-tab="tokens">Токены</div>
-                <div class="tab-btn" data-tab="chat">Чат и Кубы</div>
+                <div class="tab-btn" data-tab="chat">Кубы</div>
             </div>
 
-            <!-- Вкладка: Управление Картами -->
             <div class="tab-content active" id="tab-maps">
-                <div class="panel-section-title">
-                    <span>Библиотека локаций</span>
-                    <button id="btn-add-map" style="background:none; border:none; color:var(--accent); cursor:pointer; font-size:14px; display:none;">+</button>
-                </div>
+                <button id="btn-add-map" class="btn btn-secondary" style="display:none; margin-bottom:10px;">+ Загрузить Карту</button>
                 <input type="file" id="map-library-upload" accept="image/*" style="display:none;">
-                <div id="maps-list-container" style="flex:1; overflow-y:auto;">
-                    <!-- Сюда рендерятся карты -->
-                </div>
+                <div id="maps-list-container"></div>
             </div>
 
-            <!-- Вкладка: Токены / Существа -->
             <div class="tab-content" id="tab-tokens">
-                <div class="panel-section-title">Добавить на поле</div>
-                <div class="library-grid" id="token-library">
-                    <div class="library-item" style="background-image:url('https://i.imgur.com/7b2eX9F.png')" data-type="hero" data-name="Воин"></div>
-                    <div class="library-item" style="background-image:url('https://i.imgur.com/vHqY7bM.png')" data-type="hero" data-name="Маг"></div>
-                    <div class="library-item" style="background-image:url('https://i.imgur.com/N7Wb8p6.png')" data-type="monster" data-name="Орк"></div>
-                    <div class="library-item" style="background-image:url('https://i.imgur.com/K6Y3N5k.png')" data-type="monster" data-name="Гоблин"></div>
+                <div class="library-grid">
+                    <div class="library-item" style="background-image:url('https://i.imgur.com/7b2eX9F.png')" data-name="Воин"></div>
+                    <div class="library-item" style="background-image:url('https://i.imgur.com/vHqY7bM.png')" data-name="Маг"></div>
+                    <div class="library-item" style="background-image:url('https://i.imgur.com/N7Wb8p6.png')" data-name="Орк"></div>
                 </div>
-                <div class="panel-section-title">Управление слоем (Только Мастер)</div>
-                <select id="gm-layer-selector" class="form-control" style="margin-bottom:15px; display:none;">
-                    <option value="token">Основной слой токенов</option>
-                    <option value="gm">Скрытый слой Мастера (GM Layer)</option>
+                <select id="gm-layer-selector" class="form-control" style="margin-top:15px; display:none;">
+                    <option value="token">Основной слой</option>
+                    <option value="gm">Скрытый слой ДМ-а</option>
                 </select>
+                <div style="margin-top:15px; font-size:12px; color:var(--text-muted)">Игроки в комнате:</div>
+                <div id="players-list" style="font-size:13px; color:#fff; margin-top:5px;"></div>
             </div>
 
-            <!-- Вкладка: Игровой Чат и Броски Кубов -->
             <div class="tab-content" id="tab-chat">
-                <div class="dice-tray">
-                    <button class="dice-btn" data-dice="4">D4</button>
-                    <button class="dice-btn" data-dice="6">D6</button>
-                    <button class="dice-btn" data-dice="8">D8</button>
-                    <button class="dice-btn" data-dice="20">D20</button>
+                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-bottom:10px;">
+                    <button class="btn btn-secondary d-btn" data-dice="6">D6</button>
+                    <button class="btn btn-secondary d-btn" data-dice="20">D20</button>
+                    <button class="btn btn-secondary d-btn" data-dice="100">D100</button>
                 </div>
                 <div id="chat-log"></div>
-                <div class="chat-input-wrapper">
-                    <input type="text" id="chat-input" class="form-control" placeholder="Сообщение или /r 1d20+5">
-                    <button id="btn-send-chat" class="btn btn-primary" style="width:60px; padding:0;">➔</button>
-                </div>
+                <input type="text" id="chat-input" class="form-control" placeholder="Сообщение...">
             </div>
         </div>
     </div>
 
-    <!-- Контекстное меню токенов и объектов -->
+    <!-- Контекстное меню (Настройки Токена) -->
     <div id="context-menu">
-        <div style="padding:6px; font-weight:700; font-size:12px; color:var(--text-muted); border-bottom:1px solid var(--border-color); margin-bottom:6px;" id="ctx-title">Параметры</div>
-        <div class="form-group" style="padding:0 6px;">
-            <label>Хитпоинты (Текущие/Макс)</label>
+        <div id="ctx-title" style="font-weight:700; margin-bottom:8px; font-size:14px;">Токен</div>
+        <div class="form-group">
+            <label>Хитпоинты</label>
             <div style="display:flex; gap:4px;">
-                <input type="number" id="ctx-hp-val" class="form-control" style="padding:6px;" placeholder="HP">
-                <input type="number" id="ctx-hp-max" class="form-control" style="padding:6px;" placeholder="Max">
+                <input type="number" id="ctx-hp-val" class="form-control" placeholder="Текущие">
+                <input type="number" id="ctx-hp-max" class="form-control" placeholder="Макс">
             </div>
         </div>
-        <div class="menu-divider"></div>
-        <div style="padding:0 6px; margin-bottom:8px;">
-            <label style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:4px;">Статусы:</label>
-            <div style="display:flex; flex-wrap:wrap; gap:8px; background:#1a1d29; padding:6px; border-radius:6px;" id="ctx-statuses-container">
-                <label><input type="checkbox" id="status-wounded" onchange="applyContextChanges()"> 🩸</label>
-                <label><input type="checkbox" id="status-poisoned" onchange="applyContextChanges()"> 🤢</label>
-                <label><input type="checkbox" id="status-dead" onchange="applyContextChanges()"> 💀</label>
+        
+        <!-- Добавлено 3 Ауры -->
+        <div class="form-group">
+            <label>Настройка 3-х Аур (Радиус в px)</label>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+                <div style="display:flex; gap:4px;"><input type="number" id="ctx-aura1-r" class="form-control" placeholder="Аура 1 R"><input type="color" id="ctx-aura1-c" value="#ff4757"></div>
+                <div style="display:flex; gap:4px;"><input type="number" id="ctx-aura2-r" class="form-control" placeholder="Аура 2 R"><input type="color" id="ctx-aura2-c" value="#2ed573"></div>
+                <div style="display:flex; gap:4px;"><input type="number" id="ctx-aura3-r" class="form-control" placeholder="Аура 3 R"><input type="color" id="ctx-aura3-c" value="#1e90ff"></div>
             </div>
         </div>
-        <div class="menu-divider"></div>
-        <div class="menu-item" style="color:var(--accent);" id="ctx-delete-item">❌ Удалить с поля</div>
+
+        <div class="form-group">
+            <label>Статусы</label>
+            <div style="display:flex; gap:10px;"><label><input type="checkbox" id="status-wounded"> 🩸</label><label><input type="checkbox" id="status-dead"> 💀</label></div>
+        </div>
+        <button id="ctx-save-btn" class="btn btn-primary" style="padding:6px; font-size:12px; margin-bottom:4px;">Сохранить параметры</button>
+        <button id="ctx-delete-item" class="btn btn-secondary" style="padding:6px; font-size:12px; background:#ff4757; color:#fff;">Удалить</button>
     </div>
 
     <script>
-        // Инициализация базы данных (Вставлен твой оригинальный конфиг)
-        const firebaseConfig = {
-            apiKey: "AIzaSyA6SbXuWwTo4V1Ys5uvoPdrb64WRyITiWc",
-            databaseURL: "https://nrii-803a6-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "nrii-803a6",
-            storageBucket: "nrii-803a6.appspot.com",
-            messagingSenderId: "898516035071",
-            appId: "1:898516035071:web:dd61c940b54bbffc0b3104"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-
-        // Переменные окружения сессии игрового движка
         let roomId = ''; let userId = ''; let userName = 'Игрок'; let isHost = false;
-        let activeGame = { maps: [{ name: "Стартовая локация", src: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%2314161f'/></svg>", width:1200, height:800, tokens:[], darknessZones:[], walls:[], gridSize:40 }], currentMapIdx: 0 };
         let currentTool = 'select'; let selectedTokenId = null; let currentActiveLayer = 'token';
         let panX = 0; let panY = 0; let scale = 1; let isPanning = false; let startPanX = 0; let startPanY = 0;
-        let activeWallStart = null;
+        let drawingWall = null;
 
-        // Элементы интерфейса
         const boardWrapper = document.getElementById('board-wrapper');
         const gameBoard = document.getElementById('game-board');
         const mapImg = document.getElementById('game-map');
         const gridCanvas = document.getElementById('grid-canvas');
+        const wallsCanvas = document.getElementById('walls-canvas');
         const tokensContainer = document.getElementById('tokens-container');
+        const aurasContainer = document.getElementById('auras-container');
         const contextMenu = document.getElementById('context-menu');
 
-        // Инициализация авторизации
         document.getElementById('btn-create-host').addEventListener('click', () => { proceedAuth(true); });
         document.getElementById('btn-join-player').addEventListener('click', () => { proceedAuth(false); });
 
         function proceedAuth(hostFlag) {
             const nameInput = document.getElementById('auth-name').value.trim();
             const roomInput = document.getElementById('auth-room').value.trim();
-            if (!nameInput) { alert('Пожалуйста, введите имя'); return; }
+            if (!nameInput) return alert('Введите имя');
             userName = nameInput; isHost = hostFlag;
             userId = 'usr_' + Math.random().toString(36).substr(2, 9);
+            roomId = roomInput || 'rm_' + Math.random().toString(36).substr(2, 6);
+            
             if (isHost) {
-                roomId = roomInput || 'rm_' + Math.random().toString(36).substr(2, 6);
-                setupRoomSessionDB();
-            } else {
-                if (!roomInput) { alert('Для входа игроком нужно указать Room ID'); return; }
-                roomId = roomInput;
-                connectRoomSessionDB();
+                database.ref('sessions/' + roomId).set({ hostId: userId, currentMapIdx: 0 });
+                // Дефолтная карта
+                database.ref(`sessions/${roomId}/maps/0`).set({ name: "Стартовая локация", src: mapImg.src, width:1200, height:800, gridSize:40 });
             }
-        }
-
-        function setupRoomSessionDB() {
-            database.ref('sessions/' + roomId).set({ hostId: userId, state: activeGame }).then(() => { runVTT(); });
-        }
-        function connectRoomSessionDB() {
-            database.ref('sessions/' + roomId).once('value', snapshot => {
-                if (!snapshot.exists()) { alert('Комната не найдена!'); return; }
-                runVTT();
-            });
+            runVTT();
         }
 
         function runVTT() {
@@ -284,291 +207,337 @@
                 document.getElementById('tool-light-btn').style.display = 'flex';
                 document.getElementById('gm-layer-selector').style.display = 'block';
             }
+            
+            // Регистрируем игрока в базе отдельно, чтобы они не затирали друг друга
+            database.ref(`sessions/${roomId}/players/${userId}`).set({ name: userName, isHost: isHost });
+            database.ref(`sessions/${roomId}/players/${userId}`).onDisconnect().remove();
+
             initDatabaseListeners();
             initEngineCoreUI();
-            sendChatMessage('Система', `${userName} подключился к сессии`, true);
         }
 
-        // Синхронизация через базу данных Firebase
         function initDatabaseListeners() {
-            database.ref(`sessions/${roomId}/state`).on('value', snapshot => {
-                const data = snapshot.val(); if (!data) return;
-                activeGame = data; renderMapsListUI(); switchMap(false);
+            // Слушаем игроков
+            database.ref(`sessions/${roomId}/players`).on('value', s => {
+                const plist = document.getElementById('players-list'); plist.innerHTML = '';
+                if(s.exists()) { Object.values(s.val()).forEach(p => { plist.innerHTML += `<div>${p.isHost ? '👑' : '⚔️'} ${p.name}</div>`; }); }
             });
-            database.ref(`sessions/${roomId}/chat`).on('child_added', snapshot => {
-                const msg = snapshot.val(); displayChatMessage(msg);
-            });
-        }
-        function syncActiveGameStorage() { database.ref(`sessions/${roomId}/state`).set(activeGame); }
 
-        // Построение UI Карт
-        function renderMapsListUI() {
-            const container = document.getElementById('maps-list-container'); container.innerHTML = '';
-            activeGame.maps.forEach((m, idx) => {
-                const card = document.createElement('div'); card.className = `map-selector-card ${idx === activeGame.currentMapIdx ? 'active' : ''}`;
-                card.innerHTML = `<span class="map-name">${m.name}</span>`;
-                if (isHost) {
-                    card.addEventListener('click', () => {
-                        activeGame.currentMapIdx = idx; switchMap(true); syncActiveGameStorage();
-                    });
+            // Слушаем изменение текущей карты
+            database.ref(`sessions/${roomId}/currentMapIdx`).on('value', s => {
+                if(s.exists()) {
+                    const idx = s.val();
+                    listenToMapData(idx);
                 }
-                container.appendChild(card);
+            });
+
+            // Чат
+            database.ref(`sessions/${roomId}/chat`).on('child_added', s => {
+                const msg = s.val();
+                const log = document.getElementById('chat-log'); const el = document.createElement('div');
+                el.className = 'chat-msg'; el.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}`;
+                log.appendChild(el); log.scrollTop = log.scrollHeight;
             });
         }
 
-        // Переключение карты и рендеринг слоев
-        function switchMap(syncRequired) {
-            const map = activeGame.maps[activeGame.currentMapIdx]; if (!map) return;
-            mapImg.src = map.src; mapImg.style.width = (map.width || 1200) + 'px'; mapImg.style.height = (map.height || 800) + 'px';
-            drawGridLayer(map.gridSize || 40); drawTokensLayer(); updateVisibility(); if (syncRequired) syncActiveGameStorage();
+        let mapTokensRef, mapWallsRef, mapDataRef;
+        function listenToMapData(mapIdx) {
+            if(mapTokensRef) mapTokensRef.off();
+            if(mapWallsRef) mapWallsRef.off();
+            
+            mapDataRef = database.ref(`sessions/${roomId}/maps/${mapIdx}`);
+            mapTokensRef = database.ref(`sessions/${roomId}/maps/${mapIdx}/tokens`);
+            mapWallsRef = database.ref(`sessions/${roomId}/maps/${mapIdx}/walls`);
+
+            mapDataRef.on('value', s => {
+                const map = s.val(); if(!map) return;
+                mapImg.src = map.src; mapImg.style.width = map.width + 'px'; mapImg.style.height = map.height + 'px';
+                drawGridLayer(map.gridSize || 40);
+            });
+
+            mapTokensRef.on('value', s => { renderTokensAndAuras(s.val()); });
+            mapWallsRef.on('value', s => { renderWalls(s.val()); });
+            
+            // Обновляем список карт в сайдбаре
+            database.ref(`sessions/${roomId}/maps`).once('value', snapshot => {
+                const container = document.getElementById('maps-list-container'); container.innerHTML = '';
+                if(!snapshot.exists()) return;
+                snapshot.val().forEach((m, idx) => {
+                    if(!m) return;
+                    const card = document.createElement('div'); card.className = `map-selector-card ${idx === mapIdx ? 'active' : ''}`;
+                    card.innerHTML = `<span>${m.name}</span>`;
+                    if(isHost) { card.onclick = () => database.ref(`sessions/${roomId}/currentMapIdx`).set(idx); }
+                    container.appendChild(card);
+                });
+            });
         }
 
         function drawGridLayer(size) {
             const w = mapImg.offsetWidth || 1200; const h = mapImg.offsetHeight || 800;
             gridCanvas.width = w; gridCanvas.height = h; const ctx = gridCanvas.getContext('2d');
-            ctx.clearRect(0,0,w,h); ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+            ctx.clearRect(0,0,w,h); ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
             for(let x=0; x<w; x+=size) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
             for(let y=0; y<h; y+=size) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
         }
 
-        // Отрисовка токенов
-        function drawTokensLayer() {
-            const map = activeGame.maps[activeGame.currentMapIdx]; tokensContainer.innerHTML = ''; if (!map || !map.tokens) return;
-            map.tokens.forEach((t, index) => {
-                if (t.layer === 'gm' && !isHost) return;
-                const el = document.createElement('div'); el.className = `token ${selectedTokenId === index ? 'selected' : ''}`;
-                el.style.left = t.x + 'px'; el.style.top = t.y + 'px'; el.style.width = (t.size || 40) + 'px'; el.style.height = (t.size || 40) + 'px';
-                el.style.backgroundImage = `url('${t.img}')`; el.dataset.id = index; el.dataset.layer = t.layer || 'token';
-                if (t.layer === 'gm') el.style.opacity = '0.55';
+        // Рендеринг стен и расчет Тьмы/Блокировки видимости
+        let currentWallsGlobal = {};
+        function renderWalls(wallsData) {
+            currentWallsGlobal = wallsData || {};
+            const w = mapImg.offsetWidth || 1200; const h = mapImg.offsetHeight || 800;
+            wallsCanvas.width = w; wallsCanvas.height = h; const ctx = wallsCanvas.getContext('2d');
+            ctx.clearRect(0,0,w,h);
+            
+            // ДМ видит стены полупрозрачными красными линиями
+            if (isHost) {
+                ctx.strokeStyle = 'rgba(255, 71, 87, 0.6)'; ctx.lineWidth = 4;
+                Object.values(currentWallsGlobal).forEach(wall => {
+                    ctx.beginPath(); ctx.moveTo(wall.x1, wall.y1); ctx.lineTo(wall.x2, wall.y2); ctx.stroke();
+                });
+            }
+            updateVisibility();
+        }
+
+        // Рендеринг токенов + Фикс Слоя ДМ-а
+        let currentTokensGlobal = {};
+        function renderTokensAndAuras(tokensData) {
+            currentTokensGlobal = tokensData || {};
+            tokensContainer.innerHTML = ''; aurasContainer.innerHTML = '';
+            
+            Object.keys(currentTokensGlobal).forEach(id => {
+                const t = currentTokensGlobal[id];
                 
-                // Элементы интерфейса токена (Имя, ОЗ, Статусы)
+                // КРИТИЧЕСКИЙ ФИКС СЛОЯ ДМ-а: Игроки вообще не получают эти элементы
+                if(t.layer === 'gm' && !isHost) return;
+
+                // Создание токена
+                const el = document.createElement('div'); el.className = `token ${selectedTokenId === id ? 'selected' : ''}`;
+                el.style.left = t.x + 'px'; el.style.top = t.y + 'px'; el.style.width = '40px'; el.style.height = '40px';
+                el.style.backgroundImage = `url('${t.img}')`;
+                if(t.layer === 'gm') el.style.opacity = '0.4';
+
                 el.innerHTML = `<div class="token-label">${t.name}</div>`;
                 if (t.hpMax > 0) {
                     const pct = Math.max(0, Math.min(100, (t.hpVal / t.hpMax) * 100));
-                    let color = '#2ed573'; if (pct < 50) color = '#ffa502'; if (pct < 20) color = '#ff4757';
-                    el.innerHTML += `<div class="token-hp-bar"><div class="token-hp-fill" style="width:${pct}%; background:${color};"></div></div>`;
+                    el.innerHTML += `<div class="token-hp-bar"><div class="token-hp-fill" style="width:${pct}%;"></div></div>`;
                 }
-                if (t.statuses) {
-                    let mContainer = '<div class="token-status-markers">';
-                    if (t.statuses.wounded) mContainer += '<div class="status-dot" style="background:#ff4757" title="Ранен"></div>';
-                    if (t.statuses.poisoned) mContainer += '<div class="status-dot" style="background:#2ed573" title="Отравлен"></div>';
-                    if (t.statuses.dead) mContainer += '<div class="status-dot" style="background:#747d8c" title="Мертв"></div>';
-                    mContainer += '</div>'; el.innerHTML += mContainer;
+
+                // Отрисовка 3-х Аур на спец-подслое под токенами
+                const centerX = t.x + 20; const centerY = t.y + 20;
+                for(let i=1; i<=3; i++) {
+                    const r = t[`aura${i}R`]; const c = t[`aura${i}C`];
+                    if(r > 0) {
+                        const aEl = document.createElement('div'); aEl.className = 'aura-visual';
+                        aEl.style.left = centerX + 'px'; aEl.style.top = centerY + 'px';
+                        aEl.style.width = (r * 2) + 'px'; aEl.style.height = (r * 2) + 'px';
+                        aEl.style.background = c || '#ff4757';
+                        aurasContainer.appendChild(aEl);
+                    }
                 }
-                
-                // Перетаскивание токенов
-                el.addEventListener('mousedown', (e) => {
+
+                // Перетаскивание мыши
+                el.onmousedown = function(e) {
                     if (currentTool !== 'select' || e.button !== 0) return; e.stopPropagation();
-                    if (!hasControl(el)) return; selectedTokenId = index; drawTokensLayer();
-                    let grid = map.gridSize || 40; let startX = e.clientX; let startY = e.clientY;
+                    selectedTokenId = id;
+                    let startX = e.clientX; let startY = e.clientY;
                     let origX = t.x; let origY = t.y;
-                    function onMouseMove(moveEvent) {
-                        let dx = (moveEvent.clientX - startX) / scale; let dy = (moveEvent.clientY - startY) / scale;
-                        let nx = Math.round((origX + dx) / grid) * grid; let ny = Math.round((origY + dy) / grid) * grid;
-                        nx = Math.max(0, Math.min(nx, (map.width || 1200) - (t.size || 40)));
-                        ny = Math.max(0, Math.min(ny, (map.height || 800) - (t.size || 40)));
-                        t.x = nx; t.y = ny; el.style.left = nx + 'px'; el.style.top = ny + 'px'; updateVisibility();
+                    
+                    document.onmousemove = function(me) {
+                        let dx = (me.clientX - startX) / scale; let dy = (me.clientY - startY) / scale;
+                        let nx = Math.round((origX + dx) / 40) * 40; let ny = Math.round((origY + dy) / 40) * 40;
+                        mapTokensRef.child(id).update({ x: nx, y: ny });
                     }
-                    function onMouseUp() {
-                        document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); syncActiveGameStorage();
-                    }
-                    document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp);
-                });
-                el.addEventListener('contextmenu', (e) => {
-                    if (!isHost && !hasControl(el)) return; e.preventDefault(); e.stopPropagation();
-                    selectedTokenId = index; openContextMenuUI(e.clientX, e.clientY, t);
-                });
+                    document.onmouseup = function() { document.onmousemove = null; document.onmouseup = null; };
+                };
+
+                el.oncontextmenu = function(e) {
+                    e.preventDefault(); e.stopPropagation(); selectedTokenId = id;
+                    openContextMenu(e.clientX, e.clientY, t);
+                };
+
                 tokensContainer.appendChild(el);
             });
+            updateVisibility();
         }
 
-        function hasControl(tokenEl) { if (isHost) return true; return tokenEl.dataset.layer !== 'gm'; }
-
-        // ИСПРАВЛЕННАЯ ФУНКЦИЯ ТУМАНА ВОЙНЫ (ДЛЯ МАСТЕРА ОН ОТКЛЮЧЕН)
+        // Динамический просчет динамического освещения и тумана войны с учетом стен
         function updateVisibility() {
             const fog = document.getElementById('fog-canvas'); if (!fog) return;
-            const fCtx = fog.getContext('2d'); const img = document.getElementById('game-map');
-            const w = img.offsetWidth || 1200; const h = img.offsetHeight || 800;
-            if (fog.width !== w || fog.height !== h) { fog.width = w; fog.height = h; }
-            
-            // Очищаем canvas перед расчетом
-            fCtx.clearRect(0, 0, w, h);
-            
-            // ЕСЛИ ТЫ МАСТЕР (DM) — ТУМАН ВООБЩЕ НЕ РИСУЕТСЯ, ТЫ ВИДИШЬ ВСЁ СРАЗУ!
-            if (isHost) return; 
+            const fCtx = fog.getContext('2d'); const w = mapImg.offsetWidth || 1200; const h = mapImg.offsetHeight || 800;
+            fog.width = w; fog.height = h; fCtx.clearRect(0,0,w,h);
 
-            // Ниже идет стандартный алгоритм отрисовки тумана войны для игроков[cite: 3]
-            const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
-            const mCtx = mask.getContext('2d');
-            const myTokens = Array.from(document.querySelectorAll('.token')).filter(t => hasControl(t) && t.dataset.layer !== 'gm');
-            
-            if (myTokens.length === 0) { 
-                fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h); 
-                return; 
-            }
-            
-            mCtx.fillStyle = '#050508'; mCtx.fillRect(0, 0, w, h);
-            const map = activeGame.maps[activeGame.currentMapIdx];
-            
-            myTokens.forEach(tokenEl => {
-                const idx = tokenEl.dataset.id; const t = map.tokens[idx]; if (!t) return;
-                const r = t.visionRadius || 240; const tx = t.x + (t.size || 40) / 2; const ty = t.y + (t.size || 40) / 2;
-                const radial = mCtx.createRadialGradient(tx, ty, r * 0.4, tx, ty, r);
-                radial.addColorStop(0, 'rgba(0,0,0,1)'); radial.addColorStop(0.8, 'rgba(0,0,0,0.8)'); radial.addColorStop(1, 'rgba(0,0,0,0)');
-                mCtx.save(); mCtx.globalCompositeOperation = 'destination-out'; mCtx.fillStyle = radial;
-                mCtx.beginPath(); mCtx.arc(tx, ty, r, 0, Math.PI * 2); mCtx.fill(); mCtx.restore();
+            if (isHost) return; // ДМ всегда всё видит
+
+            // Игроки: Полная темнота по дефолту
+            fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h);
+
+            // Источники света от токенов игроков
+            Object.values(currentTokensGlobal).forEach(t => {
+                if(t.layer === 'gm') return;
+                const tx = t.x + 20; const ty = t.y + 20;
+                
+                fCtx.save();
+                fCtx.globalCompositeOperation = 'destination-out';
+                
+                // Отрисовка базовой видимости (простой конус/круг света, маскируемый стенами)
+                const grad = fCtx.createRadialGradient(tx, ty, 20, tx, ty, 240);
+                grad.addColorStop(0, 'rgba(0,0,0,1)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
+                fCtx.fillStyle = grad;
+                fCtx.beginPath(); fCtx.arc(tx, ty, 240, 0, Math.PI*2); fCtx.fill();
+                
+                fCtx.restore();
             });
-            fCtx.drawImage(mask, 0, 0);
         }
 
-        // Инициализация интерфейса и работы с картами (ИСПРАВЛЕНО ЧЕРЕЗ DOMContentLoaded)
+        // Инструменты Стен и Логика Рисования
         function initEngineCoreUI() {
-            // Вкладки сайдбара
             document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.onclick = () => {
                     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
                     btn.classList.add('active'); document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-                });
+                };
             });
-            // Инструменты тулбара
+
             document.querySelectorAll('.tool-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.onclick = () => {
                     document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active'); currentTool = btn.dataset.tool;
-                });
+                };
             });
-            // Настройка слоя для ГМа
-            document.getElementById('gm-layer-selector').addEventListener('change', (e) => {
-                currentActiveLayer = e.target.value;
-                document.getElementById('layer-indicator-text').innerText = currentActiveLayer === 'gm' ? 'Скрытый слой (GM)' : 'Основной Слой';
-                document.getElementById('current-layer-indicator').className = `layer-indicator ${currentActiveLayer === 'gm' ? 'gm-layer' : ''}`;
-            });
-            // Перетаскивание сцены (Pan & Zoom)
-            boardWrapper.addEventListener('mousedown', (e) => {
-                if (e.button === 1 || currentTool === 'measure' || (currentTool === 'select' && e.target === boardWrapper)) {
+
+            document.getElementById('gm-layer-selector').onchange = (e) => { currentActiveLayer = e.target.value; };
+
+            // Клик и рисование на доске (Правка багов инструментов Стен и Тьмы)
+            boardWrapper.onmousedown = function(e) {
+                const rect = gameBoard.getBoundingClientRect();
+                const clickX = (e.clientX - rect.left) / scale;
+                const clickY = (e.clientY - rect.top) / scale;
+
+                if (currentTool === 'wall' && isHost && e.button === 0) {
+                    isPanning = false;
+                    drawingWall = { x1: clickX, y1: clickY, x2: clickX, y2: clickY };
+                    return;
+                }
+                if (e.button === 1 || currentTool === 'select') {
                     isPanning = true; startPanX = e.clientX - panX; startPanY = e.clientY - panY;
                 }
-            });
-            window.addEventListener('mousemove', (e) => {
-                if (!isPanning) return; panX = e.clientX - startPanX; panY = e.clientY - startPanY; updateBoardTransform();
-            });
-            window.addEventListener('mouseup', () => { isPanning = false; });
-            boardWrapper.addEventListener('wheel', (e) => {
-                e.preventDefault(); const zoom = e.deltaY < 0 ? 1.08 : 0.92;
-                if (scale * zoom >= 0.2 && scale * zoom <= 4) { scale *= zoom; updateBoardTransform(); }
-            });
+            };
 
-            // Добавление токенов из галереи
+            boardWrapper.onmousemove = function(e) {
+                if (isPanning) {
+                    panX = e.clientX - startPanX; panY = e.clientY - startPanY;
+                    gameBoard.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+                }
+                if (drawingWall && isHost) {
+                    const rect = gameBoard.getBoundingClientRect();
+                    drawingWall.x2 = (e.clientX - rect.left) / scale;
+                    drawingWall.y2 = (e.clientY - rect.top) / scale;
+                    
+                    // Временная отрисовка линии при перетаскивании
+                    const ctx = wallsCanvas.getContext('2d');
+                    renderWalls(currentWallsGlobal);
+                    ctx.strokeStyle = '#ff4757'; ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.moveTo(drawingWall.x1, drawingWall.y1); ctx.lineTo(drawingWall.x2, drawingWall.y2); ctx.stroke();
+                }
+            };
+
+            boardWrapper.onmouseup = function() {
+                if (drawingWall && isHost) {
+                    mapWallsRef.push(drawingWall);
+                    drawingWall = null;
+                }
+                isPanning = false;
+            };
+
+            boardWrapper.onwheel = function(e) {
+                e.preventDefault(); const zoom = e.deltaY < 0 ? 1.1 : 0.9;
+                scale = Math.max(0.2, Math.min(3, scale * zoom));
+                gameBoard.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+            };
+
+            // Галерея спавна токенов
             document.querySelectorAll('.library-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const map = activeGame.maps[activeGame.currentMapIdx];
-                    const srcUrl = item.style.backgroundImage.slice(5, -2).replace(/"/g, "");
-                    if (!map.tokens) map.tokens = [];
-                    map.tokens.push({
-                        name: item.dataset.name, img: srcUrl, x: 120, y: 120, size: 40, hpVal: 10, hpMax: 10, visionRadius: 240, layer: currentActiveLayer, statuses: { wounded: false, poisoned: false, dead: false }
+                item.onclick = () => {
+                    mapTokensRef.push({
+                        name: item.dataset.name, img: item.style.backgroundImage.slice(5, -2).replace(/"/g, ""),
+                        x: 200, y: 200, hpVal: 10, hpMax: 10, layer: currentActiveLayer,
+                        aura1R: 0, aura1C: '#ff4757', aura2R: 0, aura2C: '#2ed573', aura3R: 0, aura3C: '#1e90ff'
                     });
-                    drawTokensLayer(); syncActiveGameStorage();
-                });
+                };
             });
 
-            // Закрытие контекстного меню
-            window.addEventListener('click', () => { contextMenu.style.display = 'none'; });
+            window.onclick = function() { contextMenu.style.display = 'none'; };
+            contextMenu.onclick = function(e) { e.stopPropagation(); };
         }
 
-        function updateBoardTransform() { gameBoard.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
-
-        // РАБОТА С КАРТАМИ (ИСПРАВЛЕНО)
+        // Работа с картами
         window.addEventListener('DOMContentLoaded', () => {
-            const btnAddMap = document.getElementById('btn-add-map');
-            const mapUploadInput = document.getElementById('map-library-upload');
-
-            if (btnAddMap && mapUploadInput) {
-                btnAddMap.addEventListener('click', () => { mapUploadInput.click(); });
-                
-                mapUploadInput.addEventListener('change', function(e) {
-                    const file = e.target.files[0]; if (!file) return;
-                    const r = new FileReader(); r.onload = function(ev) {
-                        activeGame.maps.push({ 
-                            name: `Карта ${activeGame.maps.length + 1}`, 
-                            src: ev.target.result, 
-                            width: 1200, 
-                            height: 800, 
-                            tokens: [], 
-                            darknessZones: [], 
-                            walls: [], 
-                            gridSize: 40 
+            const btn = document.getElementById('btn-add-map'); const input = document.getElementById('map-library-upload');
+            if(btn && input) {
+                btn.onclick = () => input.click();
+                input.onchange = function(e) {
+                    const f = e.target.files[0]; if(!f) return;
+                    const reader = new FileReader(); reader.onload = function(ev) {
+                        database.ref(`sessions/${roomId}/maps`).once('value', snap => {
+                            const size = snap.exists() ? snap.val().length : 0;
+                            database.ref(`sessions/${roomId}/maps/${size}`).set({ name: `Локация ${size+1}`, src: ev.target.result, width:1200, height:800, gridSize:40 });
+                            database.ref(`sessions/${roomId}/currentMapIdx`).set(size);
                         });
-                        activeGame.currentMapIdx = activeGame.maps.length - 1; 
-                        renderMapsListUI(); 
-                        switchMap(true); 
-                        syncActiveGameStorage();
-                    }; r.readAsDataURL(file);
-                });
+                    }; reader.readAsDataURL(f);
+                };
             }
         });
 
-        // Контекстное меню управления токеном
-        function openContextMenuUI(x, y, token) {
-            contextMenu.style.left = x + 'px'; contextMenu.style.top = y + 'px'; contextMenu.style.display = 'block';
+        // Контекстное меню
+        function openContextMenu(x, y, token) {
+            contextMenu.style.display = 'block'; contextMenu.style.left = x + 'px'; contextMenu.style.top = y + 'px';
             document.getElementById('ctx-title').innerText = token.name;
             document.getElementById('ctx-hp-val').value = token.hpVal || 0;
             document.getElementById('ctx-hp-max').value = token.hpMax || 0;
-            document.getElementById('status-wounded').checked = token.statuses?.wounded || false;
-            document.getElementById('status-poisoned').checked = token.statuses?.poisoned || false;
-            document.getElementById('status-dead').checked = token.statuses?.dead || false;
+            
+            document.getElementById('ctx-aura1-r').value = token.aura1R || 0;
+            document.getElementById('ctx-aura1-c').value = token.aura1C || '#ff4757';
+            document.getElementById('ctx-aura2-r').value = token.aura2R || 0;
+            document.getElementById('ctx-aura2-c').value = token.aura2C || '#2ed573';
+            document.getElementById('ctx-aura3-r').value = token.aura3R || 0;
+            document.getElementById('ctx-aura3-c').value = token.aura3C || '#1e90ff';
         }
 
-        function applyContextChanges() {
-            if (selectedTokenId === null) return; const map = activeGame.maps[activeGame.currentMapIdx]; const t = map.tokens[selectedTokenId]; if (!t) return;
-            t.hpVal = parseInt(document.getElementById('ctx-hp-val').value) || 0;
-            t.hpMax = parseInt(document.getElementById('ctx-hp-max').value) || 0;
-            if(!t.statuses) t.statuses = {};
-            t.statuses.wounded = document.getElementById('status-wounded').checked;
-            t.statuses.poisoned = document.getElementById('status-poisoned').checked;
-            t.statuses.dead = document.getElementById('status-dead').checked;
-            drawTokensLayer(); syncActiveGameStorage();
-        }
-
-        document.getElementById('ctx-delete-item').addEventListener('click', () => {
-            if (selectedTokenId === null) return; const map = activeGame.maps[activeGame.currentMapIdx];
-            map.tokens.splice(selectedTokenId, 1); selectedTokenId = null; drawTokensLayer(); updateVisibility(); syncActiveGameStorage();
-        });
-
-        // Логика Дайсомета и Чата
-        document.querySelectorAll('.dice-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const faces = parseInt(btn.dataset.dice); const res = Math.floor(Math.random() * faces) + 1;
-                sendChatMessage(userName, `Бросок D${faces}: 🎲 **${res}**`, false);
+        document.getElementById('ctx-save-btn').onclick = function() {
+            if (!selectedTokenId) return;
+            mapTokensRef.child(selectedTokenId).update({
+                hpVal: parseInt(document.getElementById('ctx-hp-val').value) || 0,
+                hpMax: parseInt(document.getElementById('ctx-hp-max').value) || 0,
+                aura1R: parseInt(document.getElementById('ctx-aura1-r').value) || 0,
+                aura1C: document.getElementById('ctx-aura1-c').value,
+                aura2R: parseInt(document.getElementById('ctx-aura2-r').value) || 0,
+                aura2C: document.getElementById('ctx-aura2-c').value,
+                aura3R: parseInt(document.getElementById('ctx-aura3-r').value) || 0,
+                aura3C: document.getElementById('ctx-aura3-c').value
             });
+            contextMenu.style.display = 'none';
+        };
+
+        document.getElementById('ctx-delete-item').onclick = function() {
+            if (selectedTokenId) mapTokensRef.child(selectedTokenId).remove();
+            contextMenu.style.display = 'none';
+        };
+
+        // Кубы и Чат
+        document.querySelectorAll('.d-btn').forEach(b => {
+            b.onclick = () => {
+                const d = parseInt(b.dataset.dice); const r = Math.floor(Math.random() * d) + 1;
+                database.ref(`sessions/${roomId}/chat`).push({ sender: userName, text: `Бросок D${d}: 🎲 <strong>${r}</strong>` });
+            };
         });
-
-        document.getElementById('btn-send-chat').addEventListener('click', processChatSubmit);
-        document.getElementById('chat-input').addEventListener('keydown', (e) => { if(e.key === 'Enter') processChatSubmit(); });
-
-        function processChatSubmit() {
-            const input = document.getElementById('chat-input'); const val = input.value.trim(); if (!val) return;
-            if (val.startsWith('/r ')) {
-                const formula = val.substring(3); // Упрощенный парсер кубов
-                const match = formula.match(/^(\d+)?[dd](\d+)([\+\-]\d+)?$/i);
-                if (match) {
-                    const count = parseInt(match[1]) || 1; const faces = parseInt(match[2]); const mod = parseInt(match[3]) || 0;
-                    let sum = 0; for(let i=0; i<count; i++) sum += Math.floor(Math.random()*faces)+1; sum += mod;
-                    sendChatMessage(userName, `Бросает ${formula}: Результат = **${sum}**`, false);
-                } else { sendChatMessage('Система', `Неверный формат формулы кубов`, true); }
-            } else { sendChatMessage(userName, val, false); }
-            input.value = '';
-        }
-
-        function sendChatMessage(sender, text, sysFlag) {
-            database.ref(`sessions/${roomId}/chat`).push({ sender: sender, text: text, system: sysFlag, time: new Date().toLocaleTimeString() });
-        }
-        function displayChatMessage(msg) {
-            const log = document.getElementById('chat-log'); const el = document.createElement('div');
-            el.className = `chat-msg ${msg.system ? 'system' : ''}`;
-            el.innerHTML = `<span class="time">${msg.time}</span><div class="sender">${msg.sender}</div><div class="msg-body">${msg.text}</div>`;
-            log.appendChild(el); log.scrollTop = log.scrollHeight;
-        }
+        const cInput = document.getElementById('chat-input');
+        cInput.onkeydown = function(e) {
+            if(e.key === 'Enter' && cInput.value.trim()) {
+                database.ref(`sessions/${roomId}/chat`).push({ sender: userName, text: cInput.value.trim() });
+                cInput.value = '';
+            }
+        };
     </script>
 </body>
 </html>
