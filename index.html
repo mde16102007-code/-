@@ -31,7 +31,7 @@
         .selection-box { position: absolute; border: 1px dashed #38bdf8; background: rgba(56, 189, 248, 0.15); pointer-events: none; z-index: 500; display: none; }
 
         /* ЛЕВАЯ БОКОВАЯ ПАНЕЛЬ */
-        .left-sidebar { position: absolute; left: 15px; top: 15px; bottom: 15px; width: 165px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; pointer-events: none; }
+        .left-sidebar { position: absolute; left: 15px; top: 15px; bottom: 15px; width: 175px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; pointer-events: none; }
         .sidebar-block { background: rgba(24, 24, 27, 0.96); border: 1px solid #3f3f46; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.8); }
         .sidebar-block h4 { margin: 0; color: #bfa15f; font-size: 12px; text-align: center; border-bottom: 1px solid #3f3f46; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
         .tools-grid { display: flex; flex-direction: column; gap: 4px; }
@@ -47,10 +47,12 @@
         .dice-container { display: flex; flex-direction: column; gap: 5px; }
         .dice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
         .dice-grid button { padding: 5px 0; text-align: center; justify-content: center; font-weight: bold; font-size: 11px; }
-        .dice-log { background: #18181b; border: 1px solid #3f3f46; overflow-y: auto; font-size: 11px; padding: 5px; border-radius: 4px; font-family: monospace; color: #a1a1aa; }
-        .dice-log p { margin: 3px 0; border-bottom: 1px solid #27272a; padding-bottom: 2px; line-height: 1.3; }
-        .crit-max { color: #22c55e; font-weight: bold; }
-        .crit-min { color: #ef4444; font-weight: bold; }
+        
+        /* УДОБНЫЙ КРУПНЫЙ ЛОГ */
+        .dice-log { background: #141416; border: 1px solid #3f3f46; overflow-y: auto; font-size: 14px; padding: 8px; border-radius: 4px; font-family: 'Segoe UI', sans-serif; color: #e4e4e7; }
+        .dice-log p { margin: 6px 0; border-bottom: 1px solid #27272a; padding-bottom: 5px; line-height: 1.4; }
+        .crit-max { color: #22c55e; font-weight: bold; background: rgba(34, 197, 94, 0.1); padding: 1px 3px; border-radius: 3px; }
+        .crit-min { color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 1px 3px; border-radius: 3px; }
 
         /* Игровое поле */
         #game-viewport { width: 100vw; height: 100vh; position: relative; background: #080808; overflow: hidden; }
@@ -202,7 +204,8 @@
             </select>
         </div>
 
-        <div class="panel-section">
+        <!-- ТОКЕНЫ ДОБАВЛЯЕТ ТОЛЬКО DM -->
+        <div class="panel-section dm-only">
             <input type="file" id="token-upload" accept="image/*" style="display:none;">
             <button style="background: #22c55e; color: black;" onclick="document.getElementById('token-upload').click()">+ Токен</button>
         </div>
@@ -218,6 +221,20 @@
                 <button id="btn-mode-ruler" onclick="setMode('ruler')">📏 Линейка</button>
                 <button id="btn-mode-darkness" class="dm-only" onclick="setMode('darkness')">⬛ Тьма</button>
                 <button id="btn-mode-wall" class="dm-only" onclick="setMode('wall')">🧱 Стена</button>
+            </div>
+            
+            <!-- ОПЦИИ ЛИНЕЙКИ / ШАБЛОНОВ -->
+            <div id="ruler-options" style="display:none; flex-direction:column; gap:4px; margin-top:5px; border-top:1px solid #3f3f46; padding-top:5px;">
+                <label style="font-size:11px; color:#bfa15f;">Шаблон АОЕ:</label>
+                <select id="ruler-shape" onchange="updateRulerShapeUI()">
+                    <option value="line">📏 Линия</option>
+                    <option value="sphere">🔮 Сфера (Радиус)</option>
+                    <option value="cone">📐 Конус (Сектор)</option>
+                </select>
+                <div id="ruler-angle-container" style="display:none; justify-content:space-between; align-items:center; margin-top:3px;">
+                    <label style="font-size:10px; color:#aaa;">Угол °:</label>
+                    <input type="number" id="ruler-angle" value="60" style="width:55px; padding:2px;">
+                </div>
             </div>
         </div>
 
@@ -483,7 +500,7 @@
                 } else {
                     const mapChanged = fresh.playerMapIdx !== activeGame.currentMapIdx;
                     activeGame = fresh;
-                    activeGame.currentMapIdx = fresh.playerMapIdx || 0; // Жёсткое следование за Мастером
+                    activeGame.currentMapIdx = fresh.playerMapIdx || 0;
                     
                     if (mapChanged) {
                         renderMapSelectorUI(); switchMap(true);
@@ -528,7 +545,7 @@
 
             document.querySelectorAll('.darkness-zone, .wall-zone').forEach(el => el.remove());
             (fm.darknessZones || []).forEach(z => { const el = document.createElement('div'); el.className = 'darkness-zone'; el.style.left = z.left; el.style.top = z.top; el.style.width = z.width; el.style.height = z.height; mapContainer.appendChild(el); });
-            (fm.walls || []).forEach(w => { const el = document.createElement('div'); el.className = 'wall-zone'; el.style.left = w.left; el.style.top = w.top; el.style.width = w.width; el.style.height = w.height; mapContainer.appendChild(el); });
+            (fm.walls || []).forEach(w => { const el = document.createElement('div'); el.className = 'wall-zone'; el.style.left = w.left; el.style.top = w.top; w.style.width = w.width; el.style.width = w.width; el.style.height = w.height; mapContainer.appendChild(el); });
             updateVisibility();
         }
 
@@ -632,25 +649,38 @@
         function setMode(m) {
             currentMode = m; document.querySelectorAll('.tools-grid button').forEach(b => b.classList.remove('active'));
             const activeBtn = document.getElementById(`btn-mode-${m}`); if(activeBtn) activeBtn.classList.add('active');
-            viewport.className = `mode-${m}`; deselectAllTokens(); rCtx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height);
+            viewport.className = `mode-${m}`; deselectAllTokens(); resetRulerCanvas();
+            
+            const opts = document.getElementById('ruler-options');
+            if(opts) opts.style.display = (m === 'ruler') ? 'flex' : 'none';
         }
+        function updateRulerShapeUI() {
+            const s = document.getElementById('ruler-shape').value;
+            document.getElementById('ruler-angle-container').style.display = (s === 'cone') ? 'flex' : 'none';
+            resetRulerCanvas();
+        }
+        function resetRulerCanvas() { rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height); }
 
-        /* === ПРОФЕССИОНАЛЬНЫЙ ДВИЖОК ДИНАМИЧЕСКОГО СВЕТА И СТЕН === */
+        /* === БЕЗУПРЕЧНЫЙ АЛГОРИТМ ВИДИМОСТИ И РАСЧЕТА ТЕНЕЙ === */
         function updateVisibility() {
             const fog = document.getElementById('fog-canvas'); if (!fog) return;
             const fCtx = fog.getContext('2d'); const img = document.getElementById('game-map');
             const w = img.offsetWidth || 1200; const h = img.offsetHeight || 800;
-            fog.width = w; fog.height = h; fCtx.clearRect(0, 0, w, h);
+            if (fog.width !== w || fog.height !== h) { fog.width = w; fog.height = h; }
+            fCtx.clearRect(0, 0, w, h);
             
-            if (isHost) return; // Мастер видит всю карту без ограничений
+            if (isHost) return; // Мастер видит всё игровое поле в исходном качестве
 
-            // Маска для рендеринга полей зрения
+            // Создаем маску света (изначально всё черное и пустое)
             const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
-            const mCtx = mask.getContext('2d'); mCtx.fillStyle = '#000000'; mCtx.fillRect(0, 0, w, h);
+            const mCtx = mask.getContext('2d');
 
-            // Игроки видят только от лица токенов, которыми им разрешено управлять
+            // Ищем токены, которыми владеет текущий игрок
             const myTokens = Array.from(document.querySelectorAll('.token')).filter(t => t.dataset.playerOwned === 'true' && t.dataset.layer !== 'gm');
-            if (myTokens.length === 0) { fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h); return; }
+            if (myTokens.length === 0) { 
+                fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h); 
+                return; 
+            }
 
             const walls = Array.from(document.querySelectorAll('.wall-zone'));
             const darkZones = Array.from(document.querySelectorAll('.darkness-zone'));
@@ -658,45 +688,65 @@
             myTokens.forEach(t => {
                 const cx = (parseFloat(t.style.left) || 0) + (parseFloat(t.style.width) || 40) / 2;
                 const cy = (parseFloat(t.style.top) || 0) + (parseFloat(t.style.height) || 40) / 2;
-                const baseSight = 500; // Обычный радиус взгляда в освещенной комнате
+                const baseSight = 600; // Радиус обычного зрения
                 const dv = parseFloat(t.dataset.darkvision) || 0;
 
                 const tCanv = document.createElement('canvas'); tCanv.width = w; tCanv.height = h;
                 const tCtx = tCanv.getContext('2d');
 
-                // 1. Обычный свет вокруг персонажа
+                // 1. Обычное зрение вокруг персонажа
                 tCtx.fillStyle = '#ffffff'; tCtx.beginPath(); tCtx.arc(cx, cy, baseSight, 0, Math.PI * 2); tCtx.fill();
 
-                // 2. Накладываем Тьму (Обычный свет тухнет в зонах Тьмы)
-                tCtx.fillStyle = '#000000';
+                // 2. Исключаем Тьму из зоны обычного зрения
+                tCtx.globalCompositeOperation = 'destination-out';
                 darkZones.forEach(z => { tCtx.fillRect(parseFloat(z.style.left)||0, parseFloat(z.style.top)||0, parseFloat(z.style.width)||0, parseFloat(z.style.height)||0); });
 
-                // 3. Прорезаем Тьму Тёмным зрением персонажа (если оно есть)
-                if (dv > 0) { tCtx.fillStyle = '#ffffff'; tCtx.beginPath(); tCtx.arc(cx, cy, dv, 0, Math.PI * 2); tCtx.fill(); }
+                // 3. Возвращаем Тёмное Зрение поверх Тьмы
+                if (dv > 0) { 
+                    tCtx.globalCompositeOperation = 'source-over';
+                    tCtx.fillStyle = '#ffffff';
+                    tCtx.beginPath(); tCtx.arc(cx, cy, dv, 0, Math.PI * 2); tCtx.fill(); 
+                }
 
-                // 4. Расчет теней от Стен
-                tCtx.fillStyle = '#000000';
+                // 4. Трассировка и вырезание теней от Стен
+                tCtx.globalCompositeOperation = 'destination-out';
+                tCtx.fillStyle = '#ffffff';
                 walls.forEach(wall => {
                     const wl = parseFloat(wall.style.left) || 0; const wt = parseFloat(wall.style.top) || 0;
                     const ww = parseFloat(wall.style.width) || 0; const wh = parseFloat(wall.style.height) || 0;
-                    tCtx.fillRect(wl, wt, ww, wh); // Закрашиваем внутренность стены
+                    tCtx.fillRect(wl, wt, ww, wh); // Закрашиваем саму стену
 
-                    const corners = [{x: wl, y: wt}, {x: wl + ww, y: wt}, {x: wl + ww, y: wt + wh}, {x: wl, y: wt + wh}];
-                    for (let i = 0; i < 4; i++) {
-                        const p1 = corners[i]; const p2 = corners[(i + 1) % 4];
+                    const edges = [
+                        [{x: wl, y: wt}, {x: wl + ww, y: wt}],
+                        [{x: wl + ww, y: wt}, {x: wl + ww, y: wt + wh}],
+                        [{x: wl + ww, y: wt + wh}, {x: wl, y: wt + wh}],
+                        [{x: wl, y: wt + wh}, {x: wl, y: wt}]
+                    ];
+
+                    edges.forEach(edge => {
+                        const p1 = edge[0]; const p2 = edge[1];
                         const dx1 = p1.x - cx; const dy1 = p1.y - cy;
                         const dx2 = p2.x - cx; const dy2 = p2.y - cy;
+                        const dist1 = Math.sqrt(dx1*dx1 + dy1*dy1) || 1;
+                        const dist2 = Math.sqrt(dx2*dx2 + dy2*dy2) || 1;
 
-                        // Бросаем теневые полигоны в бесконечность
+                        // Бросаем бесконечную тень на 10,000px вглубь карты
+                        const proj1x = p1.x + (dx1 / dist1) * 10000;
+                        const proj1y = p1.y + (dy1 / dist1) * 10000;
+                        const proj2x = p2.x + (dx2 / dist2) * 10000;
+                        const proj2y = p2.y + (dy2 / dist2) * 10000;
+
                         tCtx.beginPath(); tCtx.moveTo(p1.x, p1.y); tCtx.lineTo(p2.x, p2.y);
-                        tCtx.lineTo(p2.x + dx2 * 150, p2.y + dy2 * 150); tCtx.lineTo(p1.x + dx1 * 150, p1.y + dy1 * 150);
+                        tCtx.lineTo(proj2x, proj2y); tCtx.lineTo(proj1x, proj1y);
                         tCtx.closePath(); tCtx.fill();
-                    }
+                    });
                 });
 
-                mCtx.save(); mCtx.globalCompositeOperation = 'screen'; mCtx.drawImage(tCanv, 0, 0); mCtx.restore();
+                // Накладываем видимость текущего токена в общую маску команды
+                mCtx.globalCompositeOperation = 'source-over'; mCtx.drawImage(tCanv, 0, 0);
             });
 
+            // Заливаем экран туманом и вырезаем видимые регионы
             fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h);
             fCtx.globalCompositeOperation = 'destination-out'; fCtx.drawImage(mask, 0, 0);
         }
@@ -705,7 +755,7 @@
             const file = e.target.files[0]; if (!file) return;
             const r = new FileReader(); r.onload = function(ev) {
                 let tl = isHost ? document.getElementById('active-layer-select').value : 'token';
-                createTokenDOM({ id: 't_'+Date.now(), name: "Токен", src: ev.target.result, left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 50, hp: 10, maxHp: 10, layer: tl, darkvision: 0, playerOwned: isHost?false:true, auras: [{rPx:0, c:'#ff0000'}] });
+                createTokenDOM({ id: 't_'+Date.now(), name: "Токен", src: ev.target.result, left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 50, hp: 10, maxHp: 10, layer: tl, darkvision: 0, playerOwned: false, auras: [{rPx:0, c:'#ff0000'}] });
                 syncActiveGameStorage();
             }; r.readAsDataURL(file);
         });
@@ -738,7 +788,7 @@
         }
 
         function openTokenContextMenu(t) {
-            if(!isHost && t.dataset.playerOwned !== 'true') return; // Игрок не может настраивать чужое
+            if(!isHost && t.dataset.playerOwned !== 'true') return;
             t.appendChild(tokenMenu); tokenMenu.style.display = 'flex';
             const au = t.dataset.auras ? JSON.parse(t.dataset.auras) : [{rPx:0, c:'#ff0000'}];
             
@@ -786,7 +836,6 @@
         function setupTokenEvents(t) {
             t.addEventListener('mousedown', function(e) {
                 if (currentMode !== 'select' || e.button !== 0) return;
-                // Блокировка движения чужих токенов для игроков
                 if (!isHost && t.dataset.playerOwned !== 'true') return;
                 
                 e.stopPropagation();
@@ -834,10 +883,34 @@
             } else if (isRuling) {
                 const curX = (e.clientX - rect.left) / cameraZoom; const curY = (e.clientY - rect.top) / cameraZoom;
                 rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height);
-                rCtx.beginPath(); rCtx.moveTo(startX, startY); rCtx.lineTo(curX, curY); rCtx.strokeStyle = '#bfa15f'; rCtx.lineWidth = 3 / cameraZoom; rCtx.stroke();
+                
+                const shape = document.getElementById('ruler-shape').value;
                 const distPx = Math.sqrt(Math.pow(curX - startX, 2) + Math.pow(curY - startY, 2));
                 const text = systemUnit === 'ft' ? `${fromPx(distPx)} ft` : `${Math.round(distPx)} px`;
-                rCtx.fillStyle = '#fff'; rCtx.font = `${16 / cameraZoom}px Arial`; rCtx.fillText(text, curX + 10, curY - 10);
+                
+                rCtx.strokeStyle = '#bfa15f'; rCtx.lineWidth = 3 / cameraZoom;
+                
+                if (shape === 'line') {
+                    rCtx.beginPath(); rCtx.moveTo(startX, startY); rCtx.lineTo(curX, curY); rCtx.stroke();
+                } else if (shape === 'sphere') {
+                    rCtx.beginPath(); rCtx.arc(startX, startY, distPx, 0, Math.PI * 2); rCtx.stroke();
+                    rCtx.fillStyle = 'rgba(191, 161, 95, 0.12)'; rCtx.fill();
+                    rCtx.beginPath(); rCtx.moveTo(startX, startY); rCtx.lineTo(curX, curY); rCtx.strokeStyle = 'rgba(191, 161, 95, 0.4)'; rCtx.stroke();
+                } else if (shape === 'cone') {
+                    const baseAngle = Math.atan2(curY - startY, curX - startX);
+                    const spreadDeg = parseFloat(document.getElementById('ruler-angle').value) || 60;
+                    const spreadRad = (spreadDeg * Math.PI) / 180;
+                    const startAngle = baseAngle - spreadRad / 2;
+                    const endAngle = baseAngle + spreadRad / 2;
+                    
+                    rCtx.beginPath(); rCtx.moveTo(startX, startY);
+                    rCtx.arc(startX, startY, distPx, startAngle, endAngle);
+                    rCtx.closePath(); rCtx.stroke();
+                    rCtx.fillStyle = 'rgba(191, 161, 95, 0.12)'; rCtx.fill();
+                }
+                
+                rCtx.fillStyle = '#fff'; rCtx.font = `bold ${15 / cameraZoom}px Arial`;
+                rCtx.fillText(text, curX + 10, curY - 10);
             }
         });
 
@@ -846,7 +919,7 @@
             isPanning = false; if (isSelecting) { isSelecting = false; selectionBox.style.display = 'none'; }
             if (isDrawingDarkness) { isDrawingDarkness = false; darkZone = null; syncActiveGameStorage(); updateVisibility(); }
             if (isDrawingWall) { isDrawingWall = false; wallZone = null; syncActiveGameStorage(); updateVisibility(); }
-            if (isRuling) { isRuling = false; rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height); }
+            if (isRuling) { isRuling = false; resetRulerCanvas(); }
         });
 
         viewport.addEventListener('wheel', function(e) { e.preventDefault(); cameraZoom = Math.min(Math.max(cameraZoom + (e.deltaY < 0 ? 0.07 : -0.07), 0.15), 4); document.getElementById('zoomRangeSide').value = cameraZoom; document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom * 100) + '%'; updateTransform(); }, { passive: false });
