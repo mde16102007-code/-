@@ -410,15 +410,21 @@
         // Функция быстрой очистки ненужных игр
         function autoDeleteGameOne() {
             let deletedCount = 0;
-            const targetGame = gamesDatabase.find(g => g.name === "1");
-            if (targetGame) {
+            // Ищем все вхождения мира с названием "1" в локальной памяти
+            const targets = gamesDatabase.filter(g => g.name === "1" || g.id === "1");
+            
+            targets.forEach(targetGame => {
+                // Полностью стираем из Firebase
                 db.ref('shared_games/' + targetGame.id).remove();
-                gamesDatabase = gamesDatabase.filter(g => g.name !== "1");
-                saveGamesToStorage();
                 deletedCount++;
-            }
+            });
+
             if (deletedCount > 0) {
-                if (selectedGameId && targetGame && selectedGameId === targetGame.id) {
+                // Фильтруем локальную базу
+                gamesDatabase = gamesDatabase.filter(g => g.name !== "1" && g.id !== "1");
+                saveGamesToStorage();
+                
+                if (selectedGameId && (selectedGameId === "1" || targets.some(t => t.id === selectedGameId))) {
                     selectedGameId = null;
                 }
                 renderGamesList();
@@ -515,10 +521,12 @@
                 select.innerHTML = ''; const val = sn.val();
                 if(val) {
                     Object.keys(val).forEach(k => { 
-                        const opt = document.createElement('option'); 
-                        opt.value = k; 
-                        opt.textContent = val[k].name; 
-                        select.appendChild(opt); 
+                        if (val[k].name !== "1" && k !== "1") { // Пропускаем удаленный мир на клиенте игроков
+                            const opt = document.createElement('option'); 
+                            opt.value = k; 
+                            opt.textContent = val[k].name; 
+                            select.appendChild(opt); 
+                        }
                     });
                 } else {
                     select.innerHTML = '<option>Доступных игр нет</option>';
@@ -751,7 +759,10 @@
                 
                 if(isHost) {
                     const fm = fresh.maps[fresh.currentMapIdx];
-                    if (fm && fm.tokens) syncTokensOnly(fm.tokens);
+                    // ИСПРАВЛЕНИЕ: Мастер теперь тоже аккуратно синхронизирует элементы, но без стирания разметки стен/тьмы
+                    if (fm) {
+                        if (fm.tokens) syncTokensOnly(fm.tokens);
+                    }
                 } else {
                     const mapChanged = fresh.playerMapIdx !== activeGame.currentMapIdx;
                     activeGame = fresh;
@@ -801,9 +812,17 @@
             scaleUnitFactor = fm.gridSize || 40;
             syncTokensOnly(fm.tokens || []);
 
-            document.querySelectorAll('.darkness-zone, .wall-zone').forEach(el => el.remove());
-            (fm.darknessZones || []).forEach(z => { const el = document.createElement('div'); el.className = 'darkness-zone'; el.style.left = z.left; el.style.top = z.top; el.style.width = z.width; el.style.height = z.height; mapContainer.appendChild(el); });
-            (fm.walls || []).forEach(w => { const el = document.createElement('div'); el.className = 'wall-zone'; el.style.left = w.left; el.style.top = w.top; el.style.width = w.width; el.style.height = w.height; mapContainer.appendChild(el); });
+            // ИСПРАВЛЕНИЕ: Стены и Тьма больше не пропадают случайным образом. Очищаем и создаем их заново только при расхождении в количестве
+            const curDarknessCount = document.querySelectorAll('.darkness-zone').length;
+            const curWallsCount = document.querySelectorAll('.wall-zone').length;
+            const serverDarkness = fm.darknessZones || [];
+            const serverWalls = fm.walls || [];
+
+            if (curDarknessCount !== serverDarkness.length || curWallsCount !== serverWalls.length) {
+                document.querySelectorAll('.darkness-zone, .wall-zone').forEach(el => el.remove());
+                serverDarkness.forEach(z => { const el = document.createElement('div'); el.className = 'darkness-zone'; el.style.left = z.left; el.style.top = z.top; el.style.width = z.width; el.style.height = z.height; mapContainer.appendChild(el); });
+                serverWalls.forEach(w => { const el = document.createElement('div'); el.className = 'wall-zone'; el.style.left = w.left; el.style.top = w.top; el.style.width = w.width; el.style.height = w.height; mapContainer.appendChild(el); });
+            }
             updateVisibility();
         }
 
