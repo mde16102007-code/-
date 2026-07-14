@@ -65,12 +65,12 @@
         #map-container { position: relative; display: inline-block; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
         #game-map { display: block; width: 1200px; height: 800px; pointer-events: none; background: #27272a; object-fit: fill; z-index: 1; }
         
-        /* Слои видимости (ИСПРАВЛЕНО: Тщательно упорядочены по z-index для исключения перекрытия) */
+        /* Слои видимости */
         #fog-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 25; mix-blend-mode: multiply; }
         #ruler-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 500; }
 
-        /* Зоны Тьмы и Стен - Слой 26 */
-        .darkness-zone, .wall-zone { position: absolute; box-sizing: border-box; z-index: 26; }
+        /* Зоны Тьмы и Стен - Слой 30 (выше тумана) */
+        .darkness-zone, .wall-zone { position: absolute; box-sizing: border-box; z-index: 30; }
         
         /* Отображение геометрии для DM */
         .dm-mode .darkness-zone { opacity: 0.35; border: 1px dashed #fff; background: #1a1a1a; pointer-events: none; }
@@ -103,7 +103,7 @@
         .token.layer-gm { z-index: 30; opacity: 0.5; }
         .token.layer-gm img { filter: drop-shadow(0 0 6px #a855f7); }
 
-        /* Класс для активного перетаскивания (поднятие z-index на самый верх) */
+        /* Класс для активного перетаскивания */
         .token.active-drag { z-index: 99999 !important; }
 
         .player-mode .token.layer-gm { display: none !important; }
@@ -288,7 +288,7 @@
             </div>
         </div>
 
-        <!-- СПИСОК ИГРОКОВ (ИСПРАВЛЕНО: Добавлена кнопка "Пригласить" для генерации прямой ссылки) -->
+        <!-- СПИСОК ИГРОКОВ -->
         <div class="sidebar-block" id="players-sidebar-block">
             <h4 onclick="togglePlayersPanel()" style="cursor:pointer; margin:0; display:flex; justify-content:space-between; width:100%;">
                 <span>👥 Игроки (<span id="online-count">0</span>)</span>
@@ -404,31 +404,29 @@
             loadGamesFromStorage();
             loadDmAccountsFromStorage();
             autoDeleteGameOne();
-            checkUrlInvite(); // ИСПРАВЛЕНИЕ: Автоподключение к игре по прямой ссылке
+            checkUrlInvite();
         });
 
-        // Функция быстрой очистки ненужных игр
+        // Функция автоматического удаления старой игры "1" из облака и локального кэша
         function autoDeleteGameOne() {
             let deletedCount = 0;
-            // Ищем все вхождения мира с названием "1" в локальной памяти
             const targets = gamesDatabase.filter(g => g.name === "1" || g.id === "1");
             
             targets.forEach(targetGame => {
-                // Полностью стираем из Firebase
                 db.ref('shared_games/' + targetGame.id).remove();
                 deletedCount++;
             });
 
             if (deletedCount > 0) {
-                // Фильтруем локальную базу
                 gamesDatabase = gamesDatabase.filter(g => g.name !== "1" && g.id !== "1");
                 saveGamesToStorage();
-                
                 if (selectedGameId && (selectedGameId === "1" || targets.some(t => t.id === selectedGameId))) {
                     selectedGameId = null;
                 }
                 renderGamesList();
             }
+            // Также принудительно стираем прямую ветку "1" на сервере
+            db.ref('shared_games/1').remove();
         }
 
         function loadDmAccountsFromStorage() {
@@ -521,7 +519,7 @@
                 select.innerHTML = ''; const val = sn.val();
                 if(val) {
                     Object.keys(val).forEach(k => { 
-                        if (val[k].name !== "1" && k !== "1") { // Пропускаем удаленный мир на клиенте игроков
+                        if (val[k].name !== "1" && k !== "1") {
                             const opt = document.createElement('option'); 
                             opt.value = k; 
                             opt.textContent = val[k].name; 
@@ -573,7 +571,7 @@
             localNickname = document.getElementById('player-nickname').value.trim() || "Мастер DM";
             activeGame = gamesDatabase.find(x => x.id === selectedGameId); 
             initVTTTable(); startPlayerSync(); setupPresence();
-            document.getElementById('invite-btn').style.display = 'block'; // Показываем кнопку создания ссылки
+            document.getElementById('invite-btn').style.display = 'block';
         }
         
         function launchGamePlayer() {
@@ -585,7 +583,6 @@
             });
         }
 
-        // ИСПРАВЛЕНИЕ: Автоматический вход для друзей при переходе по сгенерированной ссылке
         function checkUrlInvite() {
             const urlParams = new URLSearchParams(window.location.search);
             const inviteGameId = urlParams.get('joinGame');
@@ -606,7 +603,6 @@
             }
         }
 
-        // ИСПРАВЛЕНИЕ: Функция создания персональной ссылки
         function copyInviteLink() {
             if (!activeGame) return;
             const link = `${window.location.origin}${window.location.pathname}?joinGame=${activeGame.id}&p=${activeGame.password}`;
@@ -759,9 +755,8 @@
                 
                 if(isHost) {
                     const fm = fresh.maps[fresh.currentMapIdx];
-                    // ИСПРАВЛЕНИЕ: Мастер теперь тоже аккуратно синхронизирует элементы, но без стирания разметки стен/тьмы
-                    if (fm) {
-                        if (fm.tokens) syncTokensOnly(fm.tokens);
+                    if (fm && fm.tokens) {
+                        syncTokensOnly(fm.tokens);
                     }
                 } else {
                     const mapChanged = fresh.playerMapIdx !== activeGame.currentMapIdx;
@@ -812,7 +807,7 @@
             scaleUnitFactor = fm.gridSize || 40;
             syncTokensOnly(fm.tokens || []);
 
-            // ИСПРАВЛЕНИЕ: Стены и Тьма больше не пропадают случайным образом. Очищаем и создаем их заново только при расхождении в количестве
+            // ИСПРАВЛЕНИЕ: Безопасная инициализация и отрисовка стен
             const curDarknessCount = document.querySelectorAll('.darkness-zone').length;
             const curWallsCount = document.querySelectorAll('.wall-zone').length;
             const serverDarkness = fm.darknessZones || [];
@@ -974,8 +969,7 @@
             if (fog.width !== w || fog.height !== h) { fog.width = w; fog.height = h; }
             fCtx.clearRect(0, 0, w, h);
             
-            // ИСПРАВЛЕНИЕ: Если вы Мастер (и НЕ в режиме игрока-спектатора), туман войны отключается, 
-            // но при этом не ломает отрисовку стен.
+            // Если вы Мастер и не смотрите как игрок — туман скрыт, но разметка стен остается
             if (isHost && !isSpectatingPlayer) return; 
 
             const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
@@ -1173,7 +1167,6 @@
 
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
                 if (copiedTokens.length > 0) {
-                    const r = mapContainer.getBoundingClientRect();
                     copiedTokens.forEach((tData, index) => {
                         const offset = index * 20; 
                         const pasteX = cursorOnMapX + offset;
