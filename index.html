@@ -853,9 +853,12 @@
                 cm.width = parseFloat(document.getElementById('game-map').style.width)||1200;
                 cm.height = parseFloat(document.getElementById('game-map').style.height)||800;
                 cm.gridSize = scaleUnitFactor;
-                db.ref('shared_games/' + activeGame.id).set(activeGame);
+                
+                // РЕШЕНИЕ ПРОБЛЕМЫ 2: Сохраняем только карту (/maps/), чтобы не затереть online_players
+                db.ref(`shared_games/${activeGame.id}/maps/${activeGame.currentMapIdx}`).set(cm);
+                db.ref(`shared_games/${activeGame.id}/playerMapIdx`).set(activeGame.playerMapIdx || 0);
             } else {
-                db.ref('shared_games/' + activeGame.id + '/maps/' + activeGame.currentMapIdx + '/tokens').set(arr);
+                db.ref(`shared_games/${activeGame.id}/maps/${activeGame.currentMapIdx}/tokens`).set(arr);
             }
             saveGamesToStorage();
         }
@@ -988,6 +991,7 @@
 
             const walls = Array.from(document.querySelectorAll('.wall-zone'));
             const darkZones = Array.from(document.querySelectorAll('.darkness-zone'));
+            const containerRect = mapContainer.getBoundingClientRect();
 
             myTokens.forEach(t => {
                 const cx = (parseFloat(t.style.left) || 0) + (parseFloat(t.style.width) || 40) / 2;
@@ -1001,8 +1005,16 @@
                 tCtx.fillStyle = '#ffffff'; tCtx.beginPath(); tCtx.arc(cx, cy, baseSight, 0, Math.PI * 2); tCtx.fill();
 
                 tCtx.globalCompositeOperation = 'destination-out';
-                // ИСПРАВЛЕНИЕ: Чтение координат через offset-свойства гарантирует получение валидных чисел Number без "px" и NaN
-                darkZones.forEach(z => { tCtx.fillRect(z.offsetLeft || 0, z.offsetTop || 0, z.offsetWidth || 0, z.offsetHeight || 0); });
+                
+                // РЕШЕНИЕ ПРОБЛЕМЫ 1: Чтение координат через getBoundingClientRect() работает безотказно при любой прозрачности стен (даже при opacity: 0)
+                darkZones.forEach(z => { 
+                    const r = z.getBoundingClientRect();
+                    const zl = (r.left - containerRect.left) / cameraZoom;
+                    const zt = (r.top - containerRect.top) / cameraZoom;
+                    const zw = r.width / cameraZoom;
+                    const zh = r.height / cameraZoom;
+                    tCtx.fillRect(zl, zt, zw, zh); 
+                });
 
                 if (dv > 0) { 
                     tCtx.globalCompositeOperation = 'source-over';
@@ -1013,9 +1025,12 @@
                 tCtx.globalCompositeOperation = 'destination-out';
                 tCtx.fillStyle = '#ffffff';
                 walls.forEach(wall => {
-                    // ИСПРАВЛЕНИЕ: Чтение координат стен через offset
-                    const wl = wall.offsetLeft || 0; const wt = wall.offsetTop || 0;
-                    const ww = wall.offsetWidth || 0; const wh = wall.offsetHeight || 0;
+                    const r = wall.getBoundingClientRect();
+                    const wl = (r.left - containerRect.left) / cameraZoom;
+                    const wt = (r.top - containerRect.top) / cameraZoom;
+                    const ww = r.width / cameraZoom;
+                    const wh = r.height / cameraZoom;
+                    
                     tCtx.fillRect(wl, wt, ww, wh);
 
                     const edges = [
@@ -1029,8 +1044,8 @@
                         const p1 = edge[0]; const p2 = edge[1];
                         const dx1 = p1.x - cx; const dy1 = p1.y - cy;
                         const dx2 = p2.x - cx; const dy2 = p2.y - cy;
-                        const dist1 = Math.sqrt(dx1*dx1 + dy1*dy1) || 1; // Защита от NaN / деления на 0
-                        const dist2 = Math.sqrt(dx2*dx2 + dy2*dy2) || 1; // Защита от NaN / деления на 0
+                        const dist1 = Math.sqrt(dx1*dx1 + dy1*dy1) || 1;
+                        const dist2 = Math.sqrt(dx2*dx2 + dy2*dy2) || 1;
 
                         const proj1x = p1.x + (dx1 / dist1) * 10000;
                         const proj1y = p1.y + (dy1 / dist1) * 10000;
@@ -1217,10 +1232,19 @@
 
         viewport.addEventListener('mousedown', function(e) {
             if (e.button !== 0) return; const rect = mapContainer.getBoundingClientRect();
+            
+            // Защита от случайной просадки при клике по уже созданной стене
+            if (e.target.classList.contains('darkness-zone') || e.target.classList.contains('wall-zone')) {
+                if (currentMode !== 'select' && currentMode !== 'pan') {
+                    e.stopPropagation();
+                    return; 
+                }
+            }
+
             if (currentMode === 'pan') { isPanning = true; startX = e.clientX; startY = e.clientY; startSurfX = surfaceX; startSurfY = surfaceY; }
             else if (currentMode === 'select' && e.target !== tokenMenu && !tokenMenu.contains(e.target)) { deselectAllTokens(); isSelecting = true; startX = e.clientX; startY = e.clientY; selectionBox.style.left = startX+'px'; selectionBox.style.top = startY+'px'; selectionBox.style.width = '0px'; selectionBox.style.height = '0px'; selectionBox.style.display = 'block'; }
-            else if (currentMode === 'darkness' && isHost) { if(e.target.classList.contains('darkness-zone')) { return; } isDrawingDarkness = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; darkZone = document.createElement('div'); darkZone.className = 'darkness-zone'; darkZone.style.left = startX + 'px'; darkZone.style.top = startY + 'px'; mapContainer.appendChild(darkZone); }
-            else if (currentMode === 'wall' && isHost) { if(e.target.classList.contains('wall-zone')) { return; } isDrawingWall = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; wallZone = document.createElement('div'); wallZone.className = 'wall-zone'; wallZone.style.left = startX + 'px'; wallZone.style.top = startY + 'px'; mapContainer.appendChild(wallZone); }
+            else if (currentMode === 'darkness' && isHost) { isDrawingDarkness = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; darkZone = document.createElement('div'); darkZone.className = 'darkness-zone'; darkZone.style.left = startX + 'px'; darkZone.style.top = startY + 'px'; mapContainer.appendChild(darkZone); }
+            else if (currentMode === 'wall' && isHost) { isDrawingWall = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; wallZone = document.createElement('div'); wallZone.className = 'wall-zone'; wallZone.style.left = startX + 'px'; wallZone.style.top = startY + 'px'; mapContainer.appendChild(wallZone); }
             else if (currentMode === 'ruler') { isRuling = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; }
         });
 
