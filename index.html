@@ -402,7 +402,30 @@
         window.addEventListener('load', () => {
             loadGamesFromStorage();
             loadDmAccountsFromStorage();
+            autoDeleteGameOne(); // Автоудаление игры "1" сразу при старте страницы
         });
+
+        // Функция мгновенного удаления игры "1"
+        function autoDeleteGameOne() {
+            let deletedCount = 0;
+            // Ищем игру с именем "1" в локальном хранилище
+            const targetGame = gamesDatabase.find(g => g.name === "1");
+            if (targetGame) {
+                // Удаляем из Firebase
+                db.ref('shared_games/' + targetGame.id).remove();
+                // Удаляем из локального массива
+                gamesDatabase = gamesDatabase.filter(g => g.name !== "1");
+                saveGamesToStorage();
+                deletedCount++;
+            }
+            if (deletedCount > 0) {
+                console.log("Система: игра '1' была мгновенно удалена при запуске.");
+                if (selectedGameId && targetGame && selectedGameId === targetGame.id) {
+                    selectedGameId = null;
+                }
+                renderGamesList();
+            }
+        }
 
         function loadDmAccountsFromStorage() {
             const data = localStorage.getItem('vtt_dm_accounts');
@@ -473,10 +496,8 @@
 
         function renderGamesList() {
             const container = document.getElementById('games-list-container'); container.innerHTML = '';
-            // Если DM имеет логин "223" — он видит вообще все существующие игры на устройстве
-            const visibleGames = (currentDmUser === '223') 
-                ? gamesDatabase 
-                : gamesDatabase.filter(g => !g.dmOwner || g.dmOwner === currentDmUser);
+            // Аккаунт 223 теперь обычный DM, видит только свои игры без сверхправ
+            const visibleGames = gamesDatabase.filter(g => !g.dmOwner || g.dmOwner === currentDmUser);
 
             visibleGames.forEach(g => {
                 const div = document.createElement('div');
@@ -485,22 +506,9 @@
                 div.onclick = () => { 
                     selectedGameId = g.id; 
                     renderGamesList(); 
-                    updateDeleteButtonState(g);
                 };
                 container.appendChild(div);
             });
-        }
-
-        function updateDeleteButtonState(game) {
-            const deleteBtn = document.getElementById('btn-delete-game-dashboard');
-            if (!deleteBtn) return;
-            
-            // Если игра называется "1" и текущий DM НЕ 223 — скрываем или отключаем кнопку
-            if (game && game.name === "1" && currentDmUser !== "223") {
-                deleteBtn.style.display = "none";
-            } else {
-                deleteBtn.style.display = "block";
-            }
         }
 
         function renderPlayerGameSelect() {
@@ -524,6 +532,7 @@
             if(isEditingMode) { const g = gamesDatabase.find(x => x.id === selectedGameId); g.name = name; g.password = pass; }
             else { const n = { id: 'g_'+Date.now(), dmOwner: currentDmUser, name: name, password: pass, maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 }], currentMapIdx: 0, playerMapIdx: 0 }; gamesDatabase.push(n); selectedGameId = n.id; }
             saveGamesToStorage(); switchLobbyStep('dm-dashboard');
+            autoDeleteGameOne();
         }
 
         function deleteGameClick() { 
@@ -531,14 +540,8 @@
                 const gameToDelete = gamesDatabase.find(x => x.id === selectedGameId);
                 if (!gameToDelete) return;
                 
-                // Строгая проверка: игра "1" удаляется только под логином '223'
-                if (gameToDelete.name === "1" && currentDmUser !== '223') {
-                    alert("Удаление игры '1' разрешено только для аккаунта 223!");
-                    return;
-                }
-
-                // Проверка прав: обычный создатель или супер-DM '223'
-                if (currentDmUser === '223' || gameToDelete.dmOwner === currentDmUser) {
+                // Простые правила без привилегий у 223
+                if (gameToDelete.dmOwner === currentDmUser) {
                     if (confirm(`Вы уверены, что хотите полностью удалить мир "${gameToDelete.name}"?`)) {
                         db.ref('shared_games/'+selectedGameId).remove(); 
                         gamesDatabase = gamesDatabase.filter(x => x.id !== selectedGameId); 
@@ -1001,7 +1004,8 @@
             const file = e.target.files[0]; if (!file) return;
             const r = new FileReader(); r.onload = function(ev) {
                 let tl = isHost ? document.getElementById('active-layer-select').value : 'token';
-                createTokenDOM({ id: 't_'+Date.now(), name: "Токен", src: ev.target.result, left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 50, hp: 10, maxHp: 10, layer: tl, darkvision: 0, owner: 'none', owners: [], auras: [{rPx:0, c:'#ff0000'}] });
+                // Размер по умолчанию уменьшен с 6 до 5 (из расчета toPx(5) = scaleUnitFactor = 40px)
+                createTokenDOM({ id: 't_'+Date.now(), name: "Токен", src: ev.target.result, left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 40, hp: 10, maxHp: 10, layer: tl, darkvision: 0, owner: 'none', owners: [], auras: [{rPx:0, c:'#ff0000'}] });
                 syncActiveGameStorage();
             }; r.readAsDataURL(file);
         });
@@ -1068,6 +1072,7 @@
                     try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
                 }
 
+                // Временный подъем высоты (active-drag) убран для возвращения оригинального z-index
                 let d = {
                     id: el.id, name: document.getElementById('ctx-name').value,
                     hp: parseInt(document.getElementById('ctx-hp').value)||0, maxHp: parseInt(document.getElementById('ctx-max-hp').value)||0,
@@ -1154,10 +1159,13 @@
                 if (!hasControl(t)) return;
                 
                 e.stopPropagation();
+                
+                // Обработка z-index при выделении:
+                // Временно запоминаем активный слой, а перетаскиваемому присваиваем наивысший приоритет
+                document.querySelectorAll('.token.active-drag').forEach(tok => tok.classList.remove('active-drag'));
+                
                 if (!selectedTokens.includes(t)) { deselectAllTokens(); t.classList.add('selected'); selectedTokens.push(t); }
                 isDraggingToken = true;
-                
-                // Делаем перетаскиваемый токен визуально самым верхним
                 t.classList.add('active-drag');
                 
                 const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
@@ -1170,8 +1178,9 @@
             if (e.button !== 0) return; const rect = mapContainer.getBoundingClientRect();
             if (currentMode === 'pan') { isPanning = true; startX = e.clientX; startY = e.clientY; startSurfX = surfaceX; startSurfY = surfaceY; }
             else if (currentMode === 'select' && e.target !== tokenMenu && !tokenMenu.contains(e.target)) { deselectAllTokens(); isSelecting = true; startX = e.clientX; startY = e.clientY; selectionBox.style.left = startX+'px'; selectionBox.style.top = startY+'px'; selectionBox.style.width = '0px'; selectionBox.style.height = '0px'; selectionBox.style.display = 'block'; }
-            else if (currentMode === 'darkness' && isHost) { if(e.target.classList.contains('darkness-zone')) { e.target.remove(); syncActiveGameStorage(); updateVisibility(); return; } isDrawingDarkness = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; darkZone = document.createElement('div'); darkZone.className = 'darkness-zone'; darkZone.style.left = startX + 'px'; darkZone.style.top = startY + 'px'; mapContainer.appendChild(darkZone); }
-            else if (currentMode === 'wall' && isHost) { if(e.target.classList.contains('wall-zone')) { e.target.remove(); syncActiveGameStorage(); updateVisibility(); return; } isDrawingWall = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; wallZone = document.createElement('div'); wallZone.className = 'wall-zone'; wallZone.style.left = startX + 'px'; wallZone.style.top = startY + 'px'; mapContainer.appendChild(wallZone); }
+            // ИСПРАВЛЕНИЕ: Клики по тьме и стенам больше НЕ приводят к их удалению (пропаданию) при нажатии на них.
+            else if (currentMode === 'darkness' && isHost) { if(e.target.classList.contains('darkness-zone')) { return; } isDrawingDarkness = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; darkZone = document.createElement('div'); darkZone.className = 'darkness-zone'; darkZone.style.left = startX + 'px'; darkZone.style.top = startY + 'px'; mapContainer.appendChild(darkZone); }
+            else if (currentMode === 'wall' && isHost) { if(e.target.classList.contains('wall-zone')) { return; } isDrawingWall = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; wallZone = document.createElement('div'); wallZone.className = 'wall-zone'; wallZone.style.left = startX + 'px'; wallZone.style.top = startY + 'px'; mapContainer.appendChild(wallZone); }
             else if (currentMode === 'ruler') { isRuling = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; }
         });
 
@@ -1241,7 +1250,7 @@
         document.addEventListener('mouseup', function() {
             if(isDraggingToken) { 
                 isDraggingToken = false; 
-                // Убираем временный класс z-index, чтобы вернуть токен на его слой
+                // ИСПРАВЛЕНИЕ ВЫСОТЫ: Возвращаем все перетаскиваемые токены на их строго заданный CSS слой (убираем класс active-drag)
                 document.querySelectorAll('.token.active-drag').forEach(t => t.classList.remove('active-drag'));
                 syncActiveGameStorage(); 
                 updateVisibility();
