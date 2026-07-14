@@ -49,10 +49,11 @@
         .dice-grid button { padding: 5px 0; text-align: center; justify-content: center; font-weight: bold; font-size: 11px; }
         
         /* КРУПНЫЙ ЛОГ */
-        .dice-log { background: #141416; border: 1px solid #3f3f46; overflow-y: auto; font-size: 14px; padding: 8px; border-radius: 4px; font-family: 'Segoe UI', sans-serif; color: #e4e4e7; }
+        .dice-log { background: #141416; border: 1px solid #3f3f46; overflow-y: auto; font-size: 13px; padding: 8px; border-radius: 4px; font-family: 'Segoe UI', sans-serif; color: #e4e4e7; }
         .dice-log p { margin: 6px 0; border-bottom: 1px solid #27272a; padding-bottom: 5px; line-height: 1.4; }
         .crit-max { color: #22c55e; font-weight: bold; background: rgba(34, 197, 94, 0.1); padding: 1px 3px; border-radius: 3px; }
         .crit-min { color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 1px 3px; border-radius: 3px; }
+        .dm-tag { background: #bfa15f; color: #121212; font-weight: bold; padding: 1px 4px; border-radius: 3px; font-size: 10px; margin-right: 4px; display: inline-block; }
 
         /* Панель Игроков (Справа снизу) */
         .player-status-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #e4e4e7; padding: 2px 0; }
@@ -68,13 +69,18 @@
         #fog-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 25; mix-blend-mode: multiply; }
         #ruler-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 500; }
 
-        /* Зоны Тьмы и Стен */
+        /* Зоны Тьмы и Стен - Слой 26 */
         .darkness-zone, .wall-zone { position: absolute; box-sizing: border-box; z-index: 26; }
         
         /* Отображение геометрии для DM */
-        .dm-mode .darkness-zone { opacity: 0.35; border: 1px dashed #fff; background: #1a1a1a; pointer-events: auto; cursor: pointer; }
-        .dm-mode .wall-zone { border: 2px solid #ef4444; background: rgba(239, 68, 68, 0.15); pointer-events: auto; cursor: pointer; }
-        .dm-mode .darkness-zone:hover, .dm-mode .wall-zone:hover { background: rgba(239, 68, 68, 0.4); }
+        .dm-mode .darkness-zone { opacity: 0.35; border: 1px dashed #fff; background: #1a1a1a; pointer-events: none; }
+        .dm-mode .wall-zone { border: 2px solid #ef4444; background: rgba(239, 68, 68, 0.15); pointer-events: none; }
+        
+        /* Включение кликов по стенам и тьме только в соответствующих режимах */
+        .mode-darkness .darkness-zone { pointer-events: auto !important; cursor: pointer; }
+        .mode-darkness .darkness-zone:hover { background: rgba(239, 68, 68, 0.4); }
+        .mode-wall .wall-zone { pointer-events: auto !important; cursor: pointer; }
+        .mode-wall .wall-zone:hover { background: rgba(239, 68, 68, 0.4); }
         
         /* Полная невидимость для игроков */
         .player-mode .darkness-zone, .player-mode .wall-zone { opacity: 0 !important; pointer-events: none !important; }
@@ -109,21 +115,13 @@
         .token-hp-bar-container { width: 44px; height: 6px; background: #27272a; border: 1px solid #000; margin-top: 2px; border-radius: 2px; overflow: hidden; }
         .token-hp-bar { width: 100%; height: 100%; background: #22c55e; }
 
-        /* Контекстное меню (Roll20 Style) */
+        /* Контекстное меню */
         .token-context-menu { position: absolute; top: 105%; left: 50%; transform: translateX(-50%); background: rgba(24, 24, 27, 0.98); border: 1px solid #38bdf8; border-radius: 6px; padding: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); z-index: 2000; display: none; flex-direction: column; gap: 6px; width: 230px; cursor: default; }
         .token-context-menu label { font-size: 10px; color: #a1a1aa; margin-bottom: -2px; display: block;}
         .token-context-menu input, .token-context-menu select { background: #18181b; color: #fff; border: 1px solid #52525b; padding: 4px; border-radius: 3px; font-size: 12px; width: 100%; box-sizing: border-box; }
         .context-row { display: flex; gap: 5px; align-items: center; }
         .status-checkboxes { display: flex; gap: 10px; font-size: 11px; margin: 4px 0; }
         .status-checkboxes label { display: flex; align-items: center; gap: 3px; color: #fff; cursor: pointer; }
-
-        /* ROLL20 СТИЛЬ УПРАВЛЕНИЯ ПРАВАМИ */
-        .roll20-permissions-box { background: #141416; border: 1px solid #3f3f46; border-radius: 4px; padding: 6px; display: flex; flex-direction: column; gap: 4px; max-height: 110px; overflow-y: auto; }
-        .perm-btn { background: #27272a; border: 1px solid #52525b; color: #e4e4e7; border-radius: 3px; padding: 4px 6px; text-align: left; font-size: 11px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .perm-btn:hover { background: #3f3f46; }
-        .perm-btn.active { border-color: #22c55e; background: rgba(34, 197, 94, 0.15); }
-        .perm-btn.all-players-btn { border-color: #38bdf8; font-weight: bold; }
-        .perm-btn.all-players-btn.active { background: rgba(56, 189, 248, 0.2); }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -267,7 +265,7 @@
         </div>
 
         <div class="sidebar-block" style="flex: 1; min-height: 120px;">
-            <h4>📜 Лог кубов <span style="cursor:pointer; color:#ef4444; float:right;" onclick="clearDiceLog()">🧹</span></h4>
+            <h4>📜 Лог кубов <span style="cursor:pointer; color:#ef4444; float:right;" class="dm-only" onclick="clearDiceLog()">🧹</span></h4>
             <div class="dice-log" id="dice-log-box" style="height: calc(100% - 20px);"></div>
         </div>
     </div>
@@ -292,11 +290,15 @@
         </div>
     </div>
 
-    <!-- НАСТРОЙКИ ТОКЕНА (Roll20 Style) -->
+    <!-- НАСТРОЙКИ ТОКЕНА -->
     <div id="token-menu" class="token-context-menu" onmousedown="event.stopPropagation()">
-        <label style="color:#38bdf8; font-weight:bold; margin-bottom: 2px;">Контролируется (Controlled by):</label>
-        <div class="roll20-permissions-box" id="ctx-permissions-list"></div>
-        <hr style="border:0; border-top:1px solid #3f3f46; margin: 4px 0;">
+        <div id="permissions-container-block">
+            <label style="color:#38bdf8; font-weight:bold; margin-bottom: 2px;">Контролируется:</label>
+            <select id="ctx-owner-select" onchange="applyContextChanges()">
+                <!-- Динамически заполняется -->
+            </select>
+            <hr style="border:0; border-top:1px solid #3f3f46; margin: 4px 0;">
+        </div>
 
         <label>Имя токена</label>
         <input type="text" id="ctx-name" oninput="applyContextChanges()">
@@ -370,11 +372,13 @@
 
         let currentMode = 'select'; 
         let selectedTokens = []; 
+        let copiedTokens = []; // Буфер для копирования
         let isHost = false;
         let localNickname = "Игрок";
         let systemUnit = 'ft'; 
         let scaleUnitFactor = 40; 
         let currentOnlinePlayers = {}; 
+        let cursorOnMapX = 0, cursorOnMapY = 0; // Координаты мыши на карте
 
         const viewport = document.getElementById('game-viewport');
         const surface = document.getElementById('table-surface');
@@ -525,7 +529,24 @@
                 currentOnlinePlayers = snapshot.val() || {};
                 updatePlayersListUI(currentOnlinePlayers);
                 if (selectedTokens.length > 0) {
-                    renderPermissionsListDOM(selectedTokens[0]);
+                    renderPermissionsSelect(selectedTokens[0]);
+                }
+            });
+
+            // Инициализация лога кубов во Firebase для синхронизации бросков
+            db.ref(`shared_games/${activeGame.id}/dice_log`).limitToLast(40).on('value', (snapshot) => {
+                const logs = snapshot.val();
+                const logBox = document.getElementById('dice-log-box');
+                logBox.innerHTML = '';
+                if(logs) {
+                    // Сортировка по времени
+                    Object.keys(logs).sort().reverse().forEach(key => {
+                        const l = logs[key];
+                        const p = document.createElement('p');
+                        const dmTag = l.isDm ? `<span class="dm-tag">DM</span>` : '';
+                        p.innerHTML = `${dmTag}<strong>${l.user}</strong> rolled <strong>${l.text}</strong>: ${l.detail} = <strong>${l.result}</strong>`;
+                        logBox.appendChild(p);
+                    });
                 }
             });
         }
@@ -551,9 +572,17 @@
             });
         }
 
-        function renderPermissionsListDOM(tokenElement) {
-            const container = document.getElementById('ctx-permissions-list');
-            container.innerHTML = '';
+        // ПОЛНОЕ УПРАВЛЕНИЕ ПРАВАМИ ЧЕРЕЗ СЕЛЕКТ (СПИСОК)
+        function renderPermissionsSelect(tokenElement) {
+            const container = document.getElementById('permissions-container-block');
+            if (!isHost) {
+                container.style.display = 'none'; // Скрыто от игроков
+                return;
+            }
+            container.style.display = 'block';
+
+            const select = document.getElementById('ctx-owner-select');
+            select.innerHTML = '';
 
             let allowedOwners = [];
             try {
@@ -564,48 +593,30 @@
                 }
             }
 
-            const allBtn = document.createElement('div');
-            allBtn.className = `perm-btn all-players-btn ${allowedOwners.includes('all') ? 'active' : ''}`;
-            allBtn.innerHTML = `<span>🌐 Всем игрокам (All)</span><span>${allowedOwners.includes('all') ? '✓' : ''}</span>`;
-            allBtn.onclick = () => togglePermission(tokenElement, 'all');
-            container.appendChild(allBtn);
+            // Опция: Никто (только DM)
+            const optNone = document.createElement('option');
+            optNone.value = 'none';
+            optNone.textContent = 'Только DM';
+            if (allowedOwners.length === 0 || allowedOwners.includes('none')) optNone.selected = true;
+            select.appendChild(optNone);
 
+            // Опция: Все игроки
+            const optAll = document.createElement('option');
+            optAll.value = 'all';
+            optAll.textContent = '🌐 Все игроки';
+            if (allowedOwners.includes('all')) optAll.selected = true;
+            select.appendChild(optAll);
+
+            // Опции для каждого конкретного игрока
             Object.keys(currentOnlinePlayers).forEach(playerName => {
-                const isSelected = allowedOwners.includes(playerName);
-                const btn = document.createElement('div');
-                btn.className = `perm-btn ${isSelected ? 'active' : ''}`;
-                btn.innerHTML = `<span>👤 ${playerName}</span><span>${isSelected ? '✓' : ''}</span>`;
-                btn.onclick = () => togglePermission(tokenElement, playerName);
-                container.appendChild(btn);
+                const opt = document.createElement('option');
+                opt.value = playerName;
+                opt.textContent = `👤 Игрок: ${playerName}`;
+                if (allowedOwners.includes(playerName) && !allowedOwners.includes('all')) {
+                    opt.selected = true;
+                }
+                select.appendChild(opt);
             });
-        }
-
-        function togglePermission(tokenElement, name) {
-            let allowedOwners = [];
-            try { allowedOwners = JSON.parse(tokenElement.dataset.owners || "[]"); } catch(e) {}
-
-            if (name === 'all') {
-                if (allowedOwners.includes('all')) {
-                    allowedOwners = [];
-                } else {
-                    allowedOwners = ['all']; 
-                }
-            } else {
-                if (allowedOwners.includes('all')) {
-                    allowedOwners = allowedOwners.filter(x => x !== 'all');
-                }
-                if (allowedOwners.includes(name)) {
-                    allowedOwners = allowedOwners.filter(x => x !== name);
-                } else {
-                    allowedOwners.push(name);
-                }
-            }
-
-            tokenElement.dataset.owners = JSON.stringify(allowedOwners);
-            tokenElement.dataset.owner = allowedOwners.includes('all') ? 'all' : (allowedOwners[0] || 'none');
-
-            renderPermissionsListDOM(tokenElement);
-            syncActiveGameStorage();
         }
 
         function hasControl(el) {
@@ -767,14 +778,31 @@
         function changeZoomSlider(v) { cameraZoom = parseFloat(v); updateTransform(); document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom*100)+'%'; }
         function changeActiveLayer() { if(!isHost) return; mapContainer.className = `active-layer-${document.getElementById('active-layer-select').value}`; deselectAllTokens(); }
 
+        // Синхронизированный бросок кубиков
         function rollDice(f) {
             const c = parseInt(document.getElementById('dice-count').value)||1; const b = parseInt(document.getElementById('dice-bonus').value)||0;
             let s = 0; let str = [];
-            for(let i=0; i<c; i++) { let r = Math.floor(Math.random()*f)+1; s+=r; if(r===f) str.push(`<span class="crit-max">${r}</span>`); else if(r===1) str.push(`<span class="crit-min">${r}</span>`); else str.push(r); }
-            const p = document.createElement('p'); p.innerHTML = `<strong>${c}d${f}${b?(' + '+b):''}</strong>: [${str.join(', ')}] = <strong>${s+b}</strong>`;
-            const box = document.getElementById('dice-log-box'); box.insertBefore(p, box.firstChild);
+            for(let i=0; i<c; i++) { 
+                let r = Math.floor(Math.random()*f)+1; 
+                s+=r; 
+                if(r===f) str.push(`<span class="crit-max">${r}</span>`); 
+                else if(r===1) str.push(`<span class="crit-min">${r}</span>`); 
+                else str.push(r); 
+            }
+            
+            // Запись броска во Firebase для всех
+            const logRef = db.ref(`shared_games/${activeGame.id}/dice_log`).push();
+            logRef.set({
+                user: localNickname,
+                isDm: isHost,
+                text: `${c}d${f}${b?(' + '+b):''}`,
+                detail: `[${str.join(', ')}]`,
+                result: s + b,
+                time: firebase.database.ServerValue.TIMESTAMP
+            });
         }
-        function clearDiceLog() { document.getElementById('dice-log-box').innerHTML = ''; }
+        function clearDiceLog() { db.ref(`shared_games/${activeGame.id}/dice_log`).remove(); }
+        
         function updateUnitsUI() { systemUnit = document.getElementById('unit-system').value; }
         function toPx(v) { return systemUnit === 'ft' ? (v / 5) * scaleUnitFactor : v; }
         function fromPx(v) { return systemUnit === 'ft' ? Math.round((v / scaleUnitFactor) * 5) : Math.round(v); }
@@ -920,7 +948,7 @@
             t.appendChild(tokenMenu); tokenMenu.style.display = 'flex';
             const au = t.dataset.auras ? JSON.parse(t.dataset.auras) : [{rPx:0, c:'#ff0000'}];
             
-            renderPermissionsListDOM(t);
+            renderPermissionsSelect(t);
             
             document.getElementById('ctx-name').value = t.querySelector('.token-name').textContent;
             document.getElementById('ctx-hp').value = t.dataset.hp || 10; document.getElementById('ctx-max-hp').value = t.dataset.maxHp || 10;
@@ -938,14 +966,21 @@
             if (selectedTokens.length === 0) return;
             selectedTokens.forEach(el => {
                 let ownersList = [];
-                try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
+                if (isHost) {
+                    const selVal = document.getElementById('ctx-owner-select').value;
+                    if (selVal === 'none') ownersList = [];
+                    else if (selVal === 'all') ownersList = ['all'];
+                    else ownersList = [selVal];
+                } else {
+                    try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
+                }
 
                 let d = {
                     id: el.id, name: document.getElementById('ctx-name').value,
                     hp: parseInt(document.getElementById('ctx-hp').value)||0, maxHp: parseInt(document.getElementById('ctx-max-hp').value)||0,
                     sizePx: toPx(parseFloat(document.getElementById('ctx-size').value)||40),
                     darkvision: toPx(parseFloat(document.getElementById('ctx-darkvision').value)||0),
-                    owner: el.dataset.owner || 'none',
+                    owner: ownersList.includes('all') ? 'all' : (ownersList[0] || 'none'),
                     owners: ownersList,
                     isDead: document.getElementById('status-dead').checked, isPoisoned: document.getElementById('status-poisoned').checked, isStunned: document.getElementById('status-stunned').checked,
                     layer: isHost ? document.getElementById('ctx-layer').value : 'token',
@@ -959,7 +994,62 @@
         function deleteSelectedTokens() { selectedTokens.forEach(el => el.remove()); deselectAllTokens(); syncActiveGameStorage(); }
         function deselectAllTokens() { tokenMenu.style.display = 'none'; document.body.appendChild(tokenMenu); selectedTokens.forEach(t => t.classList.remove('selected')); selectedTokens = []; }
 
-        document.addEventListener('keydown', (e) => { if((e.key === 'Delete' || e.key === 'Backspace') && document.activeElement.tagName !== 'INPUT') deleteSelectedTokens(); });
+        // ОБРАБОТКАГОРЯЧИХ КЛАВИШ: DELETE / BACKSPACE / CTRL+C / CTRL+V
+        document.addEventListener('keydown', (e) => { 
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
+
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                deleteSelectedTokens(); 
+            }
+            
+            // Копирование (Ctrl + C)
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+                if (selectedTokens.length > 0) {
+                    copiedTokens = selectedTokens.map(el => {
+                        const au = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{rPx:0, c:'#ff0000'}];
+                        let ownersList = [];
+                        try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
+                        return {
+                            name: el.querySelector('.token-name').textContent,
+                            src: el.querySelector('img').src,
+                            sizePx: parseFloat(el.style.width),
+                            hp: parseInt(el.dataset.hp)||10,
+                            maxHp: parseInt(el.dataset.maxHp)||10,
+                            layer: el.dataset.layer||'token',
+                            owner: el.dataset.owner || 'none',
+                            owners: ownersList,
+                            isDead: !!el.querySelector('.status-dot.dead'),
+                            isPoisoned: !!el.querySelector('.status-dot.poisoned'),
+                            isStunned: !!el.querySelector('.status-dot.stunned'),
+                            auras: au,
+                            darkvision: parseFloat(el.dataset.darkvision)||0
+                        };
+                    });
+                }
+            }
+
+            // Вставка (Ctrl + V)
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+                if (copiedTokens.length > 0) {
+                    const rect = mapContainer.getBoundingClientRect();
+                    copiedTokens.forEach((tData, index) => {
+                        const offset = index * 20; 
+                        const pasteX = cursorOnMapX + offset;
+                        const pasteY = cursorOnMapY + offset;
+                        
+                        const newTokenData = {
+                            ...tData,
+                            id: 't_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                            left: pasteX,
+                            top: pasteY
+                        };
+                        createTokenDOM(newTokenData);
+                    });
+                    syncActiveGameStorage();
+                }
+            }
+        });
+
         function clearAllDarknessAndWalls() { if(isHost) { document.querySelectorAll('.darkness-zone, .wall-zone').forEach(z => z.remove()); syncActiveGameStorage(); updateVisibility(); } }
 
         let isDraggingToken = false, isPanning = false, isSelecting = false, isDrawingDarkness = false, isDrawingWall = false, isRuling = false;
@@ -990,6 +1080,11 @@
 
         document.addEventListener('mousemove', function(e) {
             const rect = mapContainer.getBoundingClientRect();
+            
+            // Сохранение координат мыши относительно холста карты с учетом зума
+            cursorOnMapX = (e.clientX - rect.left) / cameraZoom;
+            cursorOnMapY = (e.clientY - rect.top) / cameraZoom;
+
             if (isDraggingToken && currentMode === 'select') {
                 const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
                 dragOffsets.forEach(pos => { pos.el.style.left = (mX - pos.ox) + 'px'; pos.el.style.top = (mY - pos.oy) + 'px'; });
