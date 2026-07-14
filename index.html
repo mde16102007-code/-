@@ -103,6 +103,9 @@
         .token.layer-gm { z-index: 30; opacity: 0.5; }
         .token.layer-gm img { filter: drop-shadow(0 0 6px #a855f7); }
 
+        /* Класс для активного перетаскивания (поднятие z-index на самый верх) */
+        .token.active-drag { z-index: 99999 !important; }
+
         .player-mode .token.layer-gm { display: none !important; }
         .player-mode .dm-only { display: none !important; }
 
@@ -151,7 +154,7 @@
             <button onclick="openGameEditor(false)" style="background:#0f766e;">+ Создать мир</button>
             <div style="display:flex; gap: 5px;">
                 <button onclick="openGameEditor(true)" style="background:#374151;">Изменить</button>
-                <button onclick="deleteGameClick()" style="background:#7f1d1d;">Удалить</button>
+                <button id="btn-delete-game-dashboard" onclick="deleteGameClick()" style="background:#7f1d1d;">Удалить</button>
             </div>
             <hr style="border:0; border-top:1px solid #3f3f46; margin: 5px 0;">
             <button onclick="launchGameDM()" style="background:#bfa15f; color:#121212; font-size:16px; padding:12px;">Запустить Стол 🚀</button>
@@ -479,9 +482,25 @@
                 const div = document.createElement('div');
                 div.className = `game-item ${selectedGameId === g.id ? 'selected' : ''}`;
                 div.innerHTML = `<strong>${g.name}</strong> <span style="font-size:10px; opacity:0.6;">(DM: ${g.dmOwner || 'нет'})</span>`;
-                div.onclick = () => { selectedGameId = g.id; renderGamesList(); };
+                div.onclick = () => { 
+                    selectedGameId = g.id; 
+                    renderGamesList(); 
+                    updateDeleteButtonState(g);
+                };
                 container.appendChild(div);
             });
+        }
+
+        function updateDeleteButtonState(game) {
+            const deleteBtn = document.getElementById('btn-delete-game-dashboard');
+            if (!deleteBtn) return;
+            
+            // Если игра называется "1" и текущий DM НЕ 223 — скрываем или отключаем кнопку
+            if (game && game.name === "1" && currentDmUser !== "223") {
+                deleteBtn.style.display = "none";
+            } else {
+                deleteBtn.style.display = "block";
+            }
         }
 
         function renderPlayerGameSelect() {
@@ -512,6 +531,12 @@
                 const gameToDelete = gamesDatabase.find(x => x.id === selectedGameId);
                 if (!gameToDelete) return;
                 
+                // Строгая проверка: игра "1" удаляется только под логином '223'
+                if (gameToDelete.name === "1" && currentDmUser !== '223') {
+                    alert("Удаление игры '1' разрешено только для аккаунта 223!");
+                    return;
+                }
+
                 // Проверка прав: обычный создатель или супер-DM '223'
                 if (currentDmUser === '223' || gameToDelete.dmOwner === currentDmUser) {
                     if (confirm(`Вы уверены, что хотите полностью удалить мир "${gameToDelete.name}"?`)) {
@@ -1062,7 +1087,7 @@
         function deleteSelectedTokens() { selectedTokens.forEach(el => el.remove()); deselectAllTokens(); syncActiveGameStorage(); }
         function deselectAllTokens() { tokenMenu.style.display = 'none'; document.body.appendChild(tokenMenu); selectedTokens.forEach(t => t.classList.remove('selected')); selectedTokens = []; }
 
-        // ОБРАБОТКАГОРЯЧИХ КЛАВИШ: DELETE / BACKSPACE / CTRL+C / CTRL+V
+        // ОБРАБОТКА ГОРЯЧИХ КЛАВИШ: DELETE / BACKSPACE / CTRL+C / CTRL+V
         document.addEventListener('keydown', (e) => { 
             if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
 
@@ -1099,7 +1124,7 @@
             // Вставка (Ctrl + V)
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
                 if (copiedTokens.length > 0) {
-                    const rect = mapContainer.getBoundingClientRect();
+                    const r = mapContainer.getBoundingClientRect();
                     copiedTokens.forEach((tData, index) => {
                         const offset = index * 20; 
                         const pasteX = cursorOnMapX + offset;
@@ -1131,6 +1156,10 @@
                 e.stopPropagation();
                 if (!selectedTokens.includes(t)) { deselectAllTokens(); t.classList.add('selected'); selectedTokens.push(t); }
                 isDraggingToken = true;
+                
+                // Делаем перетаскиваемый токен визуально самым верхним
+                t.classList.add('active-drag');
+                
                 const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
                 dragOffsets = selectedTokens.map(tok => ({ el: tok, ox: mX - parseFloat(tok.style.left), oy: mY - parseFloat(tok.style.top) }));
             });
@@ -1156,7 +1185,7 @@
             if (isDraggingToken && currentMode === 'select') {
                 const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
                 dragOffsets.forEach(pos => { pos.el.style.left = (mX - pos.ox) + 'px'; pos.el.style.top = (mY - pos.oy) + 'px'; });
-                updateVisibility();
+                updateVisibility(); // Вызов перерисовки видимости прямо при движении мыши токена
             } else if (isPanning) {
                 surfaceX = startSurfX + (e.clientX - startX); surfaceY = startSurfY + (e.clientY - startY); updateTransform();
             } else if (isSelecting) {
@@ -1210,7 +1239,13 @@
         });
 
         document.addEventListener('mouseup', function() {
-            if(isDraggingToken) { isDraggingToken = false; syncActiveGameStorage(); }
+            if(isDraggingToken) { 
+                isDraggingToken = false; 
+                // Убираем временный класс z-index, чтобы вернуть токен на его слой
+                document.querySelectorAll('.token.active-drag').forEach(t => t.classList.remove('active-drag'));
+                syncActiveGameStorage(); 
+                updateVisibility();
+            }
             isPanning = false; if (isSelecting) { isSelecting = false; selectionBox.style.display = 'none'; }
             if (isDrawingDarkness) { isDrawingDarkness = false; darkZone = null; syncActiveGameStorage(); updateVisibility(); }
             if (isDrawingWall) { isDrawingWall = false; wallZone = null; syncActiveGameStorage(); updateVisibility(); }
