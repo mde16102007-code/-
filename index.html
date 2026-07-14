@@ -2,230 +2,351 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Ультимативная VTT Комната</title>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Архивный НРИ Стол — Профессиональный движок видимости</title>
     <style>
-        :root { --bg-dark: #0f1015; --panel-bg: #161822; --border-color: #242736; --accent: #ff4757; --text-main: #e2e8f0; --text-muted: #718096; }
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-        body { background: var(--bg-dark); color: var(--text-main); font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        /* === БАЗА И ИНТЕРФЕЙС === */
+        body { margin: 0; padding: 0; background-color: #121212; font-family: 'Segoe UI', Arial, sans-serif; color: #e0e0e0; overflow: hidden; user-select: none; }
         
-        #auth-screen { position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(10,11,15,0.95); z-index:9999; display:flex; justify-content:center; align-items:center; backdrop-filter: blur(10px); }
-        .auth-card { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 30px; width: 100%; max-width: 460px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center; }
-        .form-group { text-align: left; margin-bottom: 14px; }
-        .form-group label { display: block; font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
-        .form-control { width: 100%; background: #1e2230; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 14px; color: #fff; font-size: 14px; }
-        .btn { width: 100%; padding: 12px; border-radius: 6px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; }
-        .btn-primary { background: var(--accent); color: #fff; }
-        .btn-secondary { background: #242736; color: var(--text-main); margin-top: 10px; }
-        
-        /* Список комнат Мастера */
-        .rooms-list { margin-top: 10px; text-align: left; max-height: 180px; overflow-y: auto; background: #11131a; border-radius: 6px; padding: 6px; border: 1px solid var(--border-color); }
-        .room-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #1e2230; font-size: 13px; }
-        .room-item:last-child { border-bottom: none; }
-        .room-info { cursor: pointer; flex: 1; font-weight: 500; }
-        .room-info:hover { color: var(--accent); }
-        .room-actions { display: flex; gap: 4px; }
-        .btn-mini { padding: 4px 8px; font-size: 11px; background: #242736; border-radius: 4px; border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer; }
-        .btn-mini:hover { background: #2e3347; }
-        .btn-delete { background: #3a1e1e; border-color: #5c2727; color: #ff4757; }
-        .btn-delete:hover { background: #ff4757; color: #fff; }
+        /* Лобби */
+        #lobby-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(18, 18, 18, 0.98); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .lobby-box { background: #18181b; padding: 25px; border-radius: 12px; border: 1px solid #bfa15f; box-shadow: 0 10px 40px rgba(0,0,0,0.8); width: 360px; display: flex; flex-direction: column; gap: 12px; }
+        .lobby-box h2 { text-align: center; color: #bfa15f; margin: 0 0 5px 0; font-size: 20px; }
+        .lobby-box input, .lobby-box select { background: #27272a; border: 1px solid #52525b; color: #fff; padding: 10px; border-radius: 6px; font-size: 14px; width: 100%; box-sizing: border-box; }
+        .lobby-box button { background: #bfa15f; color: #121212; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.2s; width: 100%;}
+        .lobby-box button:hover { background: #d4af37; }
+        .game-item { background: #27272a; border: 1px solid #3f3f46; padding: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; cursor: pointer;}
+        .game-item.selected { border-color: #bfa15f; background: #3f3f46; }
+        .games-list { max-height: 180px; overflow-y: auto; background: #111; padding: 5px; border-radius: 6px; border: 1px solid #27272a;}
 
-        #app-header { height: 50px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 10; }
-        #workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
+        /* Верхняя Панель */
+        .top-panel { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(24, 24, 27, 0.96); padding: 8px 15px; border-radius: 8px; border: 1px solid #3f3f46; display: flex; gap: 10px; align-items: center; z-index: 1000; box-shadow: 0 4px 25px rgba(0,0,0,0.7); }
+        .panel-section { display: flex; align-items: center; gap: 5px; border-right: 1px solid #3f3f46; padding-right: 8px; }
+        .panel-section:last-child { border-right: none; padding-right: 0; }
         
-        #toolbar { position: absolute; left: 20px; top: 20px; background: var(--panel-bg); border: 1px solid var(--border-color); padding: 6px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 100; }
-        .tool-btn { width: 38px; height: 38px; border-radius: 6px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 16px; }
-        .tool-btn.active { background: var(--accent); color: #fff; }
+        select, button, input[type="number"] { background: #27272a; color: #f4f4f5; border: 1px solid #52525b; padding: 5px 7px; border-radius: 4px; cursor: pointer; font-size: 12px; outline: none; }
+        select:hover, button:hover { background: #3f3f46; }
+        button.active { background: #bfa15f; color: #121212; border-color: #d4af37; font-weight: bold; }
         
-        #board-wrapper { flex: 1; position: relative; background: #0b0c10; overflow: hidden; cursor: grab; }
-        #board-wrapper:active { cursor: grabbing; }
-        #game-board { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
-        #game-map { display: block; background: #14161f; pointer-events: none; }
-        canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
-        #lighting-canvas { z-index: 2; mix-blend-mode: multiply; }
-        #ruler-canvas { z-index: 45; }
-        
-        #sidebar { width: 320px; background: var(--panel-bg); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 5; }
-        .tabs-header { display: flex; border-bottom: 1px solid var(--border-color); background: #12141d; }
-        .tab-btn { flex: 1; padding: 14px 0; text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); cursor: pointer; }
-        .tab-btn.active { color: var(--accent); background: var(--panel-bg); }
-        .tab-content { flex: 1; display: none; padding: 15px; overflow-y: auto; }
-        .tab-content.active { display: flex; flex-direction: column; gap: 12px; }
-        
-        .token { position: absolute; border-radius: 50%; cursor: move; z-index: 10; border: 2px solid #fff; background-size: cover; background-position: center; }
-        .token.selected { border-color: var(--accent); box-shadow: 0 0 15px var(--accent); z-index: 40; }
-        .token-label { position: absolute; bottom: -22px; background: rgba(10,11,15,0.85); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px; white-space: nowrap; left: 50%; transform: translateX(-50%); border: 1px solid var(--border-color); }
-        .token-hp-bar { position: absolute; top: -10px; left: 0; width: 100%; height: 5px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; }
-        .token-hp-fill { height: 100%; width: 100%; transition: background 0.3s, width 0.3s; }
-        
-        #chat-log { flex: 1; background: #11131a; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; overflow-y: auto; font-size: 13px; display: flex; flex-direction: column; gap: 6px; min-height: 180px; }
-        .chat-msg { background: #181b26; padding: 6px 10px; border-radius: 6px; border-left: 3px solid var(--accent); }
-        .dice-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-        
-        #context-menu { position: fixed; background: var(--panel-bg); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; z-index: 1000; display: none; width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        
-        #spectate-btn { position: fixed; right: 340px; bottom: 20px; z-index: 999; background: #1e2230; border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 16px; border-radius: 30px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.3); transition: 0.2s; }
-        #spectate-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .selection-box { position: absolute; border: 1px dashed #38bdf8; background: rgba(56, 189, 248, 0.15); pointer-events: none; z-index: 500; display: none; }
 
-        .hidden { display: none !important; }
+        /* ЛЕВАЯ БОКОВАЯ ПАНЕЛЬ */
+        .left-sidebar { position: absolute; left: 15px; top: 15px; bottom: 15px; width: 175px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; pointer-events: none; }
+        .sidebar-block { background: rgba(24, 24, 27, 0.96); border: 1px solid #3f3f46; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.8); }
+        .sidebar-block h4 { margin: 0; color: #bfa15f; font-size: 12px; text-align: center; border-bottom: 1px solid #3f3f46; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .tools-grid { display: flex; flex-direction: column; gap: 4px; }
+        .tools-grid button { width: 100%; text-align: left; padding: 6px 10px; }
+
+        /* ПРАВАЯ БОКОВАЯ ПАНЕЛЬ */
+        .right-sidebar { position: absolute; right: 15px; top: 15px; bottom: 15px; width: 175px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; pointer-events: none; }
+        .right-sidebar .sidebar-block { pointer-events: auto; }
+        .zoom-block-content { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 5px 0; }
+        .zoom-slider-horiz { width: 100%; cursor: pointer; margin: 0; }
+        
+        /* Лог кубов */
+        .dice-container { display: flex; flex-direction: column; gap: 5px; }
+        .dice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+        .dice-grid button { padding: 5px 0; text-align: center; justify-content: center; font-weight: bold; font-size: 11px; }
+        
+        /* КРУПНЫЙ ЛОГ */
+        .dice-log { background: #141416; border: 1px solid #3f3f46; overflow-y: auto; font-size: 14px; padding: 8px; border-radius: 4px; font-family: 'Segoe UI', sans-serif; color: #e4e4e7; }
+        .dice-log p { margin: 6px 0; border-bottom: 1px solid #27272a; padding-bottom: 5px; line-height: 1.4; }
+        .crit-max { color: #22c55e; font-weight: bold; background: rgba(34, 197, 94, 0.1); padding: 1px 3px; border-radius: 3px; }
+        .crit-min { color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 1px 3px; border-radius: 3px; }
+
+        /* Панель Игроков (Справа снизу) */
+        .player-status-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #e4e4e7; padding: 2px 0; }
+        .player-status-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 6px #22c55e; }
+
+        /* Игровое поле */
+        #game-viewport { width: 100vw; height: 100vh; position: relative; background: #080808; overflow: hidden; }
+        #table-surface { position: absolute; top: 0; left: 0; transform-origin: top left; will-change: transform; }
+        #map-container { position: relative; display: inline-block; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
+        #game-map { display: block; width: 1200px; height: 800px; pointer-events: none; background: #27272a; object-fit: fill; }
+        
+        /* Слои видимости */
+        #fog-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 25; mix-blend-mode: multiply; }
+        #ruler-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 500; }
+
+        /* Зоны Тьмы и Стен */
+        .darkness-zone, .wall-zone { position: absolute; box-sizing: border-box; z-index: 26; }
+        
+        /* Отображение геометрии для DM */
+        .dm-mode .darkness-zone { opacity: 0.35; border: 1px dashed #fff; background: #1a1a1a; pointer-events: auto; cursor: pointer; }
+        .dm-mode .wall-zone { border: 2px solid #ef4444; background: rgba(239, 68, 68, 0.15); pointer-events: auto; cursor: pointer; }
+        .dm-mode .darkness-zone:hover, .dm-mode .wall-zone:hover { background: rgba(239, 68, 68, 0.4); }
+        
+        /* Полная невидимость для игроков */
+        .player-mode .darkness-zone, .player-mode .wall-zone { opacity: 0 !important; pointer-events: none !important; }
+
+        /* === ТОКЕНЫ И СТАТУСЫ === */
+        .token { position: absolute; touch-action: none; box-sizing: border-box; }
+        .token img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block; position: relative; z-index: 3; }
+        .token.selected img { filter: drop-shadow(0 0 10px #38bdf8) drop-shadow(0 0 2px #38bdf8); }
+
+        .status-effects { position: absolute; top: 2px; right: 2px; display: flex; flex-direction: column; gap: 2px; z-index: 4; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #000; }
+        .status-dot.dead { background: #ef4444; } 
+        .status-dot.poisoned { background: #22c55e; } 
+        .status-dot.stunned { background: #eab308; } 
+
+        .aura { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border-radius: 50%; opacity: 0.25; pointer-events: none; z-index: 1; }
+        
+        .token.layer-item { z-index: 10 !important; }
+        .token.layer-token { z-index: 20; }
+        .token.layer-gm { z-index: 30; opacity: 0.5; }
+        .token.layer-gm img { filter: drop-shadow(0 0 6px #a855f7); }
+
+        .player-mode .token.layer-gm { display: none !important; }
+        .player-mode .dm-only { display: none !important; }
+
+        .dm-mode #map-container.active-layer-item .token:not(.layer-item) { pointer-events: none; }
+        .dm-mode #map-container.active-layer-token .token:not(.layer-token) { pointer-events: none; }
+        .dm-mode #map-container.active-layer-gm .token:not(.layer-gm) { pointer-events: none; }
+
+        .token-info-container { position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+        .token-name { background: rgba(0,0,0,0.85); color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 11px; white-space: nowrap; border: 1px solid #52525b; }
+        .token-hp-bar-container { width: 44px; height: 6px; background: #27272a; border: 1px solid #000; margin-top: 2px; border-radius: 2px; overflow: hidden; }
+        .token-hp-bar { width: 100%; height: 100%; background: #22c55e; }
+
+        /* Контекстное меню (Roll20 Style) */
+        .token-context-menu { position: absolute; top: 105%; left: 50%; transform: translateX(-50%); background: rgba(24, 24, 27, 0.98); border: 1px solid #38bdf8; border-radius: 6px; padding: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); z-index: 2000; display: none; flex-direction: column; gap: 6px; width: 230px; cursor: default; }
+        .token-context-menu label { font-size: 10px; color: #a1a1aa; margin-bottom: -2px; display: block;}
+        .token-context-menu input, .token-context-menu select { background: #18181b; color: #fff; border: 1px solid #52525b; padding: 4px; border-radius: 3px; font-size: 12px; width: 100%; box-sizing: border-box; }
+        .context-row { display: flex; gap: 5px; align-items: center; }
+        .status-checkboxes { display: flex; gap: 10px; font-size: 11px; margin: 4px 0; }
+        .status-checkboxes label { display: flex; align-items: center; gap: 3px; color: #fff; cursor: pointer; }
+
+        /* ROLL20 СТИЛЬ УПРАВЛЕНИЯ ПРАВАМИ */
+        .roll20-permissions-box { background: #141416; border: 1px solid #3f3f46; border-radius: 4px; padding: 6px; display: flex; flex-direction: column; gap: 4px; max-height: 110px; overflow-y: auto; }
+        .perm-btn { background: #27272a; border: 1px solid #52525b; color: #e4e4e7; border-radius: 3px; padding: 4px 6px; text-align: left; font-size: 11px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .perm-btn:hover { background: #3f3f46; }
+        .perm-btn.active { border-color: #22c55e; background: rgba(34, 197, 94, 0.15); }
+        .perm-btn.all-players-btn { border-color: #38bdf8; font-weight: bold; }
+        .perm-btn.all-players-btn.active { background: rgba(56, 189, 248, 0.2); }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
 <body>
 
-    <!-- ЭКРАН АВТОРИЗАЦИИ -->
-    <div id="auth-screen">
-        <div class="auth-card">
-            <h1 style="letter-spacing: 2px; margin-bottom: 5px;">VTT ULTIMATE</h1>
-            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 25px;">Выберите режим подключения</p>
+    <!-- МНОГОФУНКЦИОНАЛЬНОЕ ЛОББИ -->
+    <div id="lobby-screen">
+        <div class="lobby-box" id="lobby-step-1">
+            <h2>Добро пожаловать</h2>
+            <input type="text" id="player-nickname" placeholder="Ваше Имя" value="Игрок">
+            <button onclick="switchLobbyStep('dm-auth')">Я Мастер (DM)</button>
+            <button onclick="switchLobbyStep('player-join')" style="background: #3f3f46; color: white;">Я Игрок</button>
+        </div>
+
+        <div class="lobby-box" id="lobby-dm-auth" style="display:none;">
+            <h2>Аккаунт Мастера</h2>
+            <input type="text" id="dm-auth-user" placeholder="Логин Мастера">
+            <input type="password" id="dm-auth-pass" placeholder="Пароль">
+            <button onclick="handleDmAuth()" style="background:#22c55e; color:white;">Войти</button>
+            <button onclick="switchLobbyStep('1')" style="background:transparent; color:#a1a1aa; font-size:11px;">Назад</button>
+        </div>
+
+        <div class="lobby-box" id="lobby-dm-dashboard" style="display:none; width: 400px;">
+            <h2 id="dm-dashboard-title">Миры Мастера</h2>
+            <div class="games-list" id="games-list-container"></div>
+            <button onclick="openGameEditor(false)" style="background:#0f766e;">+ Создать мир</button>
+            <div style="display:flex; gap: 5px;">
+                <button onclick="openGameEditor(true)" style="background:#374151;">Изменить</button>
+                <button onclick="deleteGameClick()" style="background:#7f1d1d;">Удалить</button>
+            </div>
+            <hr style="border:0; border-top:1px solid #3f3f46; margin: 5px 0;">
+            <button onclick="launchGameDM()" style="background:#bfa15f; color:#121212; font-size:16px; padding:12px;">Запустить Стол 🚀</button>
+        </div>
+
+        <div class="lobby-box" id="lobby-dm-edit" style="display:none;">
+            <h2>Настройка Мира</h2>
+            <input type="text" id="edit-game-name" placeholder="Название игры">
+            <input type="text" id="edit-game-password" placeholder="Пароль для игроков">
+            <button onclick="saveGameChanges()" style="background:#22c55e; color:white;">Сохранить</button>
+            <button onclick="switchLobbyStep('dm-dashboard')" style="background:#3f3f46; color:white;">Отмена</button>
+        </div>
+
+        <div class="lobby-box" id="lobby-player-join" style="display:none;">
+            <h2>Подключение к игре</h2>
+            <select id="player-game-select"></select>
+            <input type="password" id="player-room-password" placeholder="Пароль от комнаты">
+            <button onclick="launchGamePlayer()">Войти в мир</button>
+            <button onclick="switchLobbyStep('1')" style="background:transparent; color:#a1a1aa; font-size:11px;">Назад</button>
+        </div>
+    </div>
+
+    <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
+    <div class="top-panel">
+        <div class="panel-section">
+            <span style="font-size:11px; color:#a1a1aa;">Локация:</span>
+            <span id="map-name-display" style="display:none; font-size:12px; font-weight:bold; color:#bfa15f; margin: 0 5px;"></span>
+            <select id="map-selector" style="max-width:100px;" onchange="switchMap()"></select>
+            <input type="file" id="map-library-upload" accept="image/*" style="display:none;">
+            <button class="dm-only" style="background: #0f766e;" onclick="document.getElementById('map-library-upload').click()">+</button>
+            <button class="dm-only" style="background: #374151;" onclick="renameCurrentMap()">✏️</button>
+            <button class="dm-only" style="background: #7f1d1d;" onclick="deleteCurrentMap()">🗑️</button>
+            <button class="dm-only" id="btn-ribbon" style="background: #bfa15f; color:#121212; font-weight:bold;" onclick="movePlayerRibbon()" title="Перенести игроков на эту карту">🚩 Игроки</button>
+            <button class="dm-only" style="background: #374151;" onclick="clearAllDarknessAndWalls()">🧹</button>
+        </div>
+        
+        <div class="panel-section dm-only">
+            <span style="font-size:11px; color:#a1a1aa;">Разм:</span>
+            <input type="number" id="map-width-input" value="1200" style="width:45px;" oninput="applyMapSize()"> ×
+            <input type="number" id="map-height-input" value="800" style="width:45px;" oninput="applyMapSize()">
+        </div>
+
+        <div class="panel-section dm-only">
+            <span style="font-size:11px; color:#a1a1aa;">Сетка:</span>
+            <input type="number" id="grid-size-input" value="40" style="width:38px;" oninput="applyGridSize()">px
+        </div>
+
+        <div class="panel-section dm-only">
+            <select id="active-layer-select" onchange="changeActiveLayer()">
+                <option value="token">Токены</option>
+                <option value="item">Предметы</option>
+                <option value="gm">GM (Скрыто)</option>
+            </select>
+        </div>
+
+        <div class="panel-section">
+            <select id="unit-system" onchange="updateUnitsUI()">
+                <option value="ft">Футы</option>
+                <option value="px">px</option>
+            </select>
+        </div>
+
+        <div class="panel-section dm-only">
+            <input type="file" id="token-upload" accept="image/*" style="display:none;">
+            <button style="background: #22c55e; color: black;" onclick="document.getElementById('token-upload').click()">+ Токен</button>
+        </div>
+    </div>
+
+    <!-- ЛЕВАЯ БОКОВАЯ ПАНЕЛЬ -->
+    <div class="left-sidebar">
+        <div class="sidebar-block">
+            <h4>Инструменты</h4>
+            <div class="tools-grid">
+                <button id="btn-mode-select" class="active" onclick="setMode('select')">🖱️ Выбор</button>
+                <button id="btn-mode-pan" onclick="setMode('pan')">🖐️ Камера</button>
+                <button id="btn-mode-ruler" onclick="setMode('ruler')">📏 Линейка</button>
+                <button id="btn-mode-darkness" class="dm-only" onclick="setMode('darkness')">⬛ Тьма</button>
+                <button id="btn-mode-wall" class="dm-only" onclick="setMode('wall')">🧱 Стена</button>
+            </div>
             
-            <!-- Основной выбор роли -->
-            <div id="role-selector" style="display:flex; flex-direction:column; gap:12px;">
-                <button id="choose-player-btn" class="btn btn-primary" style="background: #242736; border: 1px solid var(--border-color);">⚔️ Зайти как Игрок</button>
-                <button id="choose-master-btn" class="btn btn-primary" style="background: #242736; border: 1px solid var(--border-color);">👑 Зайти как Мастер</button>
-            </div>
-
-            <!-- Форма игрока -->
-            <div id="player-form-box" class="hidden" style="margin-top:15px;">
-                <div class="form-group">
-                    <label>Ваш Никнейм (для этой игры)</label>
-                    <input type="text" id="player-name" class="form-control" placeholder="Имя персонажа">
+            <div id="ruler-options" style="display:none; flex-direction:column; gap:4px; margin-top:5px; border-top:1px solid #3f3f46; padding-top:5px;">
+                <label style="font-size:11px; color:#bfa15f;">Шаблон АОЕ:</label>
+                <select id="ruler-shape" onchange="updateRulerShapeUI()">
+                    <option value="line">📏 Линия</option>
+                    <option value="sphere">🔮 Сфера (Радиус)</option>
+                    <option value="cone">📐 Конус (Сектор)</option>
+                </select>
+                <div id="ruler-angle-container" style="display:none; justify-content:space-between; align-items:center; margin-top:3px;">
+                    <label style="font-size:10px; color:#aaa;">Угол °:</label>
+                    <input type="number" id="ruler-angle" value="60" style="width:55px; padding:2px;">
                 </div>
-                <div class="form-group">
-                    <label>ID Комнаты Мастера</label>
-                    <input type="text" id="player-room-id" class="form-control" placeholder="Например: rm_abc123">
-                </div>
-                <button id="btn-join-player" class="btn btn-primary">⚔️ Войти в игру</button>
-                <button class="btn btn-secondary btn-back-to-roles">⬅️ Назад</button>
-            </div>
-
-            <!-- Форма Мастера -->
-            <div id="master-form-box" class="hidden" style="margin-top:15px;">
-                <div class="form-group" id="master-login-step">
-                    <label>Ваше Имя Мастера</label>
-                    <input type="text" id="master-name" class="form-control" placeholder="Никнейм мастера">
-                    <button id="btn-master-login" class="btn btn-primary" style="margin-top:12px;">Войти в панель</button>
-                </div>
-
-                <div id="master-panel-step" class="hidden">
-                    <button id="btn-create-host-new" class="btn btn-primary">➕ Создать новую сессию</button>
-                    <div style="margin-top:20px; margin-bottom:5px; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:600; text-align: left;">Ваши созданные игры:</div>
-                    <div id="master-rooms-list" class="rooms-list"></div>
-                </div>
-                <button class="btn btn-secondary btn-back-to-roles" style="margin-top:15px;">⬅️ Назад</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
-    <div id="app-header">
-        <div><strong>VTT ULTIMATE</strong></div>
-        <div id="room-display-id">Комната: <strong>---</strong></div>
-    </div>
-
-    <div id="workspace">
-        <div id="toolbar">
-            <button class="tool-btn active" data-tool="select" title="Перемещение карты и токенов">✋</button>
-            <button class="tool-btn" data-tool="pointer" title="Стрелка (Указатель) 🏹">🏹</button>
-            <button class="tool-btn" data-tool="ruler" title="Линейка расстояний (5фт = 20px)">📏</button>
-            <button class="tool-btn gm-only hidden" data-tool="wall" title="Рисовать Стены">🧱</button>
-            <button class="tool-btn gm-only hidden" data-tool="light" title="Поставить Свет">💡</button>
-        </div>
-
-        <div id="board-wrapper">
-            <div id="game-board">
-                <img id="game-map" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'><rect width='1200' height='800' fill='%2314161f'/></svg>">
-                <canvas id="lighting-canvas"></canvas>
-                <canvas id="ruler-canvas"></canvas>
-                <div id="tokens-container"></div>
             </div>
         </div>
 
-        <div id="sidebar">
-            <div class="tabs-header">
-                <div class="tab-btn active" data-tab="maps">Карта</div>
-                <div class="tab-btn" data-tab="tokens">Тайлики</div>
-                <div class="tab-btn" data-tab="chat">Кубы</div>
-            </div>
-
-            <!-- ВКЛАДКА КАРТЫ -->
-            <div class="tab-content active" id="tab-maps">
-                <div id="gm-map-controls" style="display:none; flex-direction:column; gap:10px;">
-                    <label style="font-size:11px; color:var(--text-muted);">ЗАГРУЗКА ФОНА КАРТЫ</label>
-                    <input type="file" id="file-map-upload" class="form-control" accept="image/*">
-                    
-                    <div style="display:flex; gap:6px; margin-top:5px;">
-                        <div class="form-group" style="flex:1;">
-                            <label>Ширина (px)</label>
-                            <input type="number" id="input-map-w" class="form-control" value="1200">
-                        </div>
-                        <div class="form-group" style="flex:1;">
-                            <label>Высота (px)</label>
-                            <input type="number" id="input-map-h" class="form-control" value="800">
-                        </div>
-                    </div>
-                    <button id="btn-save-map-settings" class="btn btn-primary">Применить размеры</button>
-                    <hr style="border-color:var(--border-color); margin:5px 0;">
-                    <button id="btn-clear-walls" class="btn btn-secondary" style="background:#3a2424; color:#ff4757; margin-top:0;">🗑️ Удалить стены/свет</button>
+        <div class="sidebar-block">
+            <h4>🎲 Броски кубов</h4>
+            <div class="dice-container">
+                <div style="display:flex; gap:5px; justify-content:space-between;">
+                    <label style="font-size: 10px;">К-во: <input type="number" id="dice-count" value="1" style="width:32px; padding:2px;"></label>
+                    <label style="font-size: 10px;">Бонус: <input type="number" id="dice-bonus" value="0" style="width:35px; padding:2px;"></label>
                 </div>
-                <div id="player-map-status" style="color:var(--text-muted); font-size:13px;">Управление параметрами карты доступно только Мастеру.</div>
-            </div>
-
-            <!-- ВКЛАДКА ТАЙЛИКИ -->
-            <div class="tab-content" id="tab-tokens">
-                <label style="font-size:11px; color:var(--text-muted);">ДОБАВИТЬ НОВЫЙ ТАЙЛИК</label>
-                <input type="file" id="file-token-upload" class="form-control" accept="image/*" style="margin-bottom:8px;">
-                <p style="font-size:12px; color:var(--text-muted);">Загруженный тайлик сразу появится на игровом столе.</p>
-                
-                <div style="margin-top:15px; font-size:11px; color:var(--text-muted)">В сети:</div>
-                <div id="players-list" style="font-size:13px;"></div>
-            </div>
-
-            <!-- ВКЛАДКА КУБЫ -->
-            <div class="tab-content" id="tab-chat">
                 <div class="dice-grid">
-                    <button class="btn btn-secondary d-btn" data-dice="4" style="margin-top:0;">D4</button>
-                    <button class="btn btn-secondary d-btn" data-dice="6" style="margin-top:0;">D6</button>
-                    <button class="btn btn-secondary d-btn" data-dice="8" style="margin-top:0;">D8</button>
-                    <button class="btn btn-secondary d-btn" data-dice="10" style="margin-top:0;">D10</button>
-                    <button class="btn btn-secondary d-btn" data-dice="12" style="margin-top:0;">D12</button>
-                    <button class="btn btn-secondary d-btn" data-dice="20" style="margin-top:0;">D20</button>
-                    <button class="btn btn-secondary d-btn" data-dice="100" style="margin-top:0;">D100</button>
+                    <button onclick="rollDice(4)">d4</button>
+                    <button onclick="rollDice(6)">d6</button>
+                    <button onclick="rollDice(8)    ">d8</button>
+                    <button onclick="rollDice(10)">d10</button>
+                    <button onclick="rollDice(12)">d12</button>
+                    <button onclick="rollDice(20)" style="color:#bfa15f;">d20</button>
                 </div>
-                <button id="btn-clear-chat" class="btn btn-secondary" style="background:#3a2424; color:#ff4757; font-size:11px; padding:6px; margin-top:0;">🗑️ Очистить чат</button>
-                <div id="chat-log"></div>
-                <input type="text" id="chat-input" class="form-control" placeholder="Сообщение...">
             </div>
+        </div>
+
+        <div class="sidebar-block" style="flex: 1; min-height: 120px;">
+            <h4>📜 Лог кубов <span style="cursor:pointer; color:#ef4444; float:right;" onclick="clearDiceLog()">🧹</span></h4>
+            <div class="dice-log" id="dice-log-box" style="height: calc(100% - 20px);"></div>
         </div>
     </div>
 
-    <!-- КНОПКА РЕЖИМА ИГРОКА (ДЛЯ МАСТЕРА) -->
-    <button id="spectate-btn" class="hidden">👁️ Глаза игрока</button>
-
-    <!-- КОНТЕКСТНОЕ МЕНЮ ТОКЕНА -->
-    <div id="context-menu">
-        <div id="ctx-title" style="font-weight:700; margin-bottom:8px; font-size:13px;">Параметры</div>
-        <div class="form-group">
-            <label>Имя тайла</label>
-            <input type="text" id="ctx-token-name" class="form-control">
-        </div>
-        <div class="form-group">
-            <label>Размер (px)</label>
-            <input type="number" id="ctx-token-size" class="form-control" value="40">
-        </div>
-        <div class="form-group">
-            <label>Хитпоинты (Тек / Макс)</label>
-            <div style="display:flex; gap:4px;">
-                <input type="number" id="ctx-hp-val" class="form-control">
-                <input type="number" id="ctx-hp-max" class="form-control">
+    <!-- ПРАВАЯ БОКОВАЯ ПАНЕЛЬ -->
+    <div class="right-sidebar">
+        <div class="sidebar-block">
+            <h4>Масштаб</h4>
+            <div class="zoom-block-content">
+                <input type="range" id="zoomRangeSide" class="zoom-slider-horiz" min="0.15" max="4" step="0.05" value="1" oninput="changeZoomSlider(this.value)">
+                <span id="zoomValueSide" style="font-size:11px; color:#bfa15f; white-space: nowrap;">100%</span>
             </div>
         </div>
-        <button id="ctx-save-btn" class="btn btn-primary" style="padding:8px; font-size:12px; margin-bottom:4px;">Сохранить</button>
-        <button id="ctx-delete-item" class="btn btn-secondary" style="padding:8px; font-size:12px; background:#ff4757; color:#fff; margin-top:0;">Удалить</button>
+
+        <!-- СПИСОК ИГРОКОВ -->
+        <div class="sidebar-block" id="players-sidebar-block">
+            <h4 onclick="togglePlayersPanel()" style="cursor:pointer; margin:0; display:flex; justify-content:space-between; width:100%;">
+                <span>👥 Игроки (<span id="online-count">0</span>)</span>
+                <span id="players-arrow">▼</span>
+            </h4>
+            <div id="players-online-list" style="display:none; margin-top:5px; max-height:200px; overflow-y:auto; flex-direction:column; gap:4px;"></div>
+        </div>
+    </div>
+
+    <!-- НАСТРОЙКИ ТОКЕНА (Roll20 Style) -->
+    <div id="token-menu" class="token-context-menu" onmousedown="event.stopPropagation()">
+        <label style="color:#38bdf8; font-weight:bold; margin-bottom: 2px;">Контролируется (Controlled by):</label>
+        <div class="roll20-permissions-box" id="ctx-permissions-list"></div>
+        <hr style="border:0; border-top:1px solid #3f3f46; margin: 4px 0;">
+
+        <label>Имя токена</label>
+        <input type="text" id="ctx-name" oninput="applyContextChanges()">
+        
+        <div class="context-row">
+            <div style="flex:1;">
+                <label style="color:#ef4444;">HP</label>
+                <div class="context-row"><input type="number" id="ctx-hp" oninput="applyContextChanges()">/ <input type="number" id="ctx-max-hp" oninput="applyContextChanges()"></div>
+            </div>
+        </div>
+
+        <label id="lbl-size">Размер</label>
+        <input type="number" id="ctx-size" oninput="applyContextChanges()">
+
+        <label style="color:#eab308;" id="lbl-darkvision">Тёмное зрение (Радиус)</label>
+        <input type="number" id="ctx-darkvision" placeholder="0" oninput="applyContextChanges()">
+
+        <label class="dm-only" style="color:#a855f7;">Слой</label>
+        <select id="ctx-layer" class="dm-only" onchange="applyContextChanges()">
+            <option value="item">Предмет</option>
+            <option value="token">Токен</option>
+            <option value="gm">GM (Скрыто)</option>
+        </select>
+        
+        <label>Статусы</label>
+        <div class="status-checkboxes">
+            <label><input type="checkbox" id="status-dead" onchange="applyContextChanges()"> 💀</label>
+            <label><input type="checkbox" id="status-poisoned" onchange="applyContextChanges()"> 🤢</label>
+            <label><input type="checkbox" id="status-stunned" onchange="applyContextChanges()"> 💫</label>
+        </div>
+
+        <label style="color:#22c55e;" id="lbl-auras">Ауры (Радиус)</label>
+        <div class="context-row"><input type="number" id="aura1-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura1-col" value="#ff0000" onchange="applyContextChanges()"></div>
+        <button onclick="deleteSelectedTokens()" style="background:#ef4444; color:#fff; font-size:11px; margin-top:4px; width:100%;">❌ Удалить</button>
+    </div>
+
+    <div id="selection-box" class="selection-box"></div>
+
+    <div id="game-viewport" class="mode-select">
+        <div id="table-surface">
+            <div id="map-container" class="active-layer-token">
+                <canvas id="fog-canvas"></canvas>
+                <canvas id="ruler-canvas"></canvas>
+                <img id="game-map" src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200" alt="Карта">
+            </div>
+        </div>
     </div>
 
     <script>
+        // Конфигурация Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyA6SbXuWwTo4V1Ys5uvoPdrb64WRyITiWc",
             authDomain: "nrii-803a6.firebaseapp.com",
@@ -238,520 +359,704 @@
         };
         
         firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-        const storage = firebase.storage();
+        const db = firebase.database();
 
-        let roomId = ''; let userId = ''; let userName = 'Игрок'; let isHost = false;
-        let currentTool = 'select'; let selectedTokenId = null;
-        let panX = 0; let panY = 0; let scale = 1; let isPanning = false;
-        let startX = 0; let startY = 0;
-        let rulerStart = null; let rulerEnd = null;
-        let pointerStart = null; let pointerEnd = null;
-        let wallStart = null;
-        let walls = []; let lights = [];
-        let isSpectating = false;
+        let gamesDatabase = [];
+        let dmAccounts = {};
+        let currentDmUser = null;
+        let activeGame = null;
+        let selectedGameId = null;
+        let isEditingMode = false;
 
-        const boardWrapper = document.getElementById('board-wrapper');
-        const gameBoard = document.getElementById('game-board');
-        const mapImg = document.getElementById('game-map');
-        const lightingCanvas = document.getElementById('lighting-canvas');
+        let currentMode = 'select'; 
+        let selectedTokens = []; 
+        let isHost = false;
+        let localNickname = "Игрок";
+        let systemUnit = 'ft'; 
+        let scaleUnitFactor = 40; 
+        let currentOnlinePlayers = {}; 
+
+        const viewport = document.getElementById('game-viewport');
+        const surface = document.getElementById('table-surface');
+        const mapContainer = document.getElementById('map-container');
+        const selectionBox = document.getElementById('selection-box');
+        const tokenMenu = document.getElementById('token-menu');
         const rulerCanvas = document.getElementById('ruler-canvas');
-        const tokensContainer = document.getElementById('tokens-container');
-        const contextMenu = document.getElementById('context-menu');
-
-        // === НАВИГАЦИЯ НА ЭКРАНЕ АВТОРИЗАЦИИ ===
+        const rCtx = rulerCanvas.getContext('2d');
         
-        document.getElementById('choose-player-btn').onclick = () => {
-            document.getElementById('role-selector').classList.add('hidden');
-            document.getElementById('player-form-box').classList.remove('hidden');
-        };
+        let surfaceX = 0, surfaceY = 0, cameraZoom = 1;
 
-        document.getElementById('choose-master-btn').onclick = () => {
-            document.getElementById('role-selector').classList.add('hidden');
-            document.getElementById('master-form-box').classList.remove('hidden');
-            document.getElementById('master-login-step').classList.remove('hidden');
-            document.getElementById('master-panel-step').classList.add('hidden');
-        };
-
-        document.querySelectorAll('.btn-back-to-roles').forEach(btn => {
-            btn.onclick = () => {
-                document.getElementById('player-form-box').classList.add('hidden');
-                document.getElementById('master-form-box').classList.add('hidden');
-                document.getElementById('role-selector').classList.remove('hidden');
-            };
+        window.addEventListener('load', () => {
+            loadGamesFromStorage();
+            loadDmAccountsFromStorage();
         });
 
-        // Вход для Мастера (ввод ника)
-        document.getElementById('btn-master-login').onclick = () => {
-            const mName = document.getElementById('master-name').value.trim();
-            if(!mName) return alert('Введите имя мастера!');
-            userName = mName;
-            
-            document.getElementById('master-login-step').classList.add('hidden');
-            document.getElementById('master-panel-step').classList.remove('hidden');
-            renderMasterRooms();
-        };
-
-        // === РАБОТА С ХРАНИЛИЩЕМ КОМНАТ МАСТЕРА (LOCALSTORAGE) ===
-        
-        function getMasterRooms() {
-            return JSON.parse(localStorage.getItem('vtt_master_rooms') || '[]');
-        }
-        function saveMasterRoom(id) {
-            let rooms = getMasterRooms();
-            if (!rooms.includes(id)) {
-                rooms.push(id);
-                localStorage.setItem('vtt_master_rooms', JSON.stringify(rooms));
-            }
-        }
-        function updateMasterRoomId(oldId, newId) {
-            let rooms = getMasterRooms();
-            const index = rooms.indexOf(oldId);
-            if (index !== -1) {
-                rooms[index] = newId;
-                localStorage.setItem('vtt_master_rooms', JSON.stringify(rooms));
-            }
-        }
-        function removeMasterRoomLocal(id) {
-            let rooms = getMasterRooms();
-            rooms = rooms.filter(r => r !== id);
-            localStorage.setItem('vtt_master_rooms', JSON.stringify(rooms));
+        function loadDmAccountsFromStorage() {
+            const data = localStorage.getItem('vtt_dm_accounts');
+            if(data) dmAccounts = JSON.parse(data);
         }
 
-        function renderMasterRooms() {
-            const listContainer = document.getElementById('master-rooms-list');
-            const rooms = getMasterRooms();
-            if (rooms.length === 0) {
-                listContainer.innerHTML = '<div style="color:var(--text-muted); font-size:12px; text-align:center; padding:10px;">Список пуст</div>';
-                return;
-            }
-            listContainer.innerHTML = rooms.map(room => `
-                <div class="room-item">
-                    <div class="room-info" onclick="selectMasterRoom('${room}')">🏰 ID: <strong>${room}</strong></div>
-                    <div class="room-actions">
-                        <button class="btn-mini" onclick="renameRoom(event, '${room}')">⚙️ Код</button>
-                        <button class="btn-mini btn-delete" onclick="deleteRoom(event, '${room}')">🗑️</button>
-                    </div>
-                </div>
-            `).join('');
+        function saveDmAccountsToStorage() {
+            localStorage.setItem('vtt_dm_accounts', JSON.stringify(dmAccounts));
         }
 
-        window.selectMasterRoom = function(roomCode) {
-            proceedAuth(true, roomCode);
-        };
-
-        // Изменение кода комнаты
-        window.renameRoom = function(e, oldRoomId) {
-            e.stopPropagation();
-            const newRoomId = prompt(`Введите новый уникальный код (ID) для комнаты "${oldRoomId}":`).trim();
-            if (!newRoomId || newRoomId === oldRoomId) return;
-
-            // Перенос данных на новый ID в Firebase
-            database.ref(`sessions/${oldRoomId}`).once('value', snapshot => {
-                if (snapshot.exists()) {
-                    database.ref(`sessions/${newRoomId}`).set(snapshot.val(), (error) => {
-                        if (!error) {
-                            database.ref(`sessions/${oldRoomId}`).remove();
-                            updateMasterRoomId(oldRoomId, newRoomId);
-                            renderMasterRooms();
-                            alert(`Код успешно изменен на "${newRoomId}"!`);
-                        } else {
-                            alert("Ошибка при переименовании в базе данных.");
-                        }
-                    });
-                } else {
-                    updateMasterRoomId(oldRoomId, newRoomId);
-                    renderMasterRooms();
-                }
-            });
-        };
-
-        // Полное удаление комнаты (и из локалки, и из Firebase)
-        window.deleteRoom = function(e, roomCode) {
-            e.stopPropagation();
-            if (confirm(`Вы уверены, что хотите удалить комнату "${roomCode}"? Все стены, свет и добавленные тайлики будут безвозвратно стёрты.`)) {
-                // Чистим в Firebase
-                database.ref(`sessions/${roomCode}`).remove();
-                // Чистим локально
-                removeMasterRoomLocal(roomCode);
-                renderMasterRooms();
-            }
-        };
-
-        // Создание новой комнаты мастером
-        document.getElementById('btn-create-host-new').onclick = () => {
-            const generatedId = 'rm_' + Math.random().toString(36).substr(2, 6);
-            saveMasterRoom(generatedId);
-            proceedAuth(true, generatedId);
-        };
-
-        // Подключение игрока
-        document.getElementById('btn-join-player').onclick = () => {
-            const pName = document.getElementById('player-name').value.trim();
-            const pRoom = document.getElementById('player-room-id').value.trim();
-            if (!pName) return alert('Введите ваш Никнейм!');
-            if (!pRoom) return alert('Введите ID комнаты мастера!');
-            
-            userName = pName;
-            proceedAuth(false, pRoom);
-        };
-
-        function proceedAuth(hostFlag, roomCode) {
-            isHost = hostFlag;
-            userId = 'usr_' + Math.random().toString(36).substr(2, 9);
-            roomId = roomCode;
-            
-            if (isHost) {
-                database.ref('sessions/' + roomId).update({ hostId: userId, mapWidth: 1200, mapHeight: 800 });
-            }
-            runVTT();
-        }
-
-        function runVTT() {
-            document.getElementById('auth-screen').style.display = 'none';
-            document.getElementById('room-display-id').innerHTML = `Комната: <strong>${roomId}</strong>`;
-            
-            if (isHost) { 
-                document.getElementById('gm-map-controls').style.display = 'flex';
-                document.getElementById('player-map-status').style.display = 'none';
-                document.querySelectorAll('.gm-only').forEach(el => el.classList.remove('hidden'));
-                
-                const specBtn = document.getElementById('spectate-btn');
-                specBtn.classList.remove('hidden');
-                specBtn.onclick = toggleSpectateMode;
-            }
-            
-            database.ref(`sessions/${roomId}/players/${userId}`).set({ name: userName, isHost: isHost });
-            database.ref(`sessions/${roomId}/players/${userId}`).onDisconnect().remove();
-
-            initDatabaseListeners();
-            initEngineCoreUI();
-        }
-
-        // Режим "Глазами игрока"
-        function toggleSpectateMode() {
-            isSpectating = !isSpectating;
-            const specBtn = document.getElementById('spectate-btn');
-            const gmControls = document.getElementById('gm-map-controls');
-            const pStatus = document.getElementById('player-map-status');
-
-            if (isSpectating) {
-                specBtn.classList.add('active');
-                specBtn.innerHTML = '👁️ Режим мастера';
-                gmControls.style.display = 'none';
-                pStatus.style.display = 'block';
-                document.querySelectorAll('.gm-only').forEach(el => el.classList.add('hidden'));
+        function loadGamesFromStorage() {
+            const data = localStorage.getItem('vtt_games_data');
+            if(data) {
+                gamesDatabase = JSON.parse(data);
+                gamesDatabase.forEach(g => {
+                    if (g.maps) {
+                        if (g.playerMapIdx === undefined) g.playerMapIdx = 0;
+                        g.maps.forEach(m => {
+                            if (!m.tokens) m.tokens = [];
+                            if (!m.darknessZones) m.darknessZones = [];
+                            if (!m.walls) m.walls = [];
+                            if (!m.height) m.height = 800;
+                            if (!m.gridSize) m.gridSize = 40;
+                        });
+                    }
+                });
             } else {
-                specBtn.classList.remove('active');
-                specBtn.innerHTML = '👁️ Глаза игрока';
-                gmControls.style.display = 'flex';
-                pStatus.style.display = 'none';
-                document.querySelectorAll('.gm-only').forEach(el => el.classList.remove('hidden'));
-            }
-            updateLightingSystem();
-        }
-
-        function initDatabaseListeners() {
-            database.ref(`sessions/${roomId}/players`).on('value', s => {
-                const plist = document.getElementById('players-list'); plist.innerHTML = '';
-                if(s.exists()) { Object.values(s.val()).forEach(p => { plist.innerHTML += `<div>${p.isHost ? '👑' : '⚔️'} ${p.name}</div>`; }); }
-            });
-
-            database.ref(`sessions/${roomId}`).on('value', s => {
-                const data = s.val(); if(!data) return;
-                if(data.mapSrc) mapImg.src = data.mapSrc;
-                
-                const w = data.mapWidth || 1200;
-                const h = data.mapHeight || 800;
-                mapImg.style.width = w + 'px';
-                mapImg.style.height = h + 'px';
-                lightingCanvas.width = w; lightingCanvas.height = h;
-                rulerCanvas.width = w; rulerCanvas.height = h;
-                
-                walls = data.walls ? Object.values(data.walls) : [];
-                lights = data.lights ? Object.values(data.lights) : [];
-                updateLightingSystem();
-            });
-
-            database.ref(`sessions/${roomId}/tokens`).on('value', s => { renderTokens(s.val()); });
-
-            database.ref(`sessions/${roomId}/pointers`).on('value', s => {
-                if (s.exists()) drawAllPointers(s.val());
-            });
-
-            database.ref(`sessions/${roomId}/chat`).on('value', s => {
-                const log = document.getElementById('chat-log'); log.innerHTML = '';
-                if(s.exists()) {
-                    Object.values(s.val()).forEach(msg => {
-                        const el = document.createElement('div'); el.className = 'chat-msg';
-                        el.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}`;
-                        log.appendChild(el);
-                    });
-                    log.scrollTop = log.scrollHeight;
-                }
-            });
-        }
-
-        function updateLightingSystem() {
-            const w = lightingCanvas.width; const h = lightingCanvas.height;
-            const ctx = lightingCanvas.getContext('2d');
-            ctx.clearRect(0,0,w,h);
-            
-            if (lights.length === 0) return;
-
-            ctx.fillStyle = "rgba(10, 12, 18, 0.92)";
-            ctx.fillRect(0, 0, w, h);
-
-            lights.forEach(light => {
-                ctx.save();
-                let gradient = ctx.createRadialGradient(light.x, light.y, 10, light.x, light.y, light.radius || 250);
-                gradient.addColorStop(0, 'rgba(255,255,255,1)');
-                gradient.addColorStop(1, 'rgba(255,255,255,0)');
-                ctx.globalCompositeOperation = 'destination-out';
-                ctx.fillStyle = gradient;
-                ctx.beginPath(); ctx.arc(light.x, light.y, light.radius || 250, 0, Math.PI*2); ctx.fill();
-                ctx.restore();
-            });
-
-            if (isHost && !isSpectating && walls.length > 0) {
-                ctx.save();
-                ctx.globalCompositeOperation = 'source-over';
-                ctx.strokeStyle = 'rgba(255, 71, 87, 0.6)'; ctx.lineWidth = 4;
-                walls.forEach(wall => {
-                    ctx.beginPath(); ctx.moveTo(wall.x1, wall.y1); ctx.lineTo(wall.x2, wall.y2); ctx.stroke();
-                });
-                ctx.restore();
+                gamesDatabase = [{
+                    id: 'g_default',
+                    dmOwner: 'admin',
+                    name: "Стартовое приключение",
+                    password: "123",
+                    maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 }],
+                    currentMapIdx: 0,
+                    playerMapIdx: 0
+                }];
+                saveGamesToStorage();
             }
         }
 
-        function renderTokens(tokensData) {
-            tokensContainer.innerHTML = ''; if(!tokensData) return;
-            Object.keys(tokensData).forEach(id => {
-                const t = tokensData[id]; const size = t.size || 40;
-                const el = document.createElement('div'); el.className = `token ${selectedTokenId === id ? 'selected' : ''}`;
-                el.style.left = t.x + 'px'; el.style.top = t.y + 'px'; el.style.width = size + 'px'; el.style.height = size + 'px';
-                el.style.backgroundImage = `url('${t.img}')`;
+        function saveGamesToStorage() {
+            localStorage.setItem('vtt_games_data', JSON.stringify(gamesDatabase));
+        }
 
-                el.innerHTML = `<div class="token-label">${t.name}</div>`;
-                if (t.hpMax > 0) {
-                    const pct = Math.max(0, Math.min(100, (t.hpVal / t.hpMax) * 100));
-                    let hpColor = '#2ed573';
-                    if(pct <= 50 && pct > 20) hpColor = '#ffa502';
-                    if(pct <= 20) hpColor = '#ff4757';
-                    el.innerHTML += `<div class="token-hp-bar"><div class="token-hp-fill" style="width:${pct}%; background:${hpColor};"></div></div>`;
-                }
+        function switchLobbyStep(step) {
+            document.getElementById('lobby-step-1').style.display = 'none';
+            document.getElementById('lobby-dm-auth').style.display = 'none';
+            document.getElementById('lobby-dm-dashboard').style.display = 'none';
+            document.getElementById('lobby-dm-edit').style.display = 'none';
+            document.getElementById('lobby-player-join').style.display = 'none';
 
-                el.onmousedown = function(e) {
-                    if (currentTool !== 'select' || e.button !== 0) return; e.stopPropagation();
-                    selectedTokenId = id;
-                    let sX = e.clientX; let sY = e.clientY; let oX = t.x; let oY = t.y;
-                    document.onmousemove = function(me) {
-                        let dx = (me.clientX - sX) / scale; let dy = (me.clientY - sY) / scale;
-                        database.ref(`sessions/${roomId}/tokens/${id}`).update({ x: Math.round(oX + dx), y: Math.round(oY + dy) });
-                    };
-                    document.onmouseup = function() { document.onmousemove = null; document.onmouseup = null; };
-                };
+            if(step === '1') document.getElementById('lobby-step-1').style.display = 'flex';
+            if(step === 'dm-auth') document.getElementById('lobby-dm-auth').style.display = 'flex';
+            if(step === 'dm-dashboard') { renderGamesList(); document.getElementById('lobby-dm-dashboard').style.display = 'flex'; }
+            if(step === 'dm-edit') document.getElementById('lobby-dm-edit').style.display = 'flex';
+            if(step === 'player-join') { renderPlayerGameSelect(); document.getElementById('lobby-player-join').style.display = 'flex'; }
+        }
 
-                el.oncontextmenu = function(e) {
-                    e.preventDefault(); e.stopPropagation(); selectedTokenId = id;
-                    contextMenu.style.display = 'block'; contextMenu.style.left = e.clientX + 'px'; contextMenu.style.top = e.clientY + 'px';
-                    document.getElementById('ctx-token-name').value = t.name;
-                    document.getElementById('ctx-token-size').value = size;
-                    document.getElementById('ctx-hp-val').value = t.hpVal || 0;
-                    document.getElementById('ctx-hp-max').value = t.hpMax || 0;
-                };
-                tokensContainer.appendChild(el);
+        function handleDmAuth() {
+            const user = document.getElementById('dm-auth-user').value.trim();
+            const pass = document.getElementById('dm-auth-pass').value.trim();
+            if(!user || !pass) return;
+            if(dmAccounts[user] && dmAccounts[user] !== pass) { alert("Неверный пароль!"); return; }
+            if(!dmAccounts[user]) dmAccounts[user] = pass;
+            saveDmAccountsToStorage(); currentDmUser = user;
+            switchLobbyStep('dm-dashboard');
+        }
+
+        function renderGamesList() {
+            const container = document.getElementById('games-list-container'); container.innerHTML = '';
+            gamesDatabase.filter(g => !g.dmOwner || g.dmOwner === currentDmUser).forEach(g => {
+                const div = document.createElement('div');
+                div.className = `game-item ${selectedGameId === g.id ? 'selected' : ''}`;
+                div.innerHTML = `<strong>${g.name}</strong>`;
+                div.onclick = () => { selectedGameId = g.id; renderGamesList(); };
+                container.appendChild(div);
             });
         }
 
-        function initEngineCoreUI() {
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.onclick = () => {
-                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                    btn.classList.add('active'); document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-                };
+        function renderPlayerGameSelect() {
+            const select = document.getElementById('player-game-select');
+            select.innerHTML = '<option>Загрузка комнат...</option>';
+            db.ref('shared_games').once('value').then((sn) => {
+                select.innerHTML = ''; const val = sn.val();
+                if(val) Object.keys(val).forEach(k => { const opt = document.createElement('option'); opt.value = k; opt.textContent = val[k].name; select.appendChild(opt); });
             });
+        }
 
-            document.querySelectorAll('.tool-btn').forEach(btn => {
-                btn.onclick = () => {
-                    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active'); currentTool = btn.dataset.tool;
-                };
+        function openGameEditor(ex) {
+            isEditingMode = ex;
+            if(ex) { const g = gamesDatabase.find(x => x.id === selectedGameId); document.getElementById('edit-game-name').value = g.name; document.getElementById('edit-game-password').value = g.password; }
+            switchLobbyStep('dm-edit');
+        }
+
+        function saveGameChanges() {
+            const name = document.getElementById('edit-game-name').value || "Без названия";
+            const pass = document.getElementById('edit-game-password').value || "123";
+            if(isEditingMode) { const g = gamesDatabase.find(x => x.id === selectedGameId); g.name = name; g.password = pass; }
+            else { const n = { id: 'g_'+Date.now(), dmOwner: currentDmUser, name: name, password: pass, maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 }], currentMapIdx: 0, playerMapIdx: 0 }; gamesDatabase.push(n); selectedGameId = n.id; }
+            saveGamesToStorage(); switchLobbyStep('dm-dashboard');
+        }
+
+        function deleteGameClick() { if(selectedGameId) { db.ref('shared_games/'+selectedGameId).remove(); gamesDatabase = gamesDatabase.filter(x => x.id !== selectedGameId); saveGamesToStorage(); renderGamesList(); } }
+
+        function launchGameDM() { 
+            isHost = true; 
+            localNickname = document.getElementById('player-nickname').value.trim() || "Мастер DM";
+            activeGame = gamesDatabase.find(x => x.id === selectedGameId); 
+            initVTTTable(); startPlayerSync(); setupPresence();
+        }
+        function launchGamePlayer() {
+            const id = document.getElementById('player-game-select').value;
+            const p = document.getElementById('player-room-password').value;
+            localNickname = document.getElementById('player-nickname').value.trim() || "Игрок";
+            db.ref('shared_games/'+id).once('value').then((sn) => {
+                const g = sn.val(); if(g && g.password === p) { isHost = false; activeGame = g; initVTTTable(); startPlayerSync(); setupPresence(); } else alert("Ошибка входа!");
             });
+        }
 
-            boardWrapper.onmousedown = function(e) {
-                const rect = gameBoard.getBoundingClientRect();
-                const mX = (e.clientX - rect.left) / scale; const mY = (e.clientY - rect.top) / scale;
+        function initVTTTable() {
+            document.getElementById('lobby-screen').style.display = 'none';
+            if(isHost) { document.body.classList.add('dm-mode'); changeActiveLayer(); }
+            else { document.body.classList.add('player-mode'); activeGame.currentMapIdx = activeGame.playerMapIdx || 0; }
+            renderMapSelectorUI(); switchMap(true);
+        }
 
-                if (currentTool === 'ruler') {
-                    rulerStart = { x: mX, y: mY }; rulerEnd = { x: mX, y: mY };
-                } else if (currentTool === 'pointer') {
-                    pointerStart = { x: mX, y: mY }; pointerEnd = { x: mX, y: mY };
-                    database.ref(`sessions/${roomId}/pointers/${userId}`).set({ x1: mX, y1: mY, x2: mX, y2: mY, name: userName });
-                } else if (currentTool === 'wall' && isHost && !isSpectating) {
-                    wallStart = { x: mX, y: mY };
-                } else if (currentTool === 'light' && isHost && !isSpectating) {
-                    database.ref(`sessions/${roomId}/lights`).push({ x: Math.round(mX), y: Math.round(mY), radius: 250 });
-                } else if (currentTool === 'select' && e.button === 0) {
-                    isPanning = true; startX = e.clientX - panX; startY = e.clientY - panY;
+        function setupPresence() {
+            const myPresenceRef = db.ref(`shared_games/${activeGame.id}/online_players/${localNickname}`);
+            myPresenceRef.set(true);
+            myPresenceRef.onDisconnect().remove();
+
+            db.ref(`shared_games/${activeGame.id}/online_players`).on('value', (snapshot) => {
+                currentOnlinePlayers = snapshot.val() || {};
+                updatePlayersListUI(currentOnlinePlayers);
+                if (selectedTokens.length > 0) {
+                    renderPermissionsListDOM(selectedTokens[0]);
                 }
-            };
+            });
+        }
 
-            boardWrapper.onmousemove = function(e) {
-                const rect = gameBoard.getBoundingClientRect();
-                const mX = (e.clientX - rect.left) / scale; const mY = (e.clientY - rect.top) / scale;
+        function togglePlayersPanel() {
+            const list = document.getElementById('players-online-list');
+            const arrow = document.getElementById('players-arrow');
+            if(list.style.display === 'none') { list.style.display = 'flex'; arrow.textContent = '▲'; }
+            else { list.style.display = 'none'; arrow.textContent = '▼'; }
+        }
 
-                if (isPanning && currentTool === 'select') {
-                    panX = e.clientX - startX; panY = e.clientY - startY;
-                    gameBoard.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+        function updatePlayersListUI(players) {
+            const container = document.getElementById('players-online-list');
+            const countSpan = document.getElementById('online-count');
+            container.innerHTML = '';
+            const names = Object.keys(players);
+            countSpan.textContent = names.length;
+            names.forEach(name => {
+                const item = document.createElement('div');
+                item.className = 'player-status-item';
+                item.innerHTML = `<div class="player-status-dot"></div><span>${name}</span>`;
+                container.appendChild(item);
+            });
+        }
+
+        function renderPermissionsListDOM(tokenElement) {
+            const container = document.getElementById('ctx-permissions-list');
+            container.innerHTML = '';
+
+            let allowedOwners = [];
+            try {
+                allowedOwners = JSON.parse(tokenElement.dataset.owners || "[]");
+            } catch(e) {
+                if(tokenElement.dataset.owner) {
+                    allowedOwners = tokenElement.dataset.owner === 'all' ? ['all'] : [tokenElement.dataset.owner];
                 }
-                if (rulerStart && currentTool === 'ruler') {
-                    rulerEnd = { x: mX, y: mY }; drawRuler();
+            }
+
+            const allBtn = document.createElement('div');
+            allBtn.className = `perm-btn all-players-btn ${allowedOwners.includes('all') ? 'active' : ''}`;
+            allBtn.innerHTML = `<span>🌐 Всем игрокам (All)</span><span>${allowedOwners.includes('all') ? '✓' : ''}</span>`;
+            allBtn.onclick = () => togglePermission(tokenElement, 'all');
+            container.appendChild(allBtn);
+
+            Object.keys(currentOnlinePlayers).forEach(playerName => {
+                const isSelected = allowedOwners.includes(playerName);
+                const btn = document.createElement('div');
+                btn.className = `perm-btn ${isSelected ? 'active' : ''}`;
+                btn.innerHTML = `<span>👤 ${playerName}</span><span>${isSelected ? '✓' : ''}</span>`;
+                btn.onclick = () => togglePermission(tokenElement, playerName);
+                container.appendChild(btn);
+            });
+        }
+
+        function togglePermission(tokenElement, name) {
+            let allowedOwners = [];
+            try { allowedOwners = JSON.parse(tokenElement.dataset.owners || "[]"); } catch(e) {}
+
+            if (name === 'all') {
+                if (allowedOwners.includes('all')) {
+                    allowedOwners = [];
+                } else {
+                    allowedOwners = ['all']; 
                 }
-                if (pointerStart && currentTool === 'pointer') {
-                    pointerEnd = { x: mX, y: mY };
-                    database.ref(`sessions/${roomId}/pointers/${userId}`).update({ x2: mX, y2: mY });
+            } else {
+                if (allowedOwners.includes('all')) {
+                    allowedOwners = allowedOwners.filter(x => x !== 'all');
                 }
-            };
-
-            boardWrapper.onmouseup = function(e) {
-                const rect = gameBoard.getBoundingClientRect();
-                const mX = (e.clientX - rect.left) / scale; const mY = (e.clientY - rect.top) / scale;
-
-                if (wallStart && currentTool === 'wall' && isHost && !isSpectating) {
-                    database.ref(`sessions/${roomId}/walls`).push({ x1: Math.round(wallStart.x), y1: Math.round(wallStart.y), x2: Math.round(mX), y2: Math.round(mY) });
-                    wallStart = null;
+                if (allowedOwners.includes(name)) {
+                    allowedOwners = allowedOwners.filter(x => x !== name);
+                } else {
+                    allowedOwners.push(name);
                 }
+            }
 
-                if (currentTool === 'pointer') {
-                    setTimeout(() => {
-                        database.ref(`sessions/${roomId}/pointers/${userId}`).remove();
-                    }, 1500);
-                    pointerStart = null; pointerEnd = null;
+            tokenElement.dataset.owners = JSON.stringify(allowedOwners);
+            tokenElement.dataset.owner = allowedOwners.includes('all') ? 'all' : (allowedOwners[0] || 'none');
+
+            renderPermissionsListDOM(tokenElement);
+            syncActiveGameStorage();
+        }
+
+        function hasControl(el) {
+            if (isHost) return true;
+            let allowedOwners = [];
+            try { allowedOwners = JSON.parse(el.dataset.owners || "[]"); } catch(e) {
+                if(el.dataset.owner) allowedOwners = el.dataset.owner === 'all' ? ['all'] : [el.dataset.owner];
+            }
+            return allowedOwners.includes('all') || allowedOwners.includes(localNickname);
+        }
+
+        function startPlayerSync() {
+            db.ref('shared_games/' + activeGame.id).on('value', (snapshot) => {
+                const fresh = snapshot.val(); if(!fresh) return;
+                
+                if(isHost) {
+                    const fm = fresh.maps[fresh.currentMapIdx];
+                    if (fm && fm.tokens) syncTokensOnly(fm.tokens);
+                } else {
+                    const mapChanged = fresh.playerMapIdx !== activeGame.currentMapIdx;
+                    activeGame = fresh;
+                    activeGame.currentMapIdx = fresh.playerMapIdx || 0;
+                    
+                    if (mapChanged) {
+                        renderMapSelectorUI(); switchMap(true);
+                    } else {
+                        const fm = fresh.maps[fresh.currentMapIdx];
+                        if (fm) syncPlayerTableFromServer(fm);
+                    }
                 }
+            });
+        }
 
-                isPanning = false; rulerStart = null; rulerEnd = null; clearRulerCanvas();
-            };
+        function syncTokensOnly(serverTokens) {
+            serverTokens.forEach(t => {
+                let el = document.getElementById(t.id);
+                if(!el) { createTokenDOM(t); el = document.getElementById(t.id); }
+                if (el && !(el.classList.contains('selected') && isDraggingToken)) {
+                    el.style.left = t.left + 'px'; el.style.top = t.top + 'px';
+                    el.style.width = t.sizePx + 'px'; el.style.height = t.sizePx + 'px';
+                    el.querySelector('.token-name').textContent = t.name;
+                    
+                    el.dataset.owners = JSON.stringify(t.owners || (t.owner === 'all' ? ['all'] : (t.owner && t.owner !== 'none' ? [t.owner] : [])));
+                    el.dataset.owner = t.owner || 'none';
+                    
+                    let pct = t.maxHp > 0 ? (t.hp / t.maxHp) * 100 : 0;
+                    el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
+                    el.dataset.hp = t.hp; el.dataset.maxHp = t.maxHp; el.dataset.layer = t.layer;
+                    el.dataset.darkvision = t.darkvision || 0; el.dataset.auras = JSON.stringify(t.auras);
+                    
+                    const sb = el.querySelector('.status-effects'); sb.innerHTML = '';
+                    if(t.isDead) sb.innerHTML += '<div class="status-dot dead"></div>';
+                    if(t.isPoisoned) sb.innerHTML += '<div class="status-dot poisoned"></div>';
+                    if(t.isStunned) sb.innerHTML += '<div class="status-dot stunned"></div>';
+                }
+            });
+            document.querySelectorAll('.token').forEach(el => { if(!serverTokens.find(t => t.id === el.id)) el.remove(); });
+            updateVisibility();
+        }
 
-            boardWrapper.onwheel = function(e) {
-                e.preventDefault(); const zoom = e.deltaY < 0 ? 1.1 : 0.9;
-                scale = Math.max(0.1, Math.min(4, scale * zoom));
-                gameBoard.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
-            };
+        function syncPlayerTableFromServer(fm) {
+            const img = document.getElementById('game-map');
+            if(img.src !== fm.src) img.src = fm.src;
+            img.style.width = (fm.width || 1200) + 'px'; img.style.height = (fm.height || 800) + 'px';
+            scaleUnitFactor = fm.gridSize || 40;
+            syncTokensOnly(fm.tokens || []);
 
-            document.getElementById('file-map-upload').onchange = function(e) {
-                const file = e.target.files[0]; if (!file) return;
-                const ref = storage.ref(`rooms/${roomId}/map_${Date.now()}`);
-                ref.put(file).then(() => ref.getDownloadURL()).then(url => {
-                    database.ref(`sessions/${roomId}`).update({ mapSrc: url });
+            document.querySelectorAll('.darkness-zone, .wall-zone').forEach(el => el.remove());
+            (fm.darknessZones || []).forEach(z => { const el = document.createElement('div'); el.className = 'darkness-zone'; el.style.left = z.left; el.style.top = z.top; el.style.width = z.width; el.style.height = z.height; mapContainer.appendChild(el); });
+            (fm.walls || []).forEach(w => { const el = document.createElement('div'); el.className = 'wall-zone'; el.style.left = w.left; el.style.top = w.top; el.style.width = w.width; el.style.height = w.height; mapContainer.appendChild(el); });
+            updateVisibility();
+        }
+
+        function syncActiveGameStorage() {
+            if(!activeGame || !activeGame.maps[activeGame.currentMapIdx]) return;
+            const cm = activeGame.maps[activeGame.currentMapIdx];
+            const arr = [];
+            document.querySelectorAll('.token').forEach(el => {
+                const au = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{rPx:0, c:'#ff0000'}];
+                let ownersList = [];
+                try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
+                
+                arr.push({
+                    id: el.id, name: el.querySelector('.token-name').textContent, src: el.querySelector('img').src,
+                    left: parseFloat(el.style.left), top: parseFloat(el.style.top), sizePx: parseFloat(el.style.width),
+                    hp: parseInt(el.dataset.hp)||10, maxHp: parseInt(el.dataset.maxHp)||10, layer: el.dataset.layer||'token',
+                    owner: el.dataset.owner || 'none',
+                    owners: ownersList,
+                    isDead: !!el.querySelector('.status-dot.dead'), isPoisoned: !!el.querySelector('.status-dot.poisoned'), isStunned: !!el.querySelector('.status-dot.stunned'),
+                    auras: au, darkvision: parseFloat(el.dataset.darkvision)||0
                 });
-            };
-
-            document.getElementById('file-token-upload').onchange = function(e) {
-                const file = e.target.files[0]; if (!file) return;
-                const ref = storage.ref(`rooms/${roomId}/token_${Date.now()}`);
-                ref.put(file).then(() => ref.getDownloadURL()).then(url => {
-                    database.ref(`sessions/${roomId}/tokens`).push({
-                        name: "Новый тайл", img: url, x: 150, y: 150, size: 60, hpVal: 0, hpMax: 0
-                    });
-                });
-            };
-
-            document.getElementById('btn-clear-walls').onclick = () => {
-                database.ref(`sessions/${roomId}/walls`).remove();
-                database.ref(`sessions/${roomId}/lights`).remove();
-            };
-
-            document.getElementById('btn-clear-chat').onclick = () => { database.ref(`sessions/${roomId}/chat`).remove(); };
+            });
+            cm.tokens = arr;
 
             if (isHost) {
-                document.getElementById('btn-save-map-settings').onclick = () => {
-                    database.ref(`sessions/${roomId}`).update({
-                        mapWidth: parseInt(document.getElementById('input-map-w').value) || 1200,
-                        mapHeight: parseInt(document.getElementById('input-map-h').value) || 800
-                    });
-                };
+                cm.darknessZones = []; document.querySelectorAll('.darkness-zone').forEach(z => cm.darknessZones.push({ left: z.style.left, top: z.style.top, width: z.style.width, height: z.style.height }));
+                cm.walls = []; document.querySelectorAll('.wall-zone').forEach(w => cm.walls.push({ left: w.style.left, top: w.style.top, width: w.style.width, height: w.style.height }));
+                cm.width = parseFloat(document.getElementById('game-map').style.width)||1200;
+                cm.height = parseFloat(document.getElementById('game-map').style.height)||800;
+                cm.gridSize = scaleUnitFactor;
+                db.ref('shared_games/' + activeGame.id).set(activeGame);
+            } else {
+                db.ref('shared_games/' + activeGame.id + '/maps/' + activeGame.currentMapIdx + '/tokens').set(arr);
+            }
+            saveGamesToStorage();
+        }
+
+        function renderMapSelectorUI() {
+            const select = document.getElementById('map-selector');
+            const display = document.getElementById('map-name-display');
+            if(!isHost) {
+                select.style.display = 'none'; display.style.display = 'inline';
+                display.textContent = activeGame.maps[activeGame.currentMapIdx].name;
+            } else {
+                select.style.display = 'inline'; display.style.display = 'none'; select.innerHTML = '';
+                activeGame.maps.forEach((m, idx) => {
+                    const opt = document.createElement('option'); opt.value = idx;
+                    opt.textContent = m.name + (idx === activeGame.playerMapIdx ? ' [🚩 Игроки]' : '');
+                    if(idx === activeGame.currentMapIdx) opt.selected = true; select.appendChild(opt);
+                });
+            }
+            updateRibbonUI();
+        }
+
+        function switchMap(initial = false) {
+            if(!initial) syncActiveGameStorage();
+            document.querySelectorAll('.token, .darkness-zone, .wall-zone').forEach(el => el.remove());
+            deselectAllTokens();
+
+            if(!initial && isHost) activeGame.currentMapIdx = parseInt(document.getElementById('map-selector').value) || 0;
+            const mo = activeGame.maps[activeGame.currentMapIdx];
+
+            const img = document.getElementById('game-map'); img.src = mo.src;
+            img.style.width = (mo.width || 1200) + 'px'; img.style.height = (mo.height || 800) + 'px';
+            if(isHost) { document.getElementById('map-width-input').value = mo.width; document.getElementById('map-height-input').value = mo.height; }
+            scaleUnitFactor = mo.gridSize || 40; document.getElementById('grid-size-input').value = scaleUnitFactor;
+
+            (mo.tokens || []).forEach(t => createTokenDOM(t));
+            (mo.darknessZones || []).forEach(z => { const el = document.createElement('div'); el.className = 'darkness-zone'; el.style.left = z.left; el.style.top = z.top; el.style.width = z.width; el.style.height = z.height; mapContainer.appendChild(el); });
+            (mo.walls || []).forEach(w => { const el = document.createElement('div'); el.className = 'wall-zone'; el.style.left = w.left; el.style.top = w.top; el.style.width = w.width; el.style.height = w.height; mapContainer.appendChild(el); });
+
+            img.onload = () => resizeRulerCanvas(); resizeRulerCanvas();
+        }
+
+        document.getElementById('map-library-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0]; if (!file) return;
+            const r = new FileReader(); r.onload = function(ev) {
+                activeGame.maps.push({ name: `Карта ${activeGame.maps.length + 1}`, src: ev.target.result, width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 });
+                activeGame.currentMapIdx = activeGame.maps.length - 1; renderMapSelectorUI(); switchMap(true); syncActiveGameStorage();
+            }; r.readAsDataURL(file);
+        });
+
+        function renameCurrentMap() { if(!isHost)return; const n = prompt("Имя карты:", activeGame.maps[activeGame.currentMapIdx].name); if(n){ activeGame.maps[activeGame.currentMapIdx].name=n; renderMapSelectorUI(); syncActiveGameStorage(); } }
+        function deleteCurrentMap() { if(!isHost || activeGame.maps.length <= 1) return; if(confirm("Удалить карту?")) { activeGame.maps.splice(activeGame.currentMapIdx, 1); activeGame.currentMapIdx=0; activeGame.playerMapIdx=0; renderMapSelectorUI(); switchMap(true); syncActiveGameStorage(); } }
+        function movePlayerRibbon() { if(!isHost) return; activeGame.playerMapIdx = activeGame.currentMapIdx; renderMapSelectorUI(); syncActiveGameStorage(); }
+        function updateRibbonUI() { const b = document.getElementById('btn-ribbon'); if(b) b.style.opacity = (activeGame.playerMapIdx === activeGame.currentMapIdx) ? '1' : '0.5'; }
+        function applyMapSize() { if(!isHost) return; const w = document.getElementById('map-width-input').value; const h = document.getElementById('map-height-input').value; const img = document.getElementById('game-map'); img.style.width = w+'px'; img.style.height = h+'px'; resizeRulerCanvas(); syncActiveGameStorage(); }
+        function applyGridSize() { if(!isHost) return; scaleUnitFactor = parseInt(document.getElementById('grid-size-input').value)||40; syncActiveGameStorage(); }
+        function changeZoomSlider(v) { cameraZoom = parseFloat(v); updateTransform(); document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom*100)+'%'; }
+        function changeActiveLayer() { if(!isHost) return; mapContainer.className = `active-layer-${document.getElementById('active-layer-select').value}`; deselectAllTokens(); }
+
+        function rollDice(f) {
+            const c = parseInt(document.getElementById('dice-count').value)||1; const b = parseInt(document.getElementById('dice-bonus').value)||0;
+            let s = 0; let str = [];
+            for(let i=0; i<c; i++) { let r = Math.floor(Math.random()*f)+1; s+=r; if(r===f) str.push(`<span class="crit-max">${r}</span>`); else if(r===1) str.push(`<span class="crit-min">${r}</span>`); else str.push(r); }
+            const p = document.createElement('p'); p.innerHTML = `<strong>${c}d${f}${b?(' + '+b):''}</strong>: [${str.join(', ')}] = <strong>${s+b}</strong>`;
+            const box = document.getElementById('dice-log-box'); box.insertBefore(p, box.firstChild);
+        }
+        function clearDiceLog() { document.getElementById('dice-log-box').innerHTML = ''; }
+        function updateUnitsUI() { systemUnit = document.getElementById('unit-system').value; }
+        function toPx(v) { return systemUnit === 'ft' ? (v / 5) * scaleUnitFactor : v; }
+        function fromPx(v) { return systemUnit === 'ft' ? Math.round((v / scaleUnitFactor) * 5) : Math.round(v); }
+        function resizeRulerCanvas() { const img = document.getElementById('game-map'); rulerCanvas.width = img.offsetWidth||1200; rulerCanvas.height = img.offsetHeight||800; updateVisibility(); }
+
+        function setMode(m) {
+            currentMode = m; document.querySelectorAll('.tools-grid button').forEach(b => b.classList.remove('active'));
+            const activeBtn = document.getElementById(`btn-mode-${m}`); if(activeBtn) activeBtn.classList.add('active');
+            viewport.className = `mode-${m}`; deselectAllTokens(); resetRulerCanvas();
+            
+            const opts = document.getElementById('ruler-options');
+            if(opts) opts.style.display = (m === 'ruler') ? 'flex' : 'none';
+        }
+        function updateRulerShapeUI() {
+            const s = document.getElementById('ruler-shape').value;
+            document.getElementById('ruler-angle-container').style.display = (s === 'cone') ? 'flex' : 'none';
+            resetRulerCanvas();
+        }
+        function resetRulerCanvas() { rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height); }
+
+        /* === УЛЬТИМАТИВНЫЙ ДВИЖОК ВИДИМОСТИ С ПОСТРОЕНИЕМ ТЕНЕЙ === */
+        function updateVisibility() {
+            const fog = document.getElementById('fog-canvas'); if (!fog) return;
+            const fCtx = fog.getContext('2d'); const img = document.getElementById('game-map');
+            const w = img.offsetWidth || 1200; const h = img.offsetHeight || 800;
+            if (fog.width !== w || fog.height !== h) { fog.width = w; fog.height = h; }
+            fCtx.clearRect(0, 0, w, h);
+            
+            if (isHost) return; 
+
+            const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
+            const mCtx = mask.getContext('2d');
+
+            const myTokens = Array.from(document.querySelectorAll('.token')).filter(t => hasControl(t) && t.dataset.layer !== 'gm');
+            if (myTokens.length === 0) { 
+                fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h); 
+                return; 
             }
 
-            document.querySelectorAll('.d-btn').forEach(b => {
-                b.onclick = () => {
-                    const d = parseInt(b.dataset.dice); const r = Math.floor(Math.random() * d) + 1;
-                    database.ref(`sessions/${roomId}/chat`).push({ sender: userName, text: `Бросок D${d}: 🎲 <strong>${r}</strong>` });
-                };
-            });
+            const walls = Array.from(document.querySelectorAll('.wall-zone'));
+            const darkZones = Array.from(document.querySelectorAll('.darkness-zone'));
 
-            const cInput = document.getElementById('chat-input');
-            cInput.onkeydown = function(e) {
-                if(e.key === 'Enter' && cInput.value.trim()) {
-                    database.ref(`sessions/${roomId}/chat`).push({ sender: userName, text: cInput.value.trim() });
-                    cInput.value = '';
+            myTokens.forEach(t => {
+                const cx = (parseFloat(t.style.left) || 0) + (parseFloat(t.style.width) || 40) / 2;
+                const cy = (parseFloat(t.style.top) || 0) + (parseFloat(t.style.height) || 40) / 2;
+                const baseSight = 600; 
+                const dv = parseFloat(t.dataset.darkvision) || 0;
+
+                const tCanv = document.createElement('canvas'); tCanv.width = w; tCanv.height = h;
+                const tCtx = tCanv.getContext('2d');
+
+                tCtx.fillStyle = '#ffffff'; tCtx.beginPath(); tCtx.arc(cx, cy, baseSight, 0, Math.PI * 2); tCtx.fill();
+
+                tCtx.globalCompositeOperation = 'destination-out';
+                darkZones.forEach(z => { tCtx.fillRect(parseFloat(z.style.left)||0, parseFloat(z.style.top)||0, parseFloat(z.style.width)||0, parseFloat(z.style.height)||0); });
+
+                if (dv > 0) { 
+                    tCtx.globalCompositeOperation = 'source-over';
+                    tCtx.fillStyle = '#ffffff';
+                    tCtx.beginPath(); tCtx.arc(cx, cy, dv, 0, Math.PI * 2); tCtx.fill(); 
                 }
-            };
 
-            window.onclick = function() { contextMenu.style.display = 'none'; };
-            contextMenu.onclick = function(e) { e.stopPropagation(); };
+                tCtx.globalCompositeOperation = 'destination-out';
+                tCtx.fillStyle = '#ffffff';
+                walls.forEach(wall => {
+                    const wl = parseFloat(wall.style.left) || 0; const wt = parseFloat(wall.style.top) || 0;
+                    const ww = parseFloat(wall.style.width) || 0; const wh = parseFloat(wall.style.height) || 0;
+                    tCtx.fillRect(wl, wt, ww, wh);
+
+                    const edges = [
+                        [{x: wl, y: wt}, {x: wl + ww, y: wt}],
+                        [{x: wl + ww, y: wt}, {x: wl + ww, y: wt + wh}],
+                        [{x: wl + ww, y: wt + wh}, {x: wl, y: wt + wh}],
+                        [{x: wl, y: wt + wh}, {x: wl, y: wt}]
+                    ];
+
+                    edges.forEach(edge => {
+                        const p1 = edge[0]; const p2 = edge[1];
+                        const dx1 = p1.x - cx; const dy1 = p1.y - cy;
+                        const dx2 = p2.x - cx; const dy2 = p2.y - cy;
+                        const dist1 = Math.sqrt(dx1*dx1 + dy1*dy1) || 1;
+                        const dist2 = Math.sqrt(dx2*dx2 + dy2*dy2) || 1;
+
+                        const proj1x = p1.x + (dx1 / dist1) * 10000;
+                        const proj1y = p1.y + (dy1 / dist1) * 10000;
+                        const proj2x = p2.x + (dx2 / dist2) * 10000;
+                        const proj2y = p2.y + (dy2 / dist2) * 10000;
+
+                        tCtx.beginPath(); tCtx.moveTo(p1.x, p1.y); tCtx.lineTo(p2.x, p2.y);
+                        tCtx.lineTo(proj2x, proj2y); tCtx.lineTo(proj1x, proj1y);
+                        tCtx.closePath(); tCtx.fill();
+                    });
+                });
+
+                mCtx.globalCompositeOperation = 'source-over'; mCtx.drawImage(tCanv, 0, 0);
+            });
+
+            fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h);
+            fCtx.globalCompositeOperation = 'destination-out'; fCtx.drawImage(mask, 0, 0);
         }
 
-        // РИСОВАНИЕ СТРЕЛОК (УКАЗАТЕЛЕЙ) ИГРОКОВ НА КАРТЕ
-        function drawAllPointers(pointersData) {
-            const ctx = rulerCanvas.getContext('2d');
-            ctx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height);
+        document.getElementById('token-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0]; if (!file) return;
+            const r = new FileReader(); r.onload = function(ev) {
+                let tl = isHost ? document.getElementById('active-layer-select').value : 'token';
+                createTokenDOM({ id: 't_'+Date.now(), name: "Токен", src: ev.target.result, left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 50, hp: 10, maxHp: 10, layer: tl, darkvision: 0, owner: 'none', owners: [], auras: [{rPx:0, c:'#ff0000'}] });
+                syncActiveGameStorage();
+            }; r.readAsDataURL(file);
+        });
+
+        function createTokenDOM(d) {
+            const t = document.createElement('div'); t.className = `token layer-${d.layer}`; t.id = d.id;
+            t.innerHTML = `<div class="aura aura-1"></div><div class="status-effects"></div><img><div class="token-info-container"><div class="token-name"></div><div class="token-hp-bar-container"><div class="token-hp-bar"></div></div></div>`;
+            mapContainer.appendChild(t); t.querySelector('img').src = d.src;
+            updateTokenVisuals(t, d); setupTokenEvents(t);
+        }
+
+        function updateTokenVisuals(el, d) {
+            el.className = `token layer-${d.layer} ${el.classList.contains('selected') ? 'selected' : ''}`;
+            el.style.left = d.left + 'px'; el.style.top = d.top + 'px'; el.style.width = d.sizePx + 'px'; el.style.height = d.sizePx + 'px';
+            el.querySelector('.token-name').textContent = d.name;
             
-            Object.keys(pointersData).forEach(uid => {
-                const p = pointersData[uid];
-                ctx.strokeStyle = '#2ed573';
-                ctx.fillStyle = '#2ed573';
-                ctx.lineWidth = 4;
+            el.dataset.owners = JSON.stringify(d.owners || (d.owner === 'all' ? ['all'] : (d.owner && d.owner !== 'none' ? [d.owner] : [])));
+            el.dataset.owner = d.owner || 'none';
+            
+            let pct = d.maxHp > 0 ? (d.hp / d.maxHp) * 100 : 0; el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
+            el.dataset.hp = d.hp; el.dataset.maxHp = d.maxHp; el.dataset.layer = d.layer; el.dataset.darkvision = d.darkvision || 0; el.dataset.auras = JSON.stringify(d.auras);
+
+            const sb = el.querySelector('.status-effects'); sb.innerHTML = '';
+            if(d.isDead) sb.innerHTML += '<div class="status-dot dead"></div>';
+            if(d.isPoisoned) sb.innerHTML += '<div class="status-dot poisoned"></div>';
+            if(d.isStunned) sb.innerHTML += '<div class="status-dot stunned"></div>';
+
+            const a1 = el.querySelector('.aura-1');
+            if (d.auras && d.auras[0] && d.auras[0].rPx > 0) {
+                const dim = (d.auras[0].rPx * 2) + d.sizePx; a1.style.width = dim+'px'; a1.style.height = dim+'px'; a1.style.backgroundColor = d.auras[0].c; a1.style.display = 'block';
+            } else a1.style.display = 'none';
+            updateVisibility();
+        }
+
+        function openTokenContextMenu(t) {
+            if(!hasControl(t)) return;
+            t.appendChild(tokenMenu); tokenMenu.style.display = 'flex';
+            const au = t.dataset.auras ? JSON.parse(t.dataset.auras) : [{rPx:0, c:'#ff0000'}];
+            
+            renderPermissionsListDOM(t);
+            
+            document.getElementById('ctx-name').value = t.querySelector('.token-name').textContent;
+            document.getElementById('ctx-hp').value = t.dataset.hp || 10; document.getElementById('ctx-max-hp').value = t.dataset.maxHp || 10;
+            document.getElementById('ctx-size').value = fromPx(parseFloat(t.style.width)||40);
+            document.getElementById('ctx-darkvision').value = fromPx(parseFloat(t.dataset.darkvision)||0);
+            if(isHost) document.getElementById('ctx-layer').value = t.dataset.layer || 'token';
+            
+            document.getElementById('status-dead').checked = !!t.querySelector('.status-dot.dead');
+            document.getElementById('status-poisoned').checked = !!t.querySelector('.status-dot.poisoned');
+            document.getElementById('status-stunned').checked = !!t.querySelector('.status-dot.stunned');
+            document.getElementById('aura1-rad').value = fromPx(au[0]?.rPx || 0); document.getElementById('aura1-col').value = au[0]?.c || '#ff0000';
+        }
+
+        function applyContextChanges() {
+            if (selectedTokens.length === 0) return;
+            selectedTokens.forEach(el => {
+                let ownersList = [];
+                try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
+
+                let d = {
+                    id: el.id, name: document.getElementById('ctx-name').value,
+                    hp: parseInt(document.getElementById('ctx-hp').value)||0, maxHp: parseInt(document.getElementById('ctx-max-hp').value)||0,
+                    sizePx: toPx(parseFloat(document.getElementById('ctx-size').value)||40),
+                    darkvision: toPx(parseFloat(document.getElementById('ctx-darkvision').value)||0),
+                    owner: el.dataset.owner || 'none',
+                    owners: ownersList,
+                    isDead: document.getElementById('status-dead').checked, isPoisoned: document.getElementById('status-poisoned').checked, isStunned: document.getElementById('status-stunned').checked,
+                    layer: isHost ? document.getElementById('ctx-layer').value : 'token',
+                    auras: [{ rPx: toPx(parseFloat(document.getElementById('aura1-rad').value)||0), c: document.getElementById('aura1-col').value }]
+                };
+                updateTokenVisuals(el, d);
+            });
+            syncActiveGameStorage();
+        }
+
+        function deleteSelectedTokens() { selectedTokens.forEach(el => el.remove()); deselectAllTokens(); syncActiveGameStorage(); }
+        function deselectAllTokens() { tokenMenu.style.display = 'none'; document.body.appendChild(tokenMenu); selectedTokens.forEach(t => t.classList.remove('selected')); selectedTokens = []; }
+
+        document.addEventListener('keydown', (e) => { if((e.key === 'Delete' || e.key === 'Backspace') && document.activeElement.tagName !== 'INPUT') deleteSelectedTokens(); });
+        function clearAllDarknessAndWalls() { if(isHost) { document.querySelectorAll('.darkness-zone, .wall-zone').forEach(z => z.remove()); syncActiveGameStorage(); updateVisibility(); } }
+
+        let isDraggingToken = false, isPanning = false, isSelecting = false, isDrawingDarkness = false, isDrawingWall = false, isRuling = false;
+        let startX, startY, startSurfX, startSurfY, darkZone, wallZone, dragOffsets = [];
+
+        function setupTokenEvents(t) {
+            t.addEventListener('mousedown', function(e) {
+                if (currentMode !== 'select' || e.button !== 0) return;
+                if (!hasControl(t)) return;
                 
-                ctx.beginPath();
-                ctx.moveTo(p.x1, p.y1);
-                ctx.lineTo(p.x2, p.y2);
-                ctx.stroke();
-
-                const angle = Math.atan2(p.y2 - p.y1, p.x2 - p.x1);
-                ctx.beginPath();
-                ctx.moveTo(p.x2, p.y2);
-                ctx.lineTo(p.x2 - 15 * Math.cos(angle - Math.PI / 6), p.y2 - 15 * Math.sin(angle - Math.PI / 6));
-                ctx.lineTo(p.x2 - 15 * Math.cos(angle + Math.PI / 6), p.y2 - 15 * Math.sin(angle + Math.PI / 6));
-                ctx.fill();
-
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 13px sans-serif';
-                ctx.fillText(`🏹 ${p.name}`, p.x2 + 10, p.y2 - 10);
+                e.stopPropagation();
+                if (!selectedTokens.includes(t)) { deselectAllTokens(); t.classList.add('selected'); selectedTokens.push(t); }
+                isDraggingToken = true;
+                const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
+                dragOffsets = selectedTokens.map(tok => ({ el: tok, ox: mX - parseFloat(tok.style.left), oy: mY - parseFloat(tok.style.top) }));
             });
+            t.addEventListener('dblclick', (e) => { e.stopPropagation(); openTokenContextMenu(t); });
         }
 
-        // ЛИНЕЙКА
-        function drawRuler() {
-            const ctx = rulerCanvas.getContext('2d'); ctx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height);
-            ctx.strokeStyle = '#ff4757'; ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(rulerStart.x, rulerStart.y); ctx.lineTo(rulerEnd.x, rulerEnd.y); ctx.stroke();
-            
-            const pixelDist = Math.sqrt(Math.pow(rulerEnd.x - rulerStart.x, 2) + Math.pow(rulerEnd.y - rulerStart.y, 2));
-            const feetDist = Math.round((pixelDist / 20) * 5);
-            
-            ctx.fillStyle = '#fff'; ctx.font = '15px sans-serif';
-            ctx.fillText(`${feetDist} фт`, rulerEnd.x + 10, rulerEnd.y - 10);
-        }
-        function clearRulerCanvas() { const ctx = rulerCanvas.getContext('2d'); ctx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height); }
+        viewport.addEventListener('mousedown', function(e) {
+            if (e.button !== 0) return; const rect = mapContainer.getBoundingClientRect();
+            if (currentMode === 'pan') { isPanning = true; startX = e.clientX; startY = e.clientY; startSurfX = surfaceX; startSurfY = surfaceY; }
+            else if (currentMode === 'select' && e.target !== tokenMenu && !tokenMenu.contains(e.target)) { deselectAllTokens(); isSelecting = true; startX = e.clientX; startY = e.clientY; selectionBox.style.left = startX+'px'; selectionBox.style.top = startY+'px'; selectionBox.style.width = '0px'; selectionBox.style.height = '0px'; selectionBox.style.display = 'block'; }
+            else if (currentMode === 'darkness' && isHost) { if(e.target.classList.contains('darkness-zone')) { e.target.remove(); syncActiveGameStorage(); updateVisibility(); return; } isDrawingDarkness = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; darkZone = document.createElement('div'); darkZone.className = 'darkness-zone'; darkZone.style.left = startX + 'px'; darkZone.style.top = startY + 'px'; mapContainer.appendChild(darkZone); }
+            else if (currentMode === 'wall' && isHost) { if(e.target.classList.contains('wall-zone')) { e.target.remove(); syncActiveGameStorage(); updateVisibility(); return; } isDrawingWall = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; wallZone = document.createElement('div'); wallZone.className = 'wall-zone'; wallZone.style.left = startX + 'px'; wallZone.style.top = startY + 'px'; mapContainer.appendChild(wallZone); }
+            else if (currentMode === 'ruler') { isRuling = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; }
+        });
 
-        document.getElementById('ctx-save-btn').onclick = function() {
-            if (!selectedTokenId) return;
-            database.ref(`sessions/${roomId}/tokens/${selectedTokenId}`).update({
-                name: document.getElementById('ctx-token-name').value,
-                size: parseInt(document.getElementById('ctx-token-size').value) || 40,
-                hpVal: parseInt(document.getElementById('ctx-hp-val').value) || 0,
-                hpMax: parseInt(document.getElementById('ctx-hp-max').value) || 0
-            });
-            contextMenu.style.display = 'none';
-        };
+        document.addEventListener('mousemove', function(e) {
+            const rect = mapContainer.getBoundingClientRect();
+            if (isDraggingToken && currentMode === 'select') {
+                const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
+                dragOffsets.forEach(pos => { pos.el.style.left = (mX - pos.ox) + 'px'; pos.el.style.top = (mY - pos.oy) + 'px'; });
+                updateVisibility();
+            } else if (isPanning) {
+                surfaceX = startSurfX + (e.clientX - startX); surfaceY = startSurfY + (e.clientY - startY); updateTransform();
+            } else if (isSelecting) {
+                selectionBox.style.left = Math.min(startX, e.clientX) + 'px'; selectionBox.style.top = Math.min(startY, e.clientY) + 'px';
+                selectionBox.style.width = Math.abs(startX - e.clientX) + 'px'; selectionBox.style.height = Math.abs(startY - e.clientY) + 'px';
+                const boxRect = selectionBox.getBoundingClientRect();
+                document.querySelectorAll('.token').forEach(t => {
+                    if (!hasControl(t)) return;
+                    const tRect = t.getBoundingClientRect(); const overlap = !(tRect.right<boxRect.left || tRect.left>boxRect.right || tRect.bottom<boxRect.top || tRect.top>boxRect.bottom);
+                    if (overlap && !selectedTokens.includes(t)) { t.classList.add('selected'); selectedTokens.push(t); }
+                    else if (!overlap && selectedTokens.includes(t)) { t.classList.remove('selected'); selectedTokens = selectedTokens.filter(x => x !== t); }
+                });
+            } else if (isDrawingDarkness && darkZone) {
+                const curX = (e.clientX - rect.left) / cameraZoom; const curY = (e.clientY - rect.top) / cameraZoom;
+                darkZone.style.left = Math.min(startX, curX) + 'px'; darkZone.style.top = Math.min(startY, curY) + 'px'; darkZone.style.width = Math.abs(startX - curX) + 'px'; darkZone.style.height = Math.abs(startY - curY) + 'px';
+            } else if (isDrawingWall && wallZone) {
+                const curX = (e.clientX - rect.left) / cameraZoom; const curY = (e.clientY - rect.top) / cameraZoom;
+                wallZone.style.left = Math.min(startX, curX) + 'px'; wallZone.style.top = Math.min(startY, curY) + 'px'; wallZone.style.width = Math.abs(startX - curX) + 'px'; wallZone.style.height = Math.abs(startY - curY) + 'px';
+            } else if (isRuling) {
+                const curX = (e.clientX - rect.left) / cameraZoom; const curY = (e.clientY - rect.top) / cameraZoom;
+                rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height);
+                
+                const shape = document.getElementById('ruler-shape').value;
+                const distPx = Math.sqrt(Math.pow(curX - startX, 2) + Math.pow(curY - startY, 2));
+                const text = systemUnit === 'ft' ? `${fromPx(distPx)} ft` : `${Math.round(distPx)} px`;
+                
+                rCtx.strokeStyle = '#bfa15f'; rCtx.lineWidth = 3 / cameraZoom;
+                
+                if (shape === 'line') {
+                    rCtx.beginPath(); rCtx.moveTo(startX, startY); rCtx.lineTo(curX, curY); rCtx.stroke();
+                } else if (shape === 'sphere') {
+                    rCtx.beginPath(); rCtx.arc(startX, startY, distPx, 0, Math.PI * 2); rCtx.stroke();
+                    rCtx.fillStyle = 'rgba(191, 161, 95, 0.12)'; rCtx.fill();
+                    rCtx.beginPath(); rCtx.moveTo(startX, startY); rCtx.lineTo(curX, curY); rCtx.strokeStyle = 'rgba(191, 161, 95, 0.4)'; rCtx.stroke();
+                } else if (shape === 'cone') {
+                    const baseAngle = Math.atan2(curY - startY, curX - startX);
+                    const spreadDeg = parseFloat(document.getElementById('ruler-angle').value) || 60;
+                    const spreadRad = (spreadDeg * Math.PI) / 180;
+                    const startAngle = baseAngle - spreadRad / 2;
+                    const endAngle = baseAngle + spreadRad / 2;
+                    
+                    rCtx.beginPath(); rCtx.moveTo(startX, startY);
+                    rCtx.arc(startX, startY, distPx, startAngle, endAngle);
+                    rCtx.closePath(); rCtx.stroke();
+                    rCtx.fillStyle = 'rgba(191, 161, 95, 0.12)'; rCtx.fill();
+                }
+                
+                rCtx.fillStyle = '#fff'; rCtx.font = `bold ${15 / cameraZoom}px Arial`;
+                rCtx.fillText(text, curX + 10, curY - 10);
+            }
+        });
 
-        document.getElementById('ctx-delete-item').onclick = function() {
-            if (selectedTokenId) database.ref(`sessions/${roomId}/tokens/${selectedTokenId}`).remove();
-            contextMenu.style.display = 'none';
-        };
+        document.addEventListener('mouseup', function() {
+            if(isDraggingToken) { isDraggingToken = false; syncActiveGameStorage(); }
+            isPanning = false; if (isSelecting) { isSelecting = false; selectionBox.style.display = 'none'; }
+            if (isDrawingDarkness) { isDrawingDarkness = false; darkZone = null; syncActiveGameStorage(); updateVisibility(); }
+            if (isDrawingWall) { isDrawingWall = false; wallZone = null; syncActiveGameStorage(); updateVisibility(); }
+            if (isRuling) { isRuling = false; resetRulerCanvas(); }
+        });
+
+        viewport.addEventListener('wheel', function(e) { e.preventDefault(); cameraZoom = Math.min(Math.max(cameraZoom + (e.deltaY < 0 ? 0.07 : -0.07), 0.15), 4); document.getElementById('zoomRangeSide').value = cameraZoom; document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom * 100) + '%'; updateTransform(); }, { passive: false });
+        function updateTransform() { surface.style.transform = `translate(${surfaceX}px, ${surfaceY}px) scale(${cameraZoom})`; }
+        setTimeout(() => { surfaceX = (window.innerWidth - 1200)/2 - 80; surfaceY = 60; updateTransform(); resizeRulerCanvas(); }, 150);
     </script>
 </body>
 </html>
