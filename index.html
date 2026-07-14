@@ -603,6 +603,11 @@
             }
         }
 
+        // Принудительное очищение выделения при потере фокуса
+        window.addEventListener('blur', () => {
+            deselectAllTokens();
+        });
+
         function copyInviteLink() {
             if (!activeGame) return;
             const link = `${window.location.origin}${window.location.pathname}?joinGame=${activeGame.id}&p=${activeGame.password}`;
@@ -807,7 +812,7 @@
             scaleUnitFactor = fm.gridSize || 40;
             syncTokensOnly(fm.tokens || []);
 
-            // ИСПРАВЛЕНИЕ: Безопасная инициализация и отрисовка стен
+            // Инициализация и безопасная отрисовка стен
             const curDarknessCount = document.querySelectorAll('.darkness-zone').length;
             const curWallsCount = document.querySelectorAll('.wall-zone').length;
             const serverDarkness = fm.darknessZones || [];
@@ -996,7 +1001,8 @@
                 tCtx.fillStyle = '#ffffff'; tCtx.beginPath(); tCtx.arc(cx, cy, baseSight, 0, Math.PI * 2); tCtx.fill();
 
                 tCtx.globalCompositeOperation = 'destination-out';
-                darkZones.forEach(z => { tCtx.fillRect(parseFloat(z.style.left)||0, parseFloat(z.style.top)||0, parseFloat(z.style.width)||0, parseFloat(z.style.height)||0); });
+                // ИСПРАВЛЕНИЕ: Чтение координат через offset-свойства гарантирует получение валидных чисел Number без "px" и NaN
+                darkZones.forEach(z => { tCtx.fillRect(z.offsetLeft || 0, z.offsetTop || 0, z.offsetWidth || 0, z.offsetHeight || 0); });
 
                 if (dv > 0) { 
                     tCtx.globalCompositeOperation = 'source-over';
@@ -1007,8 +1013,9 @@
                 tCtx.globalCompositeOperation = 'destination-out';
                 tCtx.fillStyle = '#ffffff';
                 walls.forEach(wall => {
-                    const wl = parseFloat(wall.style.left) || 0; const wt = parseFloat(wall.style.top) || 0;
-                    const ww = parseFloat(wall.style.width) || 0; const wh = parseFloat(wall.style.height) || 0;
+                    // ИСПРАВЛЕНИЕ: Чтение координат стен через offset
+                    const wl = wall.offsetLeft || 0; const wt = wall.offsetTop || 0;
+                    const ww = wall.offsetWidth || 0; const wh = wall.offsetHeight || 0;
                     tCtx.fillRect(wl, wt, ww, wh);
 
                     const edges = [
@@ -1022,8 +1029,8 @@
                         const p1 = edge[0]; const p2 = edge[1];
                         const dx1 = p1.x - cx; const dy1 = p1.y - cy;
                         const dx2 = p2.x - cx; const dy2 = p2.y - cy;
-                        const dist1 = Math.sqrt(dx1*dx1 + dy1*dy1) || 1;
-                        const dist2 = Math.sqrt(dx2*dx2 + dy2*dy2) || 1;
+                        const dist1 = Math.sqrt(dx1*dx1 + dy1*dy1) || 1; // Защита от NaN / деления на 0
+                        const dist2 = Math.sqrt(dx2*dx2 + dy2*dy2) || 1; // Защита от NaN / деления на 0
 
                         const proj1x = p1.x + (dx1 / dist1) * 10000;
                         const proj1y = p1.y + (dy1 / dist1) * 10000;
