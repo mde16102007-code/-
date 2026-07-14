@@ -218,6 +218,11 @@
             <input type="file" id="token-upload" accept="image/*" style="display:none;">
             <button style="background: #22c55e; color: black;" onclick="document.getElementById('token-upload').click()">+ Токен</button>
         </div>
+
+        <!-- Кнопка "Смотреть как игрок" для DM -->
+        <div class="panel-section dm-only-persistent" id="spectate-panel-section" style="display: none;">
+            <button id="btn-spectate-player" style="background: #a855f7; color: white;" onclick="toggleSpectatePlayerMode()">👁️ Смотреть как игрок</button>
+        </div>
     </div>
 
     <!-- ЛЕВАЯ БОКОВАЯ ПАНЕЛЬ -->
@@ -374,6 +379,7 @@
         let selectedTokens = []; 
         let copiedTokens = []; // Буфер для копирования
         let isHost = false;
+        let isSpectatingPlayer = false; // Состояние "Смотреть как игрок" для DM
         let localNickname = "Игрок";
         let systemUnit = 'ft'; 
         let scaleUnitFactor = 40; 
@@ -464,10 +470,15 @@
 
         function renderGamesList() {
             const container = document.getElementById('games-list-container'); container.innerHTML = '';
-            gamesDatabase.filter(g => !g.dmOwner || g.dmOwner === currentDmUser).forEach(g => {
+            // Если DM имеет логин "223" — он видит вообще все существующие игры на устройстве
+            const visibleGames = (currentDmUser === '223') 
+                ? gamesDatabase 
+                : gamesDatabase.filter(g => !g.dmOwner || g.dmOwner === currentDmUser);
+
+            visibleGames.forEach(g => {
                 const div = document.createElement('div');
                 div.className = `game-item ${selectedGameId === g.id ? 'selected' : ''}`;
-                div.innerHTML = `<strong>${g.name}</strong>`;
+                div.innerHTML = `<strong>${g.name}</strong> <span style="font-size:10px; opacity:0.6;">(DM: ${g.dmOwner || 'нет'})</span>`;
                 div.onclick = () => { selectedGameId = g.id; renderGamesList(); };
                 container.appendChild(div);
             });
@@ -496,7 +507,25 @@
             saveGamesToStorage(); switchLobbyStep('dm-dashboard');
         }
 
-        function deleteGameClick() { if(selectedGameId) { db.ref('shared_games/'+selectedGameId).remove(); gamesDatabase = gamesDatabase.filter(x => x.id !== selectedGameId); saveGamesToStorage(); renderGamesList(); } }
+        function deleteGameClick() { 
+            if(selectedGameId) { 
+                const gameToDelete = gamesDatabase.find(x => x.id === selectedGameId);
+                if (!gameToDelete) return;
+                
+                // Проверка прав: обычный создатель или супер-DM '223'
+                if (currentDmUser === '223' || gameToDelete.dmOwner === currentDmUser) {
+                    if (confirm(`Вы уверены, что хотите полностью удалить мир "${gameToDelete.name}"?`)) {
+                        db.ref('shared_games/'+selectedGameId).remove(); 
+                        gamesDatabase = gamesDatabase.filter(x => x.id !== selectedGameId); 
+                        saveGamesToStorage(); 
+                        selectedGameId = null;
+                        renderGamesList(); 
+                    }
+                } else {
+                    alert("У вас нет прав для удаления этой партии!");
+                }
+            } 
+        }
 
         function launchGameDM() { 
             isHost = true; 
@@ -515,9 +544,37 @@
 
         function initVTTTable() {
             document.getElementById('lobby-screen').style.display = 'none';
-            if(isHost) { document.body.classList.add('dm-mode'); changeActiveLayer(); }
-            else { document.body.classList.add('player-mode'); activeGame.currentMapIdx = activeGame.playerMapIdx || 0; }
+            if(isHost) { 
+                document.body.classList.add('dm-mode'); 
+                changeActiveLayer(); 
+                document.getElementById('spectate-panel-section').style.display = 'flex'; // Показываем кнопку спектатора для DM
+            }
+            else { 
+                document.body.classList.add('player-mode'); 
+                activeGame.currentMapIdx = activeGame.playerMapIdx || 0; 
+            }
             renderMapSelectorUI(); switchMap(true);
+        }
+
+        // КНОПКА: Переключение режима видимости "Смотреть как игрок"
+        function toggleSpectatePlayerMode() {
+            if (!isHost) return;
+            isSpectatingPlayer = !isSpectatingPlayer;
+            const btn = document.getElementById('btn-spectate-player');
+            
+            if (isSpectatingPlayer) {
+                btn.textContent = "👁️ Режим мастера";
+                btn.style.background = "#22c55e";
+                document.body.classList.remove('dm-mode');
+                document.body.classList.add('player-mode');
+            } else {
+                btn.textContent = "👁️ Смотреть как игрок";
+                btn.style.background = "#a855f7";
+                document.body.classList.remove('player-mode');
+                document.body.classList.add('dm-mode');
+            }
+            deselectAllTokens();
+            updateVisibility();
         }
 
         function setupPresence() {
@@ -620,7 +677,7 @@
         }
 
         function hasControl(el) {
-            if (isHost) return true;
+            if (isHost && !isSpectatingPlayer) return true;
             let allowedOwners = [];
             try { allowedOwners = JSON.parse(el.dataset.owners || "[]"); } catch(e) {
                 if(el.dataset.owner) allowedOwners = el.dataset.owner === 'all' ? ['all'] : [el.dataset.owner];
@@ -806,7 +863,14 @@
         function updateUnitsUI() { systemUnit = document.getElementById('unit-system').value; }
         function toPx(v) { return systemUnit === 'ft' ? (v / 5) * scaleUnitFactor : v; }
         function fromPx(v) { return systemUnit === 'ft' ? Math.round((v / scaleUnitFactor) * 5) : Math.round(v); }
-        function resizeRulerCanvas() { const img = document.getElementById('game-map'); rulerCanvas.width = img.offsetWidth||1200; rulerCanvas.height = img.offsetHeight||800; updateVisibility(); }
+        function resizeRulerCanvas() { 
+            const img = document.getElementById('game-map'); 
+            const w = parseFloat(img.style.width) || 1200;
+            const h = parseFloat(img.style.height) || 800;
+            rulerCanvas.width = w; 
+            rulerCanvas.height = h; 
+            updateVisibility(); 
+        }
 
         function setMode(m) {
             currentMode = m; document.querySelectorAll('.tools-grid button').forEach(b => b.classList.remove('active'));
@@ -827,11 +891,15 @@
         function updateVisibility() {
             const fog = document.getElementById('fog-canvas'); if (!fog) return;
             const fCtx = fog.getContext('2d'); const img = document.getElementById('game-map');
-            const w = img.offsetWidth || 1200; const h = img.offsetHeight || 800;
+            
+            // Динамический пересчет размеров по заданным стилям карты
+            const w = parseFloat(img.style.width) || 1200; 
+            const h = parseFloat(img.style.height) || 800;
             if (fog.width !== w || fog.height !== h) { fog.width = w; fog.height = h; }
             fCtx.clearRect(0, 0, w, h);
             
-            if (isHost) return; 
+            // Если включен полноценный режим DM (и не активна спектация), не прячем карту под туман
+            if (isHost && !isSpectatingPlayer) return; 
 
             const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
             const mCtx = mask.getContext('2d');
