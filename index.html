@@ -31,7 +31,7 @@
         #board-wrapper:active { cursor: grabbing; }
         #game-board { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
         #game-map { display: block; background: #14161f; pointer-events: none; }
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
         #lighting-canvas { z-index: 2; mix-blend-mode: multiply; }
         #ruler-canvas { z-index: 45; }
         
@@ -48,10 +48,11 @@
         .token-hp-bar { position: absolute; top: -10px; left: 0; width: 100%; height: 5px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; }
         .token-hp-fill { height: 100%; width: 100%; transition: background 0.3s, width 0.3s; }
         
-        #chat-log { flex: 1; background: #11131a; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; overflow-y: auto; font-size: 13px; display: flex; flex-direction: column; gap: 6px; min-height: 200px; }
+        #chat-log { flex: 1; background: #11131a; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; overflow-y: auto; font-size: 13px; display: flex; flex-direction: column; gap: 6px; min-height: 180px; }
         .chat-msg { background: #181b26; padding: 6px 10px; border-radius: 6px; border-left: 3px solid var(--accent); }
         .dice-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
         
+        #context-menu { position: fixed; background: var(--panel-bg); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; z-index: 1000; display: none; width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -61,13 +62,19 @@
         <div class="auth-card">
             <h1>VTT ULTIMATE</h1>
             <p>Подключение к игровой сессии</p>
-            <div class="form-group">
+            <div class="form-group" style="margin-top: 15px;">
                 <label>Ваш Никнейм</label>
                 <input type="text" id="auth-name" class="form-control" placeholder="Имя игрока">
             </div>
             <div class="form-group">
                 <label>ID Комнаты</label>
                 <input type="text" id="auth-room" class="form-control" placeholder="Оставьте пустым для новой">
+            </div>
+            <div class="form-group" id="recent-rooms-box" style="display:none;">
+                <label>Ваши недавние комнаты</label>
+                <select id="select-recent-rooms" class="form-control">
+                    <option value="">-- Выберите из истории --</option>
+                </select>
             </div>
             <button id="btn-join-player" class="btn btn-primary">⚔️ Войти как Игрок</button>
             <button id="btn-create-host" class="btn btn-secondary">👑 Создать как Мастер</button>
@@ -82,7 +89,7 @@
     <div id="workspace">
         <div id="toolbar">
             <button class="tool-btn active" data-tool="select" title="Выбор и перемещение">✋</button>
-            <button class="tool-btn" data-tool="ruler" title="Линейка расстояний">📏</button>
+            <button class="tool-btn" data-tool="ruler" title="Линейка расстояний (5фт = 20px)">📏</button>
             <button class="tool-btn gm-only hidden" data-tool="wall" title="Рисовать Стены">🧱</button>
             <button class="tool-btn gm-only hidden" data-tool="light" title="Поставить Свет">💡</button>
         </div>
@@ -109,7 +116,7 @@
                     <label style="font-size:11px; color:var(--text-muted);">ЗАГРУЗКА ФОНА КАРТЫ</label>
                     <input type="file" id="file-map-upload" class="form-control" accept="image/*">
                     
-                    <div style="display:flex; gap:6px; margin-top:10px;">
+                    <div style="display:flex; gap:6px; margin-top:5px;">
                         <div class="form-group" style="flex:1;">
                             <label>Ширина карты (px)</label>
                             <input type="number" id="input-map-w" class="form-control" value="1200">
@@ -120,8 +127,8 @@
                         </div>
                     </div>
                     <button id="btn-save-map-settings" class="btn btn-primary">Применить размеры</button>
-                    <hr style="border-color:var(--border-color); margin:10px 0;">
-                    <button id="btn-clear-walls" class="btn btn-secondary" style="background:#3a2424; color:#ff4757;">🗑️ Удалить все стены и свет</button>
+                    <hr style="border-color:var(--border-color); margin:5px 0;">
+                    <button id="btn-clear-walls" class="btn btn-secondary" style="background:#3a2424; color:#ff4757; margin-top:0;">🗑️ Удалить стены/свет</button>
                 </div>
                 <div id="player-map-status" style="color:var(--text-muted); font-size:13px;">Размеры и освещение контролируются Мастером.</div>
             </div>
@@ -129,62 +136,61 @@
             <!-- ВКЛАДКА ТОКЕНЫ -->
             <div class="tab-content" id="tab-tokens">
                 <div class="gm-only hidden">
-                    <label style="font-size:11px; color:var(--text-muted);">ЗАГРУЗИТЬ СВОЙ ТОКЕН (ФАЙЛ)</label>
-                    <input type="file" id="file-token-upload" class="form-control" accept="image/*" style="margin-bottom:12px;">
+                    <label style="font-size:11px; color:var(--text-muted);">ЗАГРУЗИТЬ ТОКЕН (ФАЙЛ)</label>
+                    <input type="file" id="file-token-upload" class="form-control" accept="image/*" style="margin-bottom:8px;">
                 </div>
                 
                 <label style="font-size:11px; color:var(--text-muted);">БЫСТРЫЙ СПАВН</label>
                 <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px;">
-                    <button class="btn btn-secondary spawn-token-btn" data-name="Герой" data-img="https://i.imgur.com/7b2eX9F.png">🛡️ Герой</button>
-                    <button class="btn btn-secondary spawn-token-btn" data-name="Враг" data-img="https://i.imgur.com/N7Wb8p6.png">👹 Враг</button>
-                    <button class="btn btn-secondary spawn-token-btn" data-name="НПС" data-img="https://i.imgur.com/vHqY7bM.png">🧙 НПС</button>
+                    <button class="btn btn-secondary spawn-token-btn" data-name="Герой" data-img="https://i.imgur.com/7b2eX9F.png" style="margin-top:0;">🛡️ Герой</button>
+                    <button class="btn btn-secondary spawn-token-btn" data-name="Враг" data-img="https://i.imgur.com/N7Wb8p6.png" style="margin-top:0;">👹 Враг</button>
+                    <button class="btn btn-secondary spawn-token-btn" data-name="НПС" data-img="https://i.imgur.com/vHqY7bM.png" style="margin-top:0;">🧙 НПС</button>
                 </div>
-                <div style="margin-top:15px; font-size:12px; color:var(--text-muted)">В сети:</div>
+                <div style="margin-top:10px; font-size:12px; color:var(--text-muted)">В сети:</div>
                 <div id="players-list" style="font-size:13px;"></div>
             </div>
 
             <!-- ВКЛАДКА КУБЫ -->
             <div class="tab-content" id="tab-chat">
                 <div class="dice-grid">
-                    <button class="btn btn-secondary d-btn" data-dice="4">D4</button>
-                    <button class="btn btn-secondary d-btn" data-dice="6">D6</button>
-                    <button class="btn btn-secondary d-btn" data-dice="8">D8</button>
-                    <button class="btn btn-secondary d-btn" data-dice="10">D10</button>
-                    <button class="btn btn-secondary d-btn" data-dice="12">D12</button>
-                    <button class="btn btn-secondary d-btn" data-dice="20">D20</button>
-                    <button class="btn btn-secondary d-btn" data-dice="100">D100</button>
+                    <button class="btn btn-secondary d-btn" data-dice="4" style="margin-top:0;">D4</button>
+                    <button class="btn btn-secondary d-btn" data-dice="6" style="margin-top:0;">D6</button>
+                    <button class="btn btn-secondary d-btn" data-dice="8" style="margin-top:0;">D8</button>
+                    <button class="btn btn-secondary d-btn" data-dice="10" style="margin-top:0;">D10</button>
+                    <button class="btn btn-secondary d-btn" data-dice="12" style="margin-top:0;">D12</button>
+                    <button class="btn btn-secondary d-btn" data-dice="20" style="margin-top:0;">D20</button>
+                    <button class="btn btn-secondary d-btn" data-dice="100" style="margin-top:0;">D100</button>
                 </div>
-                <button id="btn-clear-chat" class="btn btn-secondary" style="background:#3a2424; color:#ff4757; font-size:11px; padding:6px;">🗑️ Очистить историю бросков</button>
+                <button id="btn-clear-chat" class="btn btn-secondary" style="background:#3a2424; color:#ff4757; font-size:11px; padding:6px; margin-top:0;">🗑️ Очистить чат</button>
                 <div id="chat-log"></div>
-                <input type="text" id="chat-input" class="form-control" placeholder="Сообщение в чат...">
+                <input type="text" id="chat-input" class="form-control" placeholder="Сообщение...">
             </div>
         </div>
     </div>
 
     <!-- КОНТЕКСТНОЕ МЕНЮ ТОКЕНА -->
     <div id="context-menu">
-        <div id="ctx-title" style="font-weight:700; margin-bottom:8px;">Параметры токена</div>
+        <div id="ctx-title" style="font-weight:700; margin-bottom:8px; font-size:13px;">Параметры токена</div>
         <div class="form-group">
             <label>Имя токена</label>
             <input type="text" id="ctx-token-name" class="form-control">
         </div>
         <div class="form-group">
-            <label>Размер токена (px)</label>
+            <label>Размер (px)</label>
             <input type="number" id="ctx-token-size" class="form-control" value="40">
         </div>
         <div class="form-group">
-            <label>Хитпоинты (Текущие / Макс)</label>
+            <label>Хитпоинты (Тек / Макс)</label>
             <div style="display:flex; gap:4px;">
                 <input type="number" id="ctx-hp-val" class="form-control">
                 <input type="number" id="ctx-hp-max" class="form-control">
             </div>
         </div>
-        <button id="ctx-save-btn" class="btn btn-primary" style="padding:8px; font-size:12px; margin-bottom:4px;">Сохранить изменения</button>
-        <button id="ctx-delete-item" class="btn btn-secondary" style="padding:8px; font-size:12px; background:#ff4757; color:#fff;">Удалить токен</button>
+        <button id="ctx-save-btn" class="btn btn-primary" style="padding:8px; font-size:12px; margin-bottom:4px;">Сохранить</button>
+        <button id="ctx-delete-item" class="btn btn-secondary" style="padding:8px; font-size:12px; background:#ff4757; color:#fff; margin-top:0;">Удалить</button>
     </div>
 
     <script>
-        // ВСТАВЛЕННЫЕ ТОБОЙ КЛЮЧИ ТВОЕЙ БАЗЫ FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyA6SbXuWwTo4V1Ys5uvoPdrb64WRyITiWc",
             authDomain: "nrii-803a6.firebaseapp.com",
@@ -216,6 +222,27 @@
         const tokensContainer = document.getElementById('tokens-container');
         const contextMenu = document.getElementById('context-menu');
 
+        // История комнат в localStorage
+        function loadRecentRooms() {
+            let rooms = JSON.parse(localStorage.getItem('vtt_recent_rooms') || '[]');
+            const select = document.getElementById('select-recent-rooms');
+            const box = document.getElementById('recent-rooms-box');
+            if (rooms.length > 0) {
+                box.style.display = 'block';
+                select.innerHTML = '<option value="">-- Выберите комнату --</option>' + rooms.map(r => `<option value="${r}">${r}</option>`).join('');
+                select.onchange = () => { if(select.value) document.getElementById('auth-room').value = select.value; };
+            }
+        }
+        function saveRecentRoom(id) {
+            let rooms = JSON.parse(localStorage.getItem('vtt_recent_rooms') || '[]');
+            if (!rooms.includes(id)) {
+                rooms.unshift(id);
+                if (rooms.length > 5) rooms.pop();
+                localStorage.setItem('vtt_recent_rooms', JSON.stringify(rooms));
+            }
+        }
+        loadRecentRooms();
+
         document.getElementById('btn-create-host').addEventListener('click', () => { proceedAuth(true); });
         document.getElementById('btn-join-player').addEventListener('click', () => { proceedAuth(false); });
 
@@ -227,6 +254,7 @@
             userId = 'usr_' + Math.random().toString(36).substr(2, 9);
             roomId = roomInput || 'rm_' + Math.random().toString(36).substr(2, 6);
             
+            saveRecentRoom(roomId);
             if (isHost) {
                 database.ref('sessions/' + roomId).update({ hostId: userId, mapWidth: 1200, mapHeight: 800 });
             }
@@ -264,8 +292,8 @@
                 const h = data.mapHeight || 800;
                 mapImg.style.width = w + 'px';
                 mapImg.style.height = h + 'px';
-                lightingCanvas.width = w;
-                lightingCanvas.height = h;
+                lightingCanvas.width = w; lightingCanvas.height = h;
+                rulerCanvas.width = w; rulerCanvas.height = h;
                 
                 walls = data.walls ? Object.values(data.walls) : [];
                 lights = data.lights ? Object.values(data.lights) : [];
@@ -287,16 +315,14 @@
             });
         }
 
-        // ДИНАМИЧЕСКИЙ СВЕТ И ТУМАН ВОЙНЫ (БЕЗ СЕТКИ)
         function updateLightingSystem() {
             const w = lightingCanvas.width; const h = lightingCanvas.height;
             const ctx = lightingCanvas.getContext('2d');
             ctx.clearRect(0,0,w,h);
             
-            // Если источников света нет — карта полностью видна (чтобы не было черноты на старте)
             if (lights.length === 0) return;
 
-            ctx.fillStyle = "rgba(10, 12, 18, 0.92)"; // Плотный туман войны
+            ctx.fillStyle = "rgba(10, 12, 18, 0.92)";
             ctx.fillRect(0, 0, w, h);
 
             lights.forEach(light => {
@@ -310,7 +336,6 @@
                 ctx.restore();
             });
 
-            // Отрисовка стен для Мастера (чтобы видеть их линии)
             if (isHost && walls.length > 0) {
                 ctx.save();
                 ctx.globalCompositeOperation = 'source-over';
@@ -345,7 +370,6 @@
                     let sX = e.clientX; let sY = e.clientY; let oX = t.x; let oY = t.y;
                     document.onmousemove = function(me) {
                         let dx = (me.clientX - sX) / scale; let dy = (me.clientY - sY) / scale;
-                        // Свободное перемещение без жесткой привязки к клеткам
                         database.ref(`sessions/${roomId}/tokens/${id}`).update({ x: Math.round(oX + dx), y: Math.round(oY + dy) });
                     };
                     document.onmouseup = function() { document.onmousemove = null; document.onmouseup = null; };
@@ -379,7 +403,6 @@
                 };
             });
 
-            // ИСПРАВЛЕННЫЙ ТРЭКИНГ МЫШИ
             boardWrapper.onmousedown = function(e) {
                 const rect = gameBoard.getBoundingClientRect();
                 const mX = (e.clientX - rect.left) / scale; const mY = (e.clientY - rect.top) / scale;
@@ -425,7 +448,6 @@
                 gameBoard.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
             };
 
-            // ЗАГРУЗКА КАРТЫ С УСТРОЙСТВА В ОБЛАКО FIREBASE
             document.getElementById('file-map-upload').onchange = function(e) {
                 const file = e.target.files[0]; if (!file) return;
                 const ref = storage.ref(`rooms/${roomId}/map_${Date.now()}`);
@@ -434,7 +456,6 @@
                 });
             };
 
-            // ЗАГРУЗКА ТОКЕНА С УСТРОЙСТВА В ОБЛАКО FIREBASE
             document.getElementById('file-token-upload').onchange = function(e) {
                 const file = e.target.files[0]; if (!file) return;
                 const ref = storage.ref(`rooms/${roomId}/token_${Date.now()}`);
@@ -445,7 +466,6 @@
                 });
             };
 
-            // БЫСТРЫЙ СПАВН СТАНДАРТНЫХ ТОКЕНОВ
             document.querySelectorAll('.spawn-token-btn').forEach(b => {
                 b.onclick = () => {
                     database.ref(`sessions/${roomId}/tokens`).push({
@@ -489,13 +509,18 @@
             contextMenu.onclick = function(e) { e.stopPropagation(); };
         }
 
+        // ЛИНЕЙКА: 20 пикселей = 5 футов (4 пикселя на 1 фут)
         function drawRuler() {
-            rulerCanvas.width = mapImg.offsetWidth; rulerCanvas.height = mapImg.offsetHeight;
             const ctx = rulerCanvas.getContext('2d'); ctx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height);
-            ctx.strokeStyle = '#ff4757'; ctx.lineWidth = 3; ctx.getLineDash || ctx.beginPath();
+            ctx.strokeStyle = '#ff4757'; ctx.lineWidth = 3;
+            ctx.beginPath();
             ctx.moveTo(rulerStart.x, rulerStart.y); ctx.lineTo(rulerEnd.x, rulerEnd.y); ctx.stroke();
-            const dist = Math.round(Math.sqrt(Math.pow(rulerEnd.x - rulerStart.x, 2) + Math.pow(rulerEnd.y - rulerStart.y, 2)) / 40) * 1.5;
-            ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif'; ctx.fillText(`${dist} м`, rulerEnd.x + 10, rulerEnd.y - 10);
+            
+            const pixelDist = Math.sqrt(Math.pow(rulerEnd.x - rulerStart.x, 2) + Math.pow(rulerEnd.y - rulerStart.y, 2));
+            const feetDist = Math.round((pixelDist / 20) * 5); // 20px = 5ft
+            
+            ctx.fillStyle = '#fff'; ctx.font = '15px sans-serif';
+            ctx.fillText(`${feetDist} фт`, rulerEnd.x + 10, rulerEnd.y - 10);
         }
         function clearRulerCanvas() { const ctx = rulerCanvas.getContext('2d'); ctx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height); }
 
