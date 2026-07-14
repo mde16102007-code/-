@@ -968,6 +968,7 @@
         function resetRulerCanvas() { rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height); }
 
         /* === УЛЬТИМАТИВНЫЙ ДВИЖОК ВИДИМОСТИ С ПОСТРОЕНИЕМ ТЕНЕЙ === */
+/* === УЛЬТИМАТИВНЫЙ ДВИЖОК ВИДИМОСТИ С ПОСТРОЕНИЕМ ТЕНЕЙ === */
         function updateVisibility() {
             const fog = document.getElementById('fog-canvas'); if (!fog) return;
             const fCtx = fog.getContext('2d'); const img = document.getElementById('game-map');
@@ -976,6 +977,43 @@
             const h = parseFloat(img.style.height) || 800;
             if (fog.width !== w || fog.height !== h) { fog.width = w; fog.height = h; }
             fCtx.clearRect(0, 0, w, h);
+            
+            // Если вы Мастер и не смотрите как игрок — туман скрыт, но разметка стен остается
+            if (isHost && !isSpectatingPlayer) return; 
+
+            const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
+            const mCtx = mask.getContext('2d');
+
+            // ИСПРАВЛЕНО: Более мягкая и точная проверка токенов во избежание "слепоты" при загрузке
+            const myTokens = Array.from(document.querySelectorAll('.token')).filter(t => {
+                const isGmLayer = t.classList.contains('layer-gm') || t.dataset.layer === 'gm';
+                return hasControl(t) && !isGmLayer;
+            });
+            
+            // Если у игрока вообще нет токенов на этой карте, заливаем всё туманом
+            if (myTokens.length === 0) { 
+                fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h); 
+                return; 
+            }
+
+            const walls = Array.from(document.querySelectorAll('.wall-zone'));
+            const darkZones = Array.from(document.querySelectorAll('.darkness-zone'));
+            const containerRect = mapContainer.getBoundingClientRect();
+
+            myTokens.forEach(t => {
+                const cx = (parseFloat(t.style.left) || 0) + (parseFloat(t.style.width) || 40) / 2;
+                const cy = (parseFloat(t.style.top) || 0) + (parseFloat(t.style.height) || 40) / 2;
+                
+                // ИСПРАВЛЕНО: Базовый радиус видимости, если Тёмное зрение не задано (или 0)
+                const dv = parseFloat(t.dataset.darkvision) || 0;
+                const baseSight = dv > 0 ? dv : 300; // 300px — дефолтное зрение, чтобы чар не слеп
+
+                const tCanv = document.createElement('canvas'); tCanv.width = w; tCanv.height = h;
+                const tCtx = tCanv.getContext('2d');
+
+                tCtx.fillStyle = '#ffffff'; tCtx.beginPath(); tCtx.arc(cx, cy, baseSight, 0, Math.PI * 2); tCtx.fill();
+
+                tCtx.globalCompositeOperation = 'destination-out';
             
             // Если вы Мастер и не смотрите как игрок — туман скрыт, но разметка стен остается
             if (isHost && !isSpectatingPlayer) return; 
