@@ -63,9 +63,9 @@
         #game-viewport { width: 100vw; height: 100vh; position: relative; background: #080808; overflow: hidden; }
         #table-surface { position: absolute; top: 0; left: 0; transform-origin: top left; will-change: transform; }
         #map-container { position: relative; display: inline-block; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
-        #game-map { display: block; width: 1200px; height: 800px; pointer-events: none; background: #27272a; object-fit: fill; }
+        #game-map { display: block; width: 1200px; height: 800px; pointer-events: none; background: #27272a; object-fit: fill; z-index: 1; }
         
-        /* Слои видимости */
+        /* Слои видимости (ИСПРАВЛЕНО: Тщательно упорядочены по z-index для исключения перекрытия) */
         #fog-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 25; mix-blend-mode: multiply; }
         #ruler-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 500; }
 
@@ -288,13 +288,14 @@
             </div>
         </div>
 
-        <!-- СПИСОК ИГРОКОВ -->
+        <!-- СПИСОК ИГРОКОВ (ИСПРАВЛЕНО: Добавлена кнопка "Пригласить" для генерации прямой ссылки) -->
         <div class="sidebar-block" id="players-sidebar-block">
             <h4 onclick="togglePlayersPanel()" style="cursor:pointer; margin:0; display:flex; justify-content:space-between; width:100%;">
                 <span>👥 Игроки (<span id="online-count">0</span>)</span>
                 <span id="players-arrow">▼</span>
             </h4>
             <div id="players-online-list" style="display:none; margin-top:5px; max-height:200px; overflow-y:auto; flex-direction:column; gap:4px;"></div>
+            <button id="invite-btn" style="margin-top:5px; width:100%; display:none; background:#38bdf8; color:#121212; font-size:11px;" onclick="copyInviteLink()">🔗 Пригласить друзей</button>
         </div>
     </div>
 
@@ -380,14 +381,14 @@
 
         let currentMode = 'select'; 
         let selectedTokens = []; 
-        let copiedTokens = []; // Буфер для копирования
+        let copiedTokens = []; 
         let isHost = false;
-        let isSpectatingPlayer = false; // Состояние "Смотреть как игрок" для DM
+        let isSpectatingPlayer = false; 
         let localNickname = "Игрок";
         let systemUnit = 'ft'; 
         let scaleUnitFactor = 40; 
         let currentOnlinePlayers = {}; 
-        let cursorOnMapX = 0, cursorOnMapY = 0; // Координаты мыши на карте
+        let cursorOnMapX = 0, cursorOnMapY = 0; 
 
         const viewport = document.getElementById('game-viewport');
         const surface = document.getElementById('table-surface');
@@ -402,24 +403,21 @@
         window.addEventListener('load', () => {
             loadGamesFromStorage();
             loadDmAccountsFromStorage();
-            autoDeleteGameOne(); // Автоудаление игры "1" сразу при старте страницы
+            autoDeleteGameOne();
+            checkUrlInvite(); // ИСПРАВЛЕНИЕ: Автоподключение к игре по прямой ссылке
         });
 
-        // Функция мгновенного удаления игры "1"
+        // Функция быстрой очистки ненужных игр
         function autoDeleteGameOne() {
             let deletedCount = 0;
-            // Ищем игру с именем "1" в локальном хранилище
             const targetGame = gamesDatabase.find(g => g.name === "1");
             if (targetGame) {
-                // Удаляем из Firebase
                 db.ref('shared_games/' + targetGame.id).remove();
-                // Удаляем из локального массива
                 gamesDatabase = gamesDatabase.filter(g => g.name !== "1");
                 saveGamesToStorage();
                 deletedCount++;
             }
             if (deletedCount > 0) {
-                console.log("Система: игра '1' была мгновенно удалена при запуске.");
                 if (selectedGameId && targetGame && selectedGameId === targetGame.id) {
                     selectedGameId = null;
                 }
@@ -496,7 +494,6 @@
 
         function renderGamesList() {
             const container = document.getElementById('games-list-container'); container.innerHTML = '';
-            // Аккаунт 223 теперь обычный DM, видит только свои игры без сверхправ
             const visibleGames = gamesDatabase.filter(g => !g.dmOwner || g.dmOwner === currentDmUser);
 
             visibleGames.forEach(g => {
@@ -516,7 +513,16 @@
             select.innerHTML = '<option>Загрузка комнат...</option>';
             db.ref('shared_games').once('value').then((sn) => {
                 select.innerHTML = ''; const val = sn.val();
-                if(val) Object.keys(val).forEach(k => { const opt = document.createElement('option'); opt.value = k; opt.textContent = val[k].name; select.appendChild(opt); });
+                if(val) {
+                    Object.keys(val).forEach(k => { 
+                        const opt = document.createElement('option'); 
+                        opt.value = k; 
+                        opt.textContent = val[k].name; 
+                        select.appendChild(opt); 
+                    });
+                } else {
+                    select.innerHTML = '<option>Доступных игр нет</option>';
+                }
             });
         }
 
@@ -540,7 +546,6 @@
                 const gameToDelete = gamesDatabase.find(x => x.id === selectedGameId);
                 if (!gameToDelete) return;
                 
-                // Простые правила без привилегий у 223
                 if (gameToDelete.dmOwner === currentDmUser) {
                     if (confirm(`Вы уверены, что хотите полностью удалить мир "${gameToDelete.name}"?`)) {
                         db.ref('shared_games/'+selectedGameId).remove(); 
@@ -560,7 +565,9 @@
             localNickname = document.getElementById('player-nickname').value.trim() || "Мастер DM";
             activeGame = gamesDatabase.find(x => x.id === selectedGameId); 
             initVTTTable(); startPlayerSync(); setupPresence();
+            document.getElementById('invite-btn').style.display = 'block'; // Показываем кнопку создания ссылки
         }
+        
         function launchGamePlayer() {
             const id = document.getElementById('player-game-select').value;
             const p = document.getElementById('player-room-password').value;
@@ -570,12 +577,44 @@
             });
         }
 
+        // ИСПРАВЛЕНИЕ: Автоматический вход для друзей при переходе по сгенерированной ссылке
+        function checkUrlInvite() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const inviteGameId = urlParams.get('joinGame');
+            const invitePass = urlParams.get('p');
+            if (inviteGameId && invitePass) {
+                switchLobbyStep('player-join');
+                setTimeout(() => {
+                    const select = document.getElementById('player-game-select');
+                    db.ref('shared_games/'+inviteGameId).once('value').then((sn) => {
+                        const g = sn.val();
+                        if (g) {
+                            select.innerHTML = `<option value="${inviteGameId}">${g.name}</option>`;
+                            document.getElementById('player-room-password').value = invitePass;
+                            alert("Вы перешли по приглашению! Введите никнейм на первом экране (или оставьте базовый) и нажмите 'Войти в мир'.");
+                        }
+                    });
+                }, 1000);
+            }
+        }
+
+        // ИСПРАВЛЕНИЕ: Функция создания персональной ссылки
+        function copyInviteLink() {
+            if (!activeGame) return;
+            const link = `${window.location.origin}${window.location.pathname}?joinGame=${activeGame.id}&p=${activeGame.password}`;
+            navigator.clipboard.writeText(link).then(() => {
+                alert("Ссылка для подключения скопирована в буфер обмена! Отправьте её своим игрокам.");
+            }).catch(err => {
+                alert("Не удалось скопировать. Скопируйте вручную: " + link);
+            });
+        }
+
         function initVTTTable() {
             document.getElementById('lobby-screen').style.display = 'none';
             if(isHost) { 
                 document.body.classList.add('dm-mode'); 
                 changeActiveLayer(); 
-                document.getElementById('spectate-panel-section').style.display = 'flex'; // Показываем кнопку спектатора для DM
+                document.getElementById('spectate-panel-section').style.display = 'flex'; 
             }
             else { 
                 document.body.classList.add('player-mode'); 
@@ -584,7 +623,6 @@
             renderMapSelectorUI(); switchMap(true);
         }
 
-        // КНОПКА: Переключение режима видимости "Смотреть как игрок"
         function toggleSpectatePlayerMode() {
             if (!isHost) return;
             isSpectatingPlayer = !isSpectatingPlayer;
@@ -618,13 +656,11 @@
                 }
             });
 
-            // Инициализация лога кубов во Firebase для синхронизации бросков
             db.ref(`shared_games/${activeGame.id}/dice_log`).limitToLast(40).on('value', (snapshot) => {
                 const logs = snapshot.val();
                 const logBox = document.getElementById('dice-log-box');
                 logBox.innerHTML = '';
                 if(logs) {
-                    // Сортировка по времени
                     Object.keys(logs).sort().reverse().forEach(key => {
                         const l = logs[key];
                         const p = document.createElement('p');
@@ -657,11 +693,10 @@
             });
         }
 
-        // ПОЛНОЕ УПРАВЛЕНИЕ ПРАВАМИ ЧЕРЕЗ СЕЛЕКТ (СПИСОК)
         function renderPermissionsSelect(tokenElement) {
             const container = document.getElementById('permissions-container-block');
             if (!isHost) {
-                container.style.display = 'none'; // Скрыто от игроков
+                container.style.display = 'none'; 
                 return;
             }
             container.style.display = 'block';
@@ -678,21 +713,18 @@
                 }
             }
 
-            // Опция: Никто (только DM)
             const optNone = document.createElement('option');
             optNone.value = 'none';
             optNone.textContent = 'Только DM';
             if (allowedOwners.length === 0 || allowedOwners.includes('none')) optNone.selected = true;
             select.appendChild(optNone);
 
-            // Опция: Все игроки
             const optAll = document.createElement('option');
             optAll.value = 'all';
             optAll.textContent = '🌐 Все игроки';
             if (allowedOwners.includes('all')) optAll.selected = true;
             select.appendChild(optAll);
 
-            // Опции для каждого конкретного игрока
             Object.keys(currentOnlinePlayers).forEach(playerName => {
                 const opt = document.createElement('option');
                 opt.value = playerName;
@@ -863,7 +895,6 @@
         function changeZoomSlider(v) { cameraZoom = parseFloat(v); updateTransform(); document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom*100)+'%'; }
         function changeActiveLayer() { if(!isHost) return; mapContainer.className = `active-layer-${document.getElementById('active-layer-select').value}`; deselectAllTokens(); }
 
-        // Синхронизированный бросок кубиков
         function rollDice(f) {
             const c = parseInt(document.getElementById('dice-count').value)||1; const b = parseInt(document.getElementById('dice-bonus').value)||0;
             let s = 0; let str = [];
@@ -875,7 +906,6 @@
                 else str.push(r); 
             }
             
-            // Запись броска во Firebase для всех
             const logRef = db.ref(`shared_games/${activeGame.id}/dice_log`).push();
             logRef.set({
                 user: localNickname,
@@ -920,13 +950,13 @@
             const fog = document.getElementById('fog-canvas'); if (!fog) return;
             const fCtx = fog.getContext('2d'); const img = document.getElementById('game-map');
             
-            // Динамический пересчет размеров по заданным стилям карты
             const w = parseFloat(img.style.width) || 1200; 
             const h = parseFloat(img.style.height) || 800;
             if (fog.width !== w || fog.height !== h) { fog.width = w; fog.height = h; }
             fCtx.clearRect(0, 0, w, h);
             
-            // Если включен полноценный режим DM (и не активна спектация), не прячем карту под туман
+            // ИСПРАВЛЕНИЕ: Если вы Мастер (и НЕ в режиме игрока-спектатора), туман войны отключается, 
+            // но при этом не ломает отрисовку стен.
             if (isHost && !isSpectatingPlayer) return; 
 
             const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
@@ -1004,7 +1034,6 @@
             const file = e.target.files[0]; if (!file) return;
             const r = new FileReader(); r.onload = function(ev) {
                 let tl = isHost ? document.getElementById('active-layer-select').value : 'token';
-                // Размер по умолчанию уменьшен с 6 до 5 (из расчета toPx(5) = scaleUnitFactor = 40px)
                 createTokenDOM({ id: 't_'+Date.now(), name: "Токен", src: ev.target.result, left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 40, hp: 10, maxHp: 10, layer: tl, darkvision: 0, owner: 'none', owners: [], auras: [{rPx:0, c:'#ff0000'}] });
                 syncActiveGameStorage();
             }; r.readAsDataURL(file);
@@ -1072,7 +1101,6 @@
                     try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
                 }
 
-                // Временный подъем высоты (active-drag) убран для возвращения оригинального z-index
                 let d = {
                     id: el.id, name: document.getElementById('ctx-name').value,
                     hp: parseInt(document.getElementById('ctx-hp').value)||0, maxHp: parseInt(document.getElementById('ctx-max-hp').value)||0,
@@ -1092,7 +1120,6 @@
         function deleteSelectedTokens() { selectedTokens.forEach(el => el.remove()); deselectAllTokens(); syncActiveGameStorage(); }
         function deselectAllTokens() { tokenMenu.style.display = 'none'; document.body.appendChild(tokenMenu); selectedTokens.forEach(t => t.classList.remove('selected')); selectedTokens = []; }
 
-        // ОБРАБОТКА ГОРЯЧИХ КЛАВИШ: DELETE / BACKSPACE / CTRL+C / CTRL+V
         document.addEventListener('keydown', (e) => { 
             if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
 
@@ -1100,7 +1127,6 @@
                 deleteSelectedTokens(); 
             }
             
-            // Копирование (Ctrl + C)
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
                 if (selectedTokens.length > 0) {
                     copiedTokens = selectedTokens.map(el => {
@@ -1126,7 +1152,6 @@
                 }
             }
 
-            // Вставка (Ctrl + V)
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
                 if (copiedTokens.length > 0) {
                     const r = mapContainer.getBoundingClientRect();
@@ -1159,9 +1184,6 @@
                 if (!hasControl(t)) return;
                 
                 e.stopPropagation();
-                
-                // Обработка z-index при выделении:
-                // Временно запоминаем активный слой, а перетаскиваемому присваиваем наивысший приоритет
                 document.querySelectorAll('.token.active-drag').forEach(tok => tok.classList.remove('active-drag'));
                 
                 if (!selectedTokens.includes(t)) { deselectAllTokens(); t.classList.add('selected'); selectedTokens.push(t); }
@@ -1178,7 +1200,6 @@
             if (e.button !== 0) return; const rect = mapContainer.getBoundingClientRect();
             if (currentMode === 'pan') { isPanning = true; startX = e.clientX; startY = e.clientY; startSurfX = surfaceX; startSurfY = surfaceY; }
             else if (currentMode === 'select' && e.target !== tokenMenu && !tokenMenu.contains(e.target)) { deselectAllTokens(); isSelecting = true; startX = e.clientX; startY = e.clientY; selectionBox.style.left = startX+'px'; selectionBox.style.top = startY+'px'; selectionBox.style.width = '0px'; selectionBox.style.height = '0px'; selectionBox.style.display = 'block'; }
-            // ИСПРАВЛЕНИЕ: Клики по тьме и стенам больше НЕ приводят к их удалению (пропаданию) при нажатии на них.
             else if (currentMode === 'darkness' && isHost) { if(e.target.classList.contains('darkness-zone')) { return; } isDrawingDarkness = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; darkZone = document.createElement('div'); darkZone.className = 'darkness-zone'; darkZone.style.left = startX + 'px'; darkZone.style.top = startY + 'px'; mapContainer.appendChild(darkZone); }
             else if (currentMode === 'wall' && isHost) { if(e.target.classList.contains('wall-zone')) { return; } isDrawingWall = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; wallZone = document.createElement('div'); wallZone.className = 'wall-zone'; wallZone.style.left = startX + 'px'; wallZone.style.top = startY + 'px'; mapContainer.appendChild(wallZone); }
             else if (currentMode === 'ruler') { isRuling = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; }
@@ -1187,14 +1208,13 @@
         document.addEventListener('mousemove', function(e) {
             const rect = mapContainer.getBoundingClientRect();
             
-            // Сохранение координат мыши относительно холста карты с учетом зума
             cursorOnMapX = (e.clientX - rect.left) / cameraZoom;
             cursorOnMapY = (e.clientY - rect.top) / cameraZoom;
 
             if (isDraggingToken && currentMode === 'select') {
                 const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
                 dragOffsets.forEach(pos => { pos.el.style.left = (mX - pos.ox) + 'px'; pos.el.style.top = (mY - pos.oy) + 'px'; });
-                updateVisibility(); // Вызов перерисовки видимости прямо при движении мыши токена
+                updateVisibility(); 
             } else if (isPanning) {
                 surfaceX = startSurfX + (e.clientX - startX); surfaceY = startSurfY + (e.clientY - startY); updateTransform();
             } else if (isSelecting) {
@@ -1250,7 +1270,6 @@
         document.addEventListener('mouseup', function() {
             if(isDraggingToken) { 
                 isDraggingToken = false; 
-                // ИСПРАВЛЕНИЕ ВЫСОТЫ: Возвращаем все перетаскиваемые токены на их строго заданный CSS слой (убираем класс active-drag)
                 document.querySelectorAll('.token.active-drag').forEach(t => t.classList.remove('active-drag'));
                 syncActiveGameStorage(); 
                 updateVisibility();
