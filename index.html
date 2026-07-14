@@ -12,7 +12,7 @@
         body { background: var(--bg-dark); color: var(--text-main); font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
         #auth-screen { position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(10,11,15,0.95); z-index:9999; display:flex; justify-content:center; align-items:center; backdrop-filter: blur(10px); }
-        .auth-card { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 40px; width: 100%; max-width: 420px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center; }
+        .auth-card { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 30px; width: 100%; max-width: 460px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center; }
         .form-group { text-align: left; margin-bottom: 14px; }
         .form-group label { display: block; font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
         .form-control { width: 100%; background: #1e2230; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 14px; color: #fff; font-size: 14px; }
@@ -20,6 +20,18 @@
         .btn-primary { background: var(--accent); color: #fff; }
         .btn-secondary { background: #242736; color: var(--text-main); margin-top: 10px; }
         
+        /* Список комнат Мастера */
+        .rooms-list { margin-top: 10px; text-align: left; max-height: 180px; overflow-y: auto; background: #11131a; border-radius: 6px; padding: 6px; border: 1px solid var(--border-color); }
+        .room-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #1e2230; font-size: 13px; }
+        .room-item:last-child { border-bottom: none; }
+        .room-info { cursor: pointer; flex: 1; font-weight: 500; }
+        .room-info:hover { color: var(--accent); }
+        .room-actions { display: flex; gap: 4px; }
+        .btn-mini { padding: 4px 8px; font-size: 11px; background: #242736; border-radius: 4px; border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer; }
+        .btn-mini:hover { background: #2e3347; }
+        .btn-delete { background: #3a1e1e; border-color: #5c2727; color: #ff4757; }
+        .btn-delete:hover { background: #ff4757; color: #fff; }
+
         #app-header { height: 50px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 10; }
         #workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
         
@@ -53,34 +65,60 @@
         .dice-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
         
         #context-menu { position: fixed; background: var(--panel-bg); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; z-index: 1000; display: none; width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        
+        #spectate-btn { position: fixed; right: 340px; bottom: 20px; z-index: 999; background: #1e2230; border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 16px; border-radius: 30px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.3); transition: 0.2s; }
+        #spectate-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
+    <!-- ЭКРАН АВТОРИЗАЦИИ -->
     <div id="auth-screen">
         <div class="auth-card">
-            <h1>VTT ULTIMATE</h1>
-            <p>Подключение к игровой сессии</p>
-            <div class="form-group" style="margin-top: 15px;">
-                <label>Ваш Никнейм</label>
-                <input type="text" id="auth-name" class="form-control" placeholder="Имя игрока">
+            <h1 style="letter-spacing: 2px; margin-bottom: 5px;">VTT ULTIMATE</h1>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 25px;">Выберите режим подключения</p>
+            
+            <!-- Основной выбор роли -->
+            <div id="role-selector" style="display:flex; flex-direction:column; gap:12px;">
+                <button id="choose-player-btn" class="btn btn-primary" style="background: #242736; border: 1px solid var(--border-color);">⚔️ Зайти как Игрок</button>
+                <button id="choose-master-btn" class="btn btn-primary" style="background: #242736; border: 1px solid var(--border-color);">👑 Зайти как Мастер</button>
             </div>
-            <div class="form-group">
-                <label>ID Комнаты</label>
-                <input type="text" id="auth-room" class="form-control" placeholder="Оставьте пустым для новой">
+
+            <!-- Форма игрока -->
+            <div id="player-form-box" class="hidden" style="margin-top:15px;">
+                <div class="form-group">
+                    <label>Ваш Никнейм (для этой игры)</label>
+                    <input type="text" id="player-name" class="form-control" placeholder="Имя персонажа">
+                </div>
+                <div class="form-group">
+                    <label>ID Комнаты Мастера</label>
+                    <input type="text" id="player-room-id" class="form-control" placeholder="Например: rm_abc123">
+                </div>
+                <button id="btn-join-player" class="btn btn-primary">⚔️ Войти в игру</button>
+                <button class="btn btn-secondary btn-back-to-roles">⬅️ Назад</button>
             </div>
-            <div class="form-group" id="recent-rooms-box" style="display:none;">
-                <label>Ваши недавние комнаты</label>
-                <select id="select-recent-rooms" class="form-control">
-                    <option value="">-- Выберите из истории --</option>
-                </select>
+
+            <!-- Форма Мастера -->
+            <div id="master-form-box" class="hidden" style="margin-top:15px;">
+                <div class="form-group" id="master-login-step">
+                    <label>Ваше Имя Мастера</label>
+                    <input type="text" id="master-name" class="form-control" placeholder="Никнейм мастера">
+                    <button id="btn-master-login" class="btn btn-primary" style="margin-top:12px;">Войти в панель</button>
+                </div>
+
+                <div id="master-panel-step" class="hidden">
+                    <button id="btn-create-host-new" class="btn btn-primary">➕ Создать новую сессию</button>
+                    <div style="margin-top:20px; margin-bottom:5px; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:600; text-align: left;">Ваши созданные игры:</div>
+                    <div id="master-rooms-list" class="rooms-list"></div>
+                </div>
+                <button class="btn btn-secondary btn-back-to-roles" style="margin-top:15px;">⬅️ Назад</button>
             </div>
-            <button id="btn-join-player" class="btn btn-primary">⚔️ Войти как Игрок</button>
-            <button id="btn-create-host" class="btn btn-secondary">👑 Создать как Мастер</button>
         </div>
     </div>
 
+    <!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
     <div id="app-header">
         <div><strong>VTT ULTIMATE</strong></div>
         <div id="room-display-id">Комната: <strong>---</strong></div>
@@ -88,7 +126,8 @@
 
     <div id="workspace">
         <div id="toolbar">
-            <button class="tool-btn active" data-tool="select" title="Выбор и перемещение">✋</button>
+            <button class="tool-btn active" data-tool="select" title="Перемещение карты и токенов">✋</button>
+            <button class="tool-btn" data-tool="pointer" title="Стрелка (Указатель) 🏹">🏹</button>
             <button class="tool-btn" data-tool="ruler" title="Линейка расстояний (5фт = 20px)">📏</button>
             <button class="tool-btn gm-only hidden" data-tool="wall" title="Рисовать Стены">🧱</button>
             <button class="tool-btn gm-only hidden" data-tool="light" title="Поставить Свет">💡</button>
@@ -106,7 +145,7 @@
         <div id="sidebar">
             <div class="tabs-header">
                 <div class="tab-btn active" data-tab="maps">Карта</div>
-                <div class="tab-btn" data-tab="tokens">Токены</div>
+                <div class="tab-btn" data-tab="tokens">Тайлики</div>
                 <div class="tab-btn" data-tab="chat">Кубы</div>
             </div>
 
@@ -118,11 +157,11 @@
                     
                     <div style="display:flex; gap:6px; margin-top:5px;">
                         <div class="form-group" style="flex:1;">
-                            <label>Ширина карты (px)</label>
+                            <label>Ширина (px)</label>
                             <input type="number" id="input-map-w" class="form-control" value="1200">
                         </div>
                         <div class="form-group" style="flex:1;">
-                            <label>Высота карты (px)</label>
+                            <label>Высота (px)</label>
                             <input type="number" id="input-map-h" class="form-control" value="800">
                         </div>
                     </div>
@@ -130,23 +169,16 @@
                     <hr style="border-color:var(--border-color); margin:5px 0;">
                     <button id="btn-clear-walls" class="btn btn-secondary" style="background:#3a2424; color:#ff4757; margin-top:0;">🗑️ Удалить стены/свет</button>
                 </div>
-                <div id="player-map-status" style="color:var(--text-muted); font-size:13px;">Размеры и освещение контролируются Мастером.</div>
+                <div id="player-map-status" style="color:var(--text-muted); font-size:13px;">Управление параметрами карты доступно только Мастеру.</div>
             </div>
 
-            <!-- ВКЛАДКА ТОКЕНЫ -->
+            <!-- ВКЛАДКА ТАЙЛИКИ -->
             <div class="tab-content" id="tab-tokens">
-                <div class="gm-only hidden">
-                    <label style="font-size:11px; color:var(--text-muted);">ЗАГРУЗИТЬ ТОКЕН (ФАЙЛ)</label>
-                    <input type="file" id="file-token-upload" class="form-control" accept="image/*" style="margin-bottom:8px;">
-                </div>
+                <label style="font-size:11px; color:var(--text-muted);">ДОБАВИТЬ НОВЫЙ ТАЙЛИК</label>
+                <input type="file" id="file-token-upload" class="form-control" accept="image/*" style="margin-bottom:8px;">
+                <p style="font-size:12px; color:var(--text-muted);">Загруженный тайлик сразу появится на игровом столе.</p>
                 
-                <label style="font-size:11px; color:var(--text-muted);">БЫСТРЫЙ СПАВН</label>
-                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px;">
-                    <button class="btn btn-secondary spawn-token-btn" data-name="Герой" data-img="https://i.imgur.com/7b2eX9F.png" style="margin-top:0;">🛡️ Герой</button>
-                    <button class="btn btn-secondary spawn-token-btn" data-name="Враг" data-img="https://i.imgur.com/N7Wb8p6.png" style="margin-top:0;">👹 Враг</button>
-                    <button class="btn btn-secondary spawn-token-btn" data-name="НПС" data-img="https://i.imgur.com/vHqY7bM.png" style="margin-top:0;">🧙 НПС</button>
-                </div>
-                <div style="margin-top:10px; font-size:12px; color:var(--text-muted)">В сети:</div>
+                <div style="margin-top:15px; font-size:11px; color:var(--text-muted)">В сети:</div>
                 <div id="players-list" style="font-size:13px;"></div>
             </div>
 
@@ -168,11 +200,14 @@
         </div>
     </div>
 
+    <!-- КНОПКА РЕЖИМА ИГРОКА (ДЛЯ МАСТЕРА) -->
+    <button id="spectate-btn" class="hidden">👁️ Глаза игрока</button>
+
     <!-- КОНТЕКСТНОЕ МЕНЮ ТОКЕНА -->
     <div id="context-menu">
-        <div id="ctx-title" style="font-weight:700; margin-bottom:8px; font-size:13px;">Параметры токена</div>
+        <div id="ctx-title" style="font-weight:700; margin-bottom:8px; font-size:13px;">Параметры</div>
         <div class="form-group">
-            <label>Имя токена</label>
+            <label>Имя тайла</label>
             <input type="text" id="ctx-token-name" class="form-control">
         </div>
         <div class="form-group">
@@ -211,8 +246,10 @@
         let panX = 0; let panY = 0; let scale = 1; let isPanning = false;
         let startX = 0; let startY = 0;
         let rulerStart = null; let rulerEnd = null;
+        let pointerStart = null; let pointerEnd = null;
         let wallStart = null;
         let walls = []; let lights = [];
+        let isSpectating = false;
 
         const boardWrapper = document.getElementById('board-wrapper');
         const gameBoard = document.getElementById('game-board');
@@ -222,39 +259,148 @@
         const tokensContainer = document.getElementById('tokens-container');
         const contextMenu = document.getElementById('context-menu');
 
-        // История комнат в localStorage
-        function loadRecentRooms() {
-            let rooms = JSON.parse(localStorage.getItem('vtt_recent_rooms') || '[]');
-            const select = document.getElementById('select-recent-rooms');
-            const box = document.getElementById('recent-rooms-box');
-            if (rooms.length > 0) {
-                box.style.display = 'block';
-                select.innerHTML = '<option value="">-- Выберите комнату --</option>' + rooms.map(r => `<option value="${r}">${r}</option>`).join('');
-                select.onchange = () => { if(select.value) document.getElementById('auth-room').value = select.value; };
-            }
-        }
-        function saveRecentRoom(id) {
-            let rooms = JSON.parse(localStorage.getItem('vtt_recent_rooms') || '[]');
-            if (!rooms.includes(id)) {
-                rooms.unshift(id);
-                if (rooms.length > 5) rooms.pop();
-                localStorage.setItem('vtt_recent_rooms', JSON.stringify(rooms));
-            }
-        }
-        loadRecentRooms();
+        // === НАВИГАЦИЯ НА ЭКРАНЕ АВТОРИЗАЦИИ ===
+        
+        document.getElementById('choose-player-btn').onclick = () => {
+            document.getElementById('role-selector').classList.add('hidden');
+            document.getElementById('player-form-box').classList.remove('hidden');
+        };
 
-        document.getElementById('btn-create-host').addEventListener('click', () => { proceedAuth(true); });
-        document.getElementById('btn-join-player').addEventListener('click', () => { proceedAuth(false); });
+        document.getElementById('choose-master-btn').onclick = () => {
+            document.getElementById('role-selector').classList.add('hidden');
+            document.getElementById('master-form-box').classList.remove('hidden');
+            document.getElementById('master-login-step').classList.remove('hidden');
+            document.getElementById('master-panel-step').classList.add('hidden');
+        };
 
-        function proceedAuth(hostFlag) {
-            const nameInput = document.getElementById('auth-name').value.trim();
-            const roomInput = document.getElementById('auth-room').value.trim();
-            if (!nameInput) return alert('Введите имя');
-            userName = nameInput; isHost = hostFlag;
-            userId = 'usr_' + Math.random().toString(36).substr(2, 9);
-            roomId = roomInput || 'rm_' + Math.random().toString(36).substr(2, 6);
+        document.querySelectorAll('.btn-back-to-roles').forEach(btn => {
+            btn.onclick = () => {
+                document.getElementById('player-form-box').classList.add('hidden');
+                document.getElementById('master-form-box').classList.add('hidden');
+                document.getElementById('role-selector').classList.remove('hidden');
+            };
+        });
+
+        // Вход для Мастера (ввод ника)
+        document.getElementById('btn-master-login').onclick = () => {
+            const mName = document.getElementById('master-name').value.trim();
+            if(!mName) return alert('Введите имя мастера!');
+            userName = mName;
             
-            saveRecentRoom(roomId);
+            document.getElementById('master-login-step').classList.add('hidden');
+            document.getElementById('master-panel-step').classList.remove('hidden');
+            renderMasterRooms();
+        };
+
+        // === РАБОТА С ХРАНИЛИЩЕМ КОМНАТ МАСТЕРА (LOCALSTORAGE) ===
+        
+        function getMasterRooms() {
+            return JSON.parse(localStorage.getItem('vtt_master_rooms') || '[]');
+        }
+        function saveMasterRoom(id) {
+            let rooms = getMasterRooms();
+            if (!rooms.includes(id)) {
+                rooms.push(id);
+                localStorage.setItem('vtt_master_rooms', JSON.stringify(rooms));
+            }
+        }
+        function updateMasterRoomId(oldId, newId) {
+            let rooms = getMasterRooms();
+            const index = rooms.indexOf(oldId);
+            if (index !== -1) {
+                rooms[index] = newId;
+                localStorage.setItem('vtt_master_rooms', JSON.stringify(rooms));
+            }
+        }
+        function removeMasterRoomLocal(id) {
+            let rooms = getMasterRooms();
+            rooms = rooms.filter(r => r !== id);
+            localStorage.setItem('vtt_master_rooms', JSON.stringify(rooms));
+        }
+
+        function renderMasterRooms() {
+            const listContainer = document.getElementById('master-rooms-list');
+            const rooms = getMasterRooms();
+            if (rooms.length === 0) {
+                listContainer.innerHTML = '<div style="color:var(--text-muted); font-size:12px; text-align:center; padding:10px;">Список пуст</div>';
+                return;
+            }
+            listContainer.innerHTML = rooms.map(room => `
+                <div class="room-item">
+                    <div class="room-info" onclick="selectMasterRoom('${room}')">🏰 ID: <strong>${room}</strong></div>
+                    <div class="room-actions">
+                        <button class="btn-mini" onclick="renameRoom(event, '${room}')">⚙️ Код</button>
+                        <button class="btn-mini btn-delete" onclick="deleteRoom(event, '${room}')">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.selectMasterRoom = function(roomCode) {
+            proceedAuth(true, roomCode);
+        };
+
+        // Изменение кода комнаты
+        window.renameRoom = function(e, oldRoomId) {
+            e.stopPropagation();
+            const newRoomId = prompt(`Введите новый уникальный код (ID) для комнаты "${oldRoomId}":`).trim();
+            if (!newRoomId || newRoomId === oldRoomId) return;
+
+            // Перенос данных на новый ID в Firebase
+            database.ref(`sessions/${oldRoomId}`).once('value', snapshot => {
+                if (snapshot.exists()) {
+                    database.ref(`sessions/${newRoomId}`).set(snapshot.val(), (error) => {
+                        if (!error) {
+                            database.ref(`sessions/${oldRoomId}`).remove();
+                            updateMasterRoomId(oldRoomId, newRoomId);
+                            renderMasterRooms();
+                            alert(`Код успешно изменен на "${newRoomId}"!`);
+                        } else {
+                            alert("Ошибка при переименовании в базе данных.");
+                        }
+                    });
+                } else {
+                    updateMasterRoomId(oldRoomId, newRoomId);
+                    renderMasterRooms();
+                }
+            });
+        };
+
+        // Полное удаление комнаты (и из локалки, и из Firebase)
+        window.deleteRoom = function(e, roomCode) {
+            e.stopPropagation();
+            if (confirm(`Вы уверены, что хотите удалить комнату "${roomCode}"? Все стены, свет и добавленные тайлики будут безвозвратно стёрты.`)) {
+                // Чистим в Firebase
+                database.ref(`sessions/${roomCode}`).remove();
+                // Чистим локально
+                removeMasterRoomLocal(roomCode);
+                renderMasterRooms();
+            }
+        };
+
+        // Создание новой комнаты мастером
+        document.getElementById('btn-create-host-new').onclick = () => {
+            const generatedId = 'rm_' + Math.random().toString(36).substr(2, 6);
+            saveMasterRoom(generatedId);
+            proceedAuth(true, generatedId);
+        };
+
+        // Подключение игрока
+        document.getElementById('btn-join-player').onclick = () => {
+            const pName = document.getElementById('player-name').value.trim();
+            const pRoom = document.getElementById('player-room-id').value.trim();
+            if (!pName) return alert('Введите ваш Никнейм!');
+            if (!pRoom) return alert('Введите ID комнаты мастера!');
+            
+            userName = pName;
+            proceedAuth(false, pRoom);
+        };
+
+        function proceedAuth(hostFlag, roomCode) {
+            isHost = hostFlag;
+            userId = 'usr_' + Math.random().toString(36).substr(2, 9);
+            roomId = roomCode;
+            
             if (isHost) {
                 database.ref('sessions/' + roomId).update({ hostId: userId, mapWidth: 1200, mapHeight: 800 });
             }
@@ -269,6 +415,10 @@
                 document.getElementById('gm-map-controls').style.display = 'flex';
                 document.getElementById('player-map-status').style.display = 'none';
                 document.querySelectorAll('.gm-only').forEach(el => el.classList.remove('hidden'));
+                
+                const specBtn = document.getElementById('spectate-btn');
+                specBtn.classList.remove('hidden');
+                specBtn.onclick = toggleSpectateMode;
             }
             
             database.ref(`sessions/${roomId}/players/${userId}`).set({ name: userName, isHost: isHost });
@@ -276,6 +426,29 @@
 
             initDatabaseListeners();
             initEngineCoreUI();
+        }
+
+        // Режим "Глазами игрока"
+        function toggleSpectateMode() {
+            isSpectating = !isSpectating;
+            const specBtn = document.getElementById('spectate-btn');
+            const gmControls = document.getElementById('gm-map-controls');
+            const pStatus = document.getElementById('player-map-status');
+
+            if (isSpectating) {
+                specBtn.classList.add('active');
+                specBtn.innerHTML = '👁️ Режим мастера';
+                gmControls.style.display = 'none';
+                pStatus.style.display = 'block';
+                document.querySelectorAll('.gm-only').forEach(el => el.classList.add('hidden'));
+            } else {
+                specBtn.classList.remove('active');
+                specBtn.innerHTML = '👁️ Глаза игрока';
+                gmControls.style.display = 'flex';
+                pStatus.style.display = 'none';
+                document.querySelectorAll('.gm-only').forEach(el => el.classList.remove('hidden'));
+            }
+            updateLightingSystem();
         }
 
         function initDatabaseListeners() {
@@ -301,6 +474,10 @@
             });
 
             database.ref(`sessions/${roomId}/tokens`).on('value', s => { renderTokens(s.val()); });
+
+            database.ref(`sessions/${roomId}/pointers`).on('value', s => {
+                if (s.exists()) drawAllPointers(s.val());
+            });
 
             database.ref(`sessions/${roomId}/chat`).on('value', s => {
                 const log = document.getElementById('chat-log'); log.innerHTML = '';
@@ -336,7 +513,7 @@
                 ctx.restore();
             });
 
-            if (isHost && walls.length > 0) {
+            if (isHost && !isSpectating && walls.length > 0) {
                 ctx.save();
                 ctx.globalCompositeOperation = 'source-over';
                 ctx.strokeStyle = 'rgba(255, 71, 87, 0.6)'; ctx.lineWidth = 4;
@@ -409,9 +586,12 @@
 
                 if (currentTool === 'ruler') {
                     rulerStart = { x: mX, y: mY }; rulerEnd = { x: mX, y: mY };
-                } else if (currentTool === 'wall' && isHost) {
+                } else if (currentTool === 'pointer') {
+                    pointerStart = { x: mX, y: mY }; pointerEnd = { x: mX, y: mY };
+                    database.ref(`sessions/${roomId}/pointers/${userId}`).set({ x1: mX, y1: mY, x2: mX, y2: mY, name: userName });
+                } else if (currentTool === 'wall' && isHost && !isSpectating) {
                     wallStart = { x: mX, y: mY };
-                } else if (currentTool === 'light' && isHost) {
+                } else if (currentTool === 'light' && isHost && !isSpectating) {
                     database.ref(`sessions/${roomId}/lights`).push({ x: Math.round(mX), y: Math.round(mY), radius: 250 });
                 } else if (currentTool === 'select' && e.button === 0) {
                     isPanning = true; startX = e.clientX - panX; startY = e.clientY - panY;
@@ -429,16 +609,28 @@
                 if (rulerStart && currentTool === 'ruler') {
                     rulerEnd = { x: mX, y: mY }; drawRuler();
                 }
+                if (pointerStart && currentTool === 'pointer') {
+                    pointerEnd = { x: mX, y: mY };
+                    database.ref(`sessions/${roomId}/pointers/${userId}`).update({ x2: mX, y2: mY });
+                }
             };
 
             boardWrapper.onmouseup = function(e) {
                 const rect = gameBoard.getBoundingClientRect();
                 const mX = (e.clientX - rect.left) / scale; const mY = (e.clientY - rect.top) / scale;
 
-                if (wallStart && currentTool === 'wall' && isHost) {
+                if (wallStart && currentTool === 'wall' && isHost && !isSpectating) {
                     database.ref(`sessions/${roomId}/walls`).push({ x1: Math.round(wallStart.x), y1: Math.round(wallStart.y), x2: Math.round(mX), y2: Math.round(mY) });
                     wallStart = null;
                 }
+
+                if (currentTool === 'pointer') {
+                    setTimeout(() => {
+                        database.ref(`sessions/${roomId}/pointers/${userId}`).remove();
+                    }, 1500);
+                    pointerStart = null; pointerEnd = null;
+                }
+
                 isPanning = false; rulerStart = null; rulerEnd = null; clearRulerCanvas();
             };
 
@@ -461,18 +653,10 @@
                 const ref = storage.ref(`rooms/${roomId}/token_${Date.now()}`);
                 ref.put(file).then(() => ref.getDownloadURL()).then(url => {
                     database.ref(`sessions/${roomId}/tokens`).push({
-                        name: "Новый токен", img: url, x: 150, y: 150, size: 50, hpVal: 10, hpMax: 10
+                        name: "Новый тайл", img: url, x: 150, y: 150, size: 60, hpVal: 0, hpMax: 0
                     });
                 });
             };
-
-            document.querySelectorAll('.spawn-token-btn').forEach(b => {
-                b.onclick = () => {
-                    database.ref(`sessions/${roomId}/tokens`).push({
-                        name: b.dataset.name, img: b.dataset.img, x: 100, y: 100, size: 40, hpVal: 10, hpMax: 10
-                    });
-                };
-            });
 
             document.getElementById('btn-clear-walls').onclick = () => {
                 database.ref(`sessions/${roomId}/walls`).remove();
@@ -509,7 +693,36 @@
             contextMenu.onclick = function(e) { e.stopPropagation(); };
         }
 
-        // ЛИНЕЙКА: 20 пикселей = 5 футов (4 пикселя на 1 фут)
+        // РИСОВАНИЕ СТРЕЛОК (УКАЗАТЕЛЕЙ) ИГРОКОВ НА КАРТЕ
+        function drawAllPointers(pointersData) {
+            const ctx = rulerCanvas.getContext('2d');
+            ctx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height);
+            
+            Object.keys(pointersData).forEach(uid => {
+                const p = pointersData[uid];
+                ctx.strokeStyle = '#2ed573';
+                ctx.fillStyle = '#2ed573';
+                ctx.lineWidth = 4;
+                
+                ctx.beginPath();
+                ctx.moveTo(p.x1, p.y1);
+                ctx.lineTo(p.x2, p.y2);
+                ctx.stroke();
+
+                const angle = Math.atan2(p.y2 - p.y1, p.x2 - p.x1);
+                ctx.beginPath();
+                ctx.moveTo(p.x2, p.y2);
+                ctx.lineTo(p.x2 - 15 * Math.cos(angle - Math.PI / 6), p.y2 - 15 * Math.sin(angle - Math.PI / 6));
+                ctx.lineTo(p.x2 - 15 * Math.cos(angle + Math.PI / 6), p.y2 - 15 * Math.sin(angle + Math.PI / 6));
+                ctx.fill();
+
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 13px sans-serif';
+                ctx.fillText(`🏹 ${p.name}`, p.x2 + 10, p.y2 - 10);
+            });
+        }
+
+        // ЛИНЕЙКА
         function drawRuler() {
             const ctx = rulerCanvas.getContext('2d'); ctx.clearRect(0,0,rulerCanvas.width,rulerCanvas.height);
             ctx.strokeStyle = '#ff4757'; ctx.lineWidth = 3;
@@ -517,7 +730,7 @@
             ctx.moveTo(rulerStart.x, rulerStart.y); ctx.lineTo(rulerEnd.x, rulerEnd.y); ctx.stroke();
             
             const pixelDist = Math.sqrt(Math.pow(rulerEnd.x - rulerStart.x, 2) + Math.pow(rulerEnd.y - rulerStart.y, 2));
-            const feetDist = Math.round((pixelDist / 20) * 5); // 20px = 5ft
+            const feetDist = Math.round((pixelDist / 20) * 5);
             
             ctx.fillStyle = '#fff'; ctx.font = '15px sans-serif';
             ctx.fillText(`${feetDist} фт`, rulerEnd.x + 10, rulerEnd.y - 10);
@@ -540,6 +753,5 @@
             contextMenu.style.display = 'none';
         };
     </script>
-</body></html>
-
-?
+</body>
+</html>
