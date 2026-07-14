@@ -718,12 +718,17 @@
             });
         }
 
-        function hasControl(el) {
+    function hasControl(el) {
+            // Если включен режим «Смотреть как игрок», Мастер подчиняется правилам игроков!
             if (isHost && !isSpectatingPlayer) return true;
+            
             let allowedOwners = [];
-            try { allowedOwners = JSON.parse(el.dataset.owners || "[]"); } catch(e) {
+            try { 
+                allowedOwners = JSON.parse(el.dataset.owners || "[]"); 
+            } catch(e) {
                 if(el.dataset.owner) allowedOwners = el.dataset.owner === 'all' ? ['all'] : [el.dataset.owner];
             }
+            // Игрок (или Мастер в режиме игрока) контролирует токен, если он доступен всем или закреплен за ним
             return allowedOwners.includes('all') || allowedOwners.includes(localNickname);
         }
 
@@ -948,18 +953,20 @@
             if (fog.width !== w || fog.height !== h) { fog.width = w; fog.height = h; }
             fCtx.clearRect(0, 0, w, h);
             
-            // Если вы Мастер и не смотрите как игрок — туман скрыт, но разметка стен остается
+            // Если вы Мастер и НЕ смотрите как игрок — туман полностью скрыт
             if (isHost && !isSpectatingPlayer) return; 
 
             const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
             const mCtx = mask.getContext('2d');
 
-            // ИСПРАВЛЕНО: Безопасное чтение слоев и токенов во избежание слепоты
+            // Фильтруем токены, которые дают зрение текущему экрану
             const myTokens = Array.from(document.querySelectorAll('.token')).filter(t => {
                 const isGmLayer = t.classList.contains('layer-gm') || t.dataset.layer === 'gm';
+                // В режиме зрителя Мастер видит только то, что подконтрольно обычным игрокам
                 return hasControl(t) && !isGmLayer;
             });
             
+            // Если под контролем нет токенов (или они еще загружаются), заливаем всё полной тьмой
             if (myTokens.length === 0) { 
                 fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h); 
                 return; 
@@ -973,7 +980,6 @@
                 const cx = (parseFloat(t.style.left) || 0) + (parseFloat(t.style.width) || 40) / 2;
                 const cy = (parseFloat(t.style.top) || 0) + (parseFloat(t.style.height) || 40) / 2;
                 
-                // ИСПРАВЛЕНО: Даем дефолтный радиус в 300px, если у токена нет спец. темного зрения
                 const dv = parseFloat(t.dataset.darkvision) || 0;
                 const baseSight = dv > 0 ? dv : 300; 
 
@@ -1041,16 +1047,6 @@
             fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h);
             fCtx.globalCompositeOperation = 'destination-out'; fCtx.drawImage(mask, 0, 0);
         }
-
-        document.getElementById('token-upload').addEventListener('change', function(e) {
-            const file = e.target.files[0]; if (!file) return;
-            const r = new FileReader(); r.onload = function(ev) {
-                let tl = isHost ? document.getElementById('active-layer-select').value : 'token';
-                createTokenDOM({ id: 't_'+Date.now(), name: "Токен", src: ev.target.result, left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 40, hp: 10, maxHp: 10, layer: tl, darkvision: 0, owner: 'none', owners: [], auras: [{rPx:0, c:'#ff0000'}] });
-                syncActiveGameStorage();
-            }; r.readAsDataURL(file);
-        });
-
         function createTokenDOM(d) {
             const t = document.createElement('div'); t.className = `token layer-${d.layer}`; t.id = d.id;
             t.innerHTML = `<div class="aura aura-1"></div><div class="status-effects"></div><img><div class="token-info-container"><div class="token-name"></div><div class="token-hp-bar-container"><div class="token-hp-bar"></div></div></div>`;
