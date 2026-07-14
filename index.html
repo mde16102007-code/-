@@ -403,31 +403,8 @@
         window.addEventListener('load', () => {
             loadGamesFromStorage();
             loadDmAccountsFromStorage();
-            autoDeleteGameOne();
             checkUrlInvite();
         });
-
-        // Функция автоматического удаления старой игры "1" из облака и локального кэша
-        function autoDeleteGameOne() {
-            let deletedCount = 0;
-            const targets = gamesDatabase.filter(g => g.name === "1" || g.id === "1");
-            
-            targets.forEach(targetGame => {
-                db.ref('shared_games/' + targetGame.id).remove();
-                deletedCount++;
-            });
-
-            if (deletedCount > 0) {
-                gamesDatabase = gamesDatabase.filter(g => g.name !== "1" && g.id !== "1");
-                saveGamesToStorage();
-                if (selectedGameId && (selectedGameId === "1" || targets.some(t => t.id === selectedGameId))) {
-                    selectedGameId = null;
-                }
-                renderGamesList();
-            }
-            // Также принудительно стираем прямую ветку "1" на сервере
-            db.ref('shared_games/1').remove();
-        }
 
         function loadDmAccountsFromStorage() {
             const data = localStorage.getItem('vtt_dm_accounts');
@@ -519,12 +496,10 @@
                 select.innerHTML = ''; const val = sn.val();
                 if(val) {
                     Object.keys(val).forEach(k => { 
-                        if (val[k].name !== "1" && k !== "1") {
-                            const opt = document.createElement('option'); 
-                            opt.value = k; 
-                            opt.textContent = val[k].name; 
-                            select.appendChild(opt); 
-                        }
+                        const opt = document.createElement('option'); 
+                        opt.value = k; 
+                        opt.textContent = val[k].name; 
+                        select.appendChild(opt); 
                     });
                 } else {
                     select.innerHTML = '<option>Доступных игр нет</option>';
@@ -544,7 +519,6 @@
             if(isEditingMode) { const g = gamesDatabase.find(x => x.id === selectedGameId); g.name = name; g.password = pass; }
             else { const n = { id: 'g_'+Date.now(), dmOwner: currentDmUser, name: name, password: pass, maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 }], currentMapIdx: 0, playerMapIdx: 0 }; gamesDatabase.push(n); selectedGameId = n.id; }
             saveGamesToStorage(); switchLobbyStep('dm-dashboard');
-            autoDeleteGameOne();
         }
 
         function deleteGameClick() { 
@@ -603,7 +577,6 @@
             }
         }
 
-        // Принудительное очищение выделения при потере фокуса
         window.addEventListener('blur', () => {
             deselectAllTokens();
         });
@@ -812,7 +785,6 @@
             scaleUnitFactor = fm.gridSize || 40;
             syncTokensOnly(fm.tokens || []);
 
-            // Инициализация и безопасная отрисовка стен
             const curDarknessCount = document.querySelectorAll('.darkness-zone').length;
             const curWallsCount = document.querySelectorAll('.wall-zone').length;
             const serverDarkness = fm.darknessZones || [];
@@ -854,7 +826,6 @@
                 cm.height = parseFloat(document.getElementById('game-map').style.height)||800;
                 cm.gridSize = scaleUnitFactor;
                 
-                // РЕШЕНИЕ ПРОБЛЕМЫ 2: Сохраняем только карту (/maps/), чтобы не затереть online_players
                 db.ref(`shared_games/${activeGame.id}/maps/${activeGame.currentMapIdx}`).set(cm);
                 db.ref(`shared_games/${activeGame.id}/playerMapIdx`).set(activeGame.playerMapIdx || 0);
             } else {
@@ -968,7 +939,6 @@
         function resetRulerCanvas() { rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height); }
 
         /* === УЛЬТИМАТИВНЫЙ ДВИЖОК ВИДИМОСТИ С ПОСТРОЕНИЕМ ТЕНЕЙ === */
-/* === УЛЬТИМАТИВНЫЙ ДВИЖОК ВИДИМОСТИ С ПОСТРОЕНИЕМ ТЕНЕЙ === */
         function updateVisibility() {
             const fog = document.getElementById('fog-canvas'); if (!fog) return;
             const fCtx = fog.getContext('2d'); const img = document.getElementById('game-map');
@@ -984,13 +954,12 @@
             const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
             const mCtx = mask.getContext('2d');
 
-            // ИСПРАВЛЕНО: Более мягкая и точная проверка токенов во избежание "слепоты" при загрузке
+            // ИСПРАВЛЕНО: Безопасное чтение слоев и токенов во избежание слепоты
             const myTokens = Array.from(document.querySelectorAll('.token')).filter(t => {
                 const isGmLayer = t.classList.contains('layer-gm') || t.dataset.layer === 'gm';
                 return hasControl(t) && !isGmLayer;
             });
             
-            // Если у игрока вообще нет токенов на этой карте, заливаем всё туманом
             if (myTokens.length === 0) { 
                 fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h); 
                 return; 
@@ -1004,38 +973,9 @@
                 const cx = (parseFloat(t.style.left) || 0) + (parseFloat(t.style.width) || 40) / 2;
                 const cy = (parseFloat(t.style.top) || 0) + (parseFloat(t.style.height) || 40) / 2;
                 
-                // ИСПРАВЛЕНО: Базовый радиус видимости, если Тёмное зрение не задано (или 0)
+                // ИСПРАВЛЕНО: Даем дефолтный радиус в 300px, если у токена нет спец. темного зрения
                 const dv = parseFloat(t.dataset.darkvision) || 0;
-                const baseSight = dv > 0 ? dv : 300; // 300px — дефолтное зрение, чтобы чар не слеп
-
-                const tCanv = document.createElement('canvas'); tCanv.width = w; tCanv.height = h;
-                const tCtx = tCanv.getContext('2d');
-
-                tCtx.fillStyle = '#ffffff'; tCtx.beginPath(); tCtx.arc(cx, cy, baseSight, 0, Math.PI * 2); tCtx.fill();
-
-                tCtx.globalCompositeOperation = 'destination-out';
-            
-            // Если вы Мастер и не смотрите как игрок — туман скрыт, но разметка стен остается
-            if (isHost && !isSpectatingPlayer) return; 
-
-            const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
-            const mCtx = mask.getContext('2d');
-
-            const myTokens = Array.from(document.querySelectorAll('.token')).filter(t => hasControl(t) && t.dataset.layer !== 'gm');
-            if (myTokens.length === 0) { 
-                fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h); 
-                return; 
-            }
-
-            const walls = Array.from(document.querySelectorAll('.wall-zone'));
-            const darkZones = Array.from(document.querySelectorAll('.darkness-zone'));
-            const containerRect = mapContainer.getBoundingClientRect();
-
-            myTokens.forEach(t => {
-                const cx = (parseFloat(t.style.left) || 0) + (parseFloat(t.style.width) || 40) / 2;
-                const cy = (parseFloat(t.style.top) || 0) + (parseFloat(t.style.height) || 40) / 2;
-                const baseSight = 600; 
-                const dv = parseFloat(t.dataset.darkvision) || 0;
+                const baseSight = dv > 0 ? dv : 300; 
 
                 const tCanv = document.createElement('canvas'); tCanv.width = w; tCanv.height = h;
                 const tCtx = tCanv.getContext('2d');
@@ -1044,7 +984,6 @@
 
                 tCtx.globalCompositeOperation = 'destination-out';
                 
-                // РЕШЕНИЕ ПРОБЛЕМЫ 1: Чтение координат через getBoundingClientRect() работает безотказно при любой прозрачности стен (даже при opacity: 0)
                 darkZones.forEach(z => { 
                     const r = z.getBoundingClientRect();
                     const zl = (r.left - containerRect.left) / cameraZoom;
@@ -1271,7 +1210,6 @@
         viewport.addEventListener('mousedown', function(e) {
             if (e.button !== 0) return; const rect = mapContainer.getBoundingClientRect();
             
-            // Защита от случайной просадки при клике по уже созданной стене
             if (e.target.classList.contains('darkness-zone') || e.target.classList.contains('wall-zone')) {
                 if (currentMode !== 'select' && currentMode !== 'pan') {
                     e.stopPropagation();
