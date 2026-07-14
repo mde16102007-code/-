@@ -718,8 +718,8 @@
             });
         }
 
-    function hasControl(el) {
-            // Если включен режим «Смотреть как игрок», Мастер подчиняется правилам игроков!
+        function hasControl(el) {
+            // В обычном режиме Хост контролирует вообще всё. В режиме зрителя — подчиняется правилам игроков.
             if (isHost && !isSpectatingPlayer) return true;
             
             let allowedOwners = [];
@@ -728,7 +728,6 @@
             } catch(e) {
                 if(el.dataset.owner) allowedOwners = el.dataset.owner === 'all' ? ['all'] : [el.dataset.owner];
             }
-            // Игрок (или Мастер в режиме игрока) контролирует токен, если он доступен всем или закреплен за ним
             return allowedOwners.includes('all') || allowedOwners.includes(localNickname);
         }
 
@@ -765,7 +764,12 @@
                     el.style.width = t.sizePx + 'px'; el.style.height = t.sizePx + 'px';
                     el.querySelector('.token-name').textContent = t.name;
                     
-                    el.dataset.owners = JSON.stringify(t.owners || (t.owner === 'all' ? ['all'] : (t.owner && t.owner !== 'none' ? [t.owner] : [])));
+                    // ИСПРАВЛЕНО: Безопасное склеивание старой и новой структуры прав при синхронизации сессии
+                    let parsedOwners = t.owners;
+                    if (!parsedOwners || !Array.isArray(parsedOwners)) {
+                        parsedOwners = (t.owner === 'all') ? ['all'] : (t.owner && t.owner !== 'none' ? [t.owner] : []);
+                    }
+                    el.dataset.owners = JSON.stringify(parsedOwners);
                     el.dataset.owner = t.owner || 'none';
                     
                     let pct = t.maxHp > 0 ? (t.hp / t.maxHp) * 100 : 0;
@@ -959,14 +963,13 @@
             const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
             const mCtx = mask.getContext('2d');
 
-            // Фильтруем токены, которые дают зрение текущему экрану
+            // ИСПРАВЛЕНО: Полная защита от GM-слоя и точное вычисление контроля
             const myTokens = Array.from(document.querySelectorAll('.token')).filter(t => {
                 const isGmLayer = t.classList.contains('layer-gm') || t.dataset.layer === 'gm';
-                // В режиме зрителя Мастер видит только то, что подконтрольно обычным игрокам
                 return hasControl(t) && !isGmLayer;
             });
             
-            // Если под контролем нет токенов (или они еще загружаются), заливаем всё полной тьмой
+            // Если под контролем нет токенов, заливаем всё полной тьмой
             if (myTokens.length === 0) { 
                 fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h); 
                 return; 
@@ -1047,6 +1050,16 @@
             fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h);
             fCtx.globalCompositeOperation = 'destination-out'; fCtx.drawImage(mask, 0, 0);
         }
+
+        document.getElementById('token-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0]; if (!file) return;
+            const r = new FileReader(); r.onload = function(ev) {
+                let tl = isHost ? document.getElementById('active-layer-select').value : 'token';
+                createTokenDOM({ id: 't_'+Date.now(), name: "Токен", src: ev.target.result, left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 40, hp: 10, maxHp: 10, layer: tl, darkvision: 0, owner: 'none', owners: [], auras: [{rPx:0, c:'#ff0000'}] });
+                syncActiveGameStorage();
+            }; r.readAsDataURL(file);
+        });
+
         function createTokenDOM(d) {
             const t = document.createElement('div'); t.className = `token layer-${d.layer}`; t.id = d.id;
             t.innerHTML = `<div class="aura aura-1"></div><div class="status-effects"></div><img><div class="token-info-container"><div class="token-name"></div><div class="token-hp-bar-container"><div class="token-hp-bar"></div></div></div>`;
