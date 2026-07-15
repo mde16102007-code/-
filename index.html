@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Архивный НРИ Стол — Профессиональный движок видимости</title>
+    <title>Архивный НРИ Стол</title>
     <style>
         /* === БАЗА И ИНТЕРФЕЙС === */
         body { margin: 0; padding: 0; background-color: #121212; font-family: 'Segoe UI', Arial, sans-serif; color: #e0e0e0; overflow: hidden; user-select: none; }
@@ -66,24 +66,7 @@
         #game-map { display: block; width: 1200px; height: 800px; pointer-events: none; background: #27272a; object-fit: fill; z-index: 1; }
         
         /* Слои видимости */
-        #fog-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 25; mix-blend-mode: multiply; }
         #ruler-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 500; }
-
-        /* Зоны Тьмы и Стен - Слой 30 (выше тумана) */
-        .darkness-zone, .wall-zone { position: absolute; box-sizing: border-box; z-index: 30; }
-        
-        /* Отображение геометрии для DM */
-        .dm-mode .darkness-zone { opacity: 0.35; border: 1px dashed #fff; background: #1a1a1a; pointer-events: none; }
-        .dm-mode .wall-zone { border: 2px solid #ef4444; background: rgba(239, 68, 68, 0.15); pointer-events: none; }
-        
-        /* Включение кликов по стенам и тьме только в соответствующих режимах */
-        .mode-darkness .darkness-zone { pointer-events: auto !important; cursor: pointer; }
-        .mode-darkness .darkness-zone:hover { background: rgba(239, 68, 68, 0.4); }
-        .mode-wall .wall-zone { pointer-events: auto !important; cursor: pointer; }
-        .mode-wall .wall-zone:hover { background: rgba(239, 68, 68, 0.4); }
-        
-        /* Полная невидимость для игроков */
-        .player-mode .darkness-zone, .player-mode .wall-zone { opacity: 0 !important; pointer-events: none !important; }
 
         /* === ТОКЕНЫ И СТАТУСЫ === */
         .token { position: absolute; touch-action: none; box-sizing: border-box; }
@@ -103,6 +86,14 @@
         .token.layer-gm { z-index: 30; opacity: 0.5; }
         .token.layer-gm img { filter: drop-shadow(0 0 6px #a855f7); }
 
+        /* Быстрые характеристики (Хиты, КЗ, Мана) над токеном */
+        .token .quick-stats { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); display: none; gap: 4px; z-index: 100; pointer-events: auto; }
+        .token.selected .quick-stats { display: flex; }
+        .quick-stats input { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #38bdf8; background: rgba(24, 24, 27, 0.95); color: #fff; text-align: center; font-size: 10px; padding: 0; outline: none; box-shadow: 0 0 5px rgba(0,0,0,0.8); cursor: text; }
+        .quick-stats input.qs-hp { border-color: #ef4444; }
+        .quick-stats input.qs-ac { border-color: #bfa15f; }
+        .quick-stats input.qs-mp { border-color: #3b82f6; }
+
         /* Класс для активного перетаскивания */
         .token.active-drag { z-index: 99999 !important; }
 
@@ -119,7 +110,7 @@
         .token-hp-bar { width: 100%; height: 100%; background: #22c55e; }
 
         /* Контекстное меню */
-        .token-context-menu { position: absolute; top: 105%; left: 50%; transform: translateX(-50%); background: rgba(24, 24, 27, 0.98); border: 1px solid #38bdf8; border-radius: 6px; padding: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); z-index: 2000; display: none; flex-direction: column; gap: 6px; width: 230px; cursor: default; }
+        .token-context-menu { position: absolute; background: rgba(24, 24, 27, 0.98); border: 1px solid #38bdf8; border-radius: 6px; padding: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); z-index: 2000; display: none; flex-direction: column; gap: 6px; width: 230px; cursor: default; }
         .token-context-menu label { font-size: 10px; color: #a1a1aa; margin-bottom: -2px; display: block;}
         .token-context-menu input, .token-context-menu select { background: #18181b; color: #fff; border: 1px solid #52525b; padding: 4px; border-radius: 3px; font-size: 12px; width: 100%; box-sizing: border-box; }
         .context-row { display: flex; gap: 5px; align-items: center; }
@@ -188,18 +179,12 @@
             <button class="dm-only" style="background: #374151;" onclick="renameCurrentMap()">✏️</button>
             <button class="dm-only" style="background: #7f1d1d;" onclick="deleteCurrentMap()">🗑️</button>
             <button class="dm-only" id="btn-ribbon" style="background: #bfa15f; color:#121212; font-weight:bold;" onclick="movePlayerRibbon()" title="Перенести игроков на эту карту">🚩 Игроки</button>
-            <button class="dm-only" style="background: #374151;" onclick="clearAllDarknessAndWalls()">🧹</button>
         </div>
         
         <div class="panel-section dm-only">
             <span style="font-size:11px; color:#a1a1aa;">Разм:</span>
             <input type="number" id="map-width-input" value="1200" style="width:45px;" oninput="applyMapSize()"> ×
             <input type="number" id="map-height-input" value="800" style="width:45px;" oninput="applyMapSize()">
-        </div>
-
-        <div class="panel-section dm-only">
-            <span style="font-size:11px; color:#a1a1aa;">Сетка:</span>
-            <input type="number" id="grid-size-input" value="40" style="width:38px;" oninput="applyGridSize()">px
         </div>
 
         <div class="panel-section dm-only">
@@ -221,11 +206,6 @@
             <input type="file" id="token-upload" accept="image/*" style="display:none;">
             <button style="background: #22c55e; color: black;" onclick="document.getElementById('token-upload').click()">+ Токен</button>
         </div>
-
-        <!-- Кнопка "Смотреть как игрок" для DM -->
-        <div class="panel-section dm-only-persistent" id="spectate-panel-section" style="display: none;">
-            <button id="btn-spectate-player" style="background: #a855f7; color: white;" onclick="toggleSpectatePlayerMode()">👁️ Смотреть как игрок</button>
-        </div>
     </div>
 
     <!-- ЛЕВАЯ БОКОВАЯ ПАНЕЛЬ -->
@@ -236,8 +216,6 @@
                 <button id="btn-mode-select" class="active" onclick="setMode('select')">🖱️ Выбор</button>
                 <button id="btn-mode-pan" onclick="setMode('pan')">🖐️ Камера</button>
                 <button id="btn-mode-ruler" onclick="setMode('ruler')">📏 Линейка</button>
-                <button id="btn-mode-darkness" class="dm-only" onclick="setMode('darkness')">⬛ Тьма</button>
-                <button id="btn-mode-wall" class="dm-only" onclick="setMode('wall')">🧱 Стена</button>
             </div>
             
             <div id="ruler-options" style="display:none; flex-direction:column; gap:4px; margin-top:5px; border-top:1px solid #3f3f46; padding-top:5px;">
@@ -264,7 +242,7 @@
                 <div class="dice-grid">
                     <button onclick="rollDice(4)">d4</button>
                     <button onclick="rollDice(6)">d6</button>
-                    <button onclick="rollDice(8)    ">d8</button>
+                    <button onclick="rollDice(8)">d8</button>
                     <button onclick="rollDice(10)">d10</button>
                     <button onclick="rollDice(12)">d12</button>
                     <button onclick="rollDice(20)" style="color:#bfa15f;">d20</button>
@@ -301,10 +279,10 @@
 
     <!-- НАСТРОЙКИ ТОКЕНА -->
     <div id="token-menu" class="token-context-menu" onmousedown="event.stopPropagation()">
-        <div id="permissions-container-block">
+        <div id="permissions-container-block" class="dm-only">
             <label style="color:#38bdf8; font-weight:bold; margin-bottom: 2px;">Контролируется:</label>
             <select id="ctx-owner-select" onchange="applyContextChanges()">
-                <!-- Динамически заполняется -->
+                <!-- Динамически заполняется только для Мастера -->
             </select>
             <hr style="border:0; border-top:1px solid #3f3f46; margin: 4px 0;">
         </div>
@@ -315,15 +293,20 @@
         <div class="context-row">
             <div style="flex:1;">
                 <label style="color:#ef4444;">HP</label>
-                <div class="context-row"><input type="number" id="ctx-hp" oninput="applyContextChanges()">/ <input type="number" id="ctx-max-hp" oninput="applyContextChanges()"></div>
+                <div class="context-row"><input type="number" id="ctx-hp" oninput="applyContextChanges()" style="width:40px;">/ <input type="number" id="ctx-max-hp" oninput="applyContextChanges()" style="width:40px;"></div>
+            </div>
+            <div style="flex:1;">
+                <label style="color:#bfa15f;">КЗ (AC)</label>
+                <input type="text" id="ctx-ac" oninput="applyContextChanges()">
+            </div>
+            <div style="flex:1;">
+                <label style="color:#3b82f6;">Мана</label>
+                <input type="text" id="ctx-mp" oninput="applyContextChanges()">
             </div>
         </div>
 
         <label id="lbl-size">Размер</label>
         <input type="number" id="ctx-size" oninput="applyContextChanges()">
-
-        <label style="color:#eab308;" id="lbl-darkvision">Тёмное зрение (Радиус)</label>
-        <input type="number" id="ctx-darkvision" placeholder="0" oninput="applyContextChanges()">
 
         <label class="dm-only" style="color:#a855f7;">Слой</label>
         <select id="ctx-layer" class="dm-only" onchange="applyContextChanges()">
@@ -341,7 +324,10 @@
 
         <label style="color:#22c55e;" id="lbl-auras">Ауры (Радиус)</label>
         <div class="context-row"><input type="number" id="aura1-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura1-col" value="#ff0000" onchange="applyContextChanges()"></div>
-        <button onclick="deleteSelectedTokens()" style="background:#ef4444; color:#fff; font-size:11px; margin-top:4px; width:100%;">❌ Удалить</button>
+        <div class="context-row"><input type="number" id="aura2-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura2-col" value="#00ff00" onchange="applyContextChanges()"></div>
+        <div class="context-row"><input type="number" id="aura3-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura3-col" value="#0000ff" onchange="applyContextChanges()"></div>
+        
+        <button id="btn-delete-token" onclick="deleteSelectedTokens()" style="background:#ef4444; color:#fff; font-size:11px; margin-top:4px; width:100%;">❌ Удалить</button>
     </div>
 
     <div id="selection-box" class="selection-box"></div>
@@ -349,7 +335,6 @@
     <div id="game-viewport" class="mode-select">
         <div id="table-surface">
             <div id="map-container" class="active-layer-token">
-                <canvas id="fog-canvas"></canvas>
                 <canvas id="ruler-canvas"></canvas>
                 <img id="game-map" src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200" alt="Карта">
             </div>
@@ -383,7 +368,6 @@
         let selectedTokens = []; 
         let copiedTokens = []; 
         let isHost = false;
-        let isSpectatingPlayer = false; 
         let localNickname = "Игрок";
         let systemUnit = 'ft'; 
         let scaleUnitFactor = 40; 
@@ -424,8 +408,6 @@
                         if (g.playerMapIdx === undefined) g.playerMapIdx = 0;
                         g.maps.forEach(m => {
                             if (!m.tokens) m.tokens = [];
-                            if (!m.darknessZones) m.darknessZones = [];
-                            if (!m.walls) m.walls = [];
                             if (!m.height) m.height = 800;
                             if (!m.gridSize) m.gridSize = 40;
                         });
@@ -437,7 +419,7 @@
                     dmOwner: 'admin',
                     name: "Стартовое приключение",
                     password: "123",
-                    maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 }],
+                    maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], gridSize: 40 }],
                     currentMapIdx: 0,
                     playerMapIdx: 0
                 }];
@@ -517,7 +499,7 @@
             const name = document.getElementById('edit-game-name').value || "Без названия";
             const pass = document.getElementById('edit-game-password').value || "123";
             if(isEditingMode) { const g = gamesDatabase.find(x => x.id === selectedGameId); g.name = name; g.password = pass; }
-            else { const n = { id: 'g_'+Date.now(), dmOwner: currentDmUser, name: name, password: pass, maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 }], currentMapIdx: 0, playerMapIdx: 0 }; gamesDatabase.push(n); selectedGameId = n.id; }
+            else { const n = { id: 'g_'+Date.now(), dmOwner: currentDmUser, name: name, password: pass, maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], gridSize: 40 }], currentMapIdx: 0, playerMapIdx: 0 }; gamesDatabase.push(n); selectedGameId = n.id; }
             saveGamesToStorage(); switchLobbyStep('dm-dashboard');
         }
 
@@ -596,33 +578,14 @@
             if(isHost) { 
                 document.body.classList.add('dm-mode'); 
                 changeActiveLayer(); 
-                document.getElementById('spectate-panel-section').style.display = 'flex'; 
+                document.getElementById('btn-delete-token').style.display = 'block';
             }
             else { 
                 document.body.classList.add('player-mode'); 
                 activeGame.currentMapIdx = activeGame.playerMapIdx || 0; 
+                document.getElementById('btn-delete-token').style.display = 'none';
             }
             renderMapSelectorUI(); switchMap(true);
-        }
-
-        function toggleSpectatePlayerMode() {
-            if (!isHost) return;
-            isSpectatingPlayer = !isSpectatingPlayer;
-            const btn = document.getElementById('btn-spectate-player');
-            
-            if (isSpectatingPlayer) {
-                btn.textContent = "👁️ Режим мастера";
-                btn.style.background = "#22c55e";
-                document.body.classList.remove('dm-mode');
-                document.body.classList.add('player-mode');
-            } else {
-                btn.textContent = "👁️ Смотреть как игрок";
-                btn.style.background = "#a855f7";
-                document.body.classList.remove('player-mode');
-                document.body.classList.add('dm-mode');
-            }
-            deselectAllTokens();
-            updateVisibility();
         }
 
         function setupPresence() {
@@ -719,8 +682,7 @@
         }
 
         function hasControl(el) {
-            // В обычном режиме Хост контролирует вообще всё. В режиме зрителя — подчиняется правилам игроков.
-            if (isHost && !isSpectatingPlayer) return true;
+            if (isHost) return true;
             
             let allowedOwners = [];
             try { 
@@ -737,9 +699,7 @@
                 
                 if(isHost) {
                     const fm = fresh.maps[fresh.currentMapIdx];
-                    if (fm && fm.tokens) {
-                        syncTokensOnly(fm.tokens);
-                    }
+                    if (fm && fm.tokens) syncTokensOnly(fm.tokens);
                 } else {
                     const mapChanged = fresh.playerMapIdx !== activeGame.currentMapIdx;
                     activeGame = fresh;
@@ -764,7 +724,6 @@
                     el.style.width = t.sizePx + 'px'; el.style.height = t.sizePx + 'px';
                     el.querySelector('.token-name').textContent = t.name;
                     
-                    // ИСПРАВЛЕНО: Безопасное склеивание старой и новой структуры прав при синхронизации сессии
                     let parsedOwners = t.owners;
                     if (!parsedOwners || !Array.isArray(parsedOwners)) {
                         parsedOwners = (t.owner === 'all') ? ['all'] : (t.owner && t.owner !== 'none' ? [t.owner] : []);
@@ -772,19 +731,30 @@
                     el.dataset.owners = JSON.stringify(parsedOwners);
                     el.dataset.owner = t.owner || 'none';
                     
-                    let pct = t.maxHp > 0 ? (t.hp / t.maxHp) * 100 : 0;
+                    let hpVal = t.hp !== undefined ? t.hp : 10;
+                    let maxHpVal = t.maxHp !== undefined ? t.maxHp : 10;
+
+                    let pct = maxHpVal > 0 ? (hpVal / maxHpVal) * 100 : 0;
                     el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
-                    el.dataset.hp = t.hp; el.dataset.maxHp = t.maxHp; el.dataset.layer = t.layer;
-                    el.dataset.darkvision = t.darkvision || 0; el.dataset.auras = JSON.stringify(t.auras);
                     
+                    el.dataset.hp = hpVal; el.dataset.maxHp = maxHpVal;
+                    el.dataset.ac = t.ac || ''; el.dataset.mp = t.mp || '';
+                    el.dataset.layer = t.layer;
+                    el.dataset.auras = JSON.stringify(t.auras || [{},{},{}]);
+                    
+                    el.querySelector('.qs-hp').value = hpVal;
+                    el.querySelector('.qs-ac').value = t.ac || '';
+                    el.querySelector('.qs-mp').value = t.mp || '';
+
                     const sb = el.querySelector('.status-effects'); sb.innerHTML = '';
                     if(t.isDead) sb.innerHTML += '<div class="status-dot dead"></div>';
                     if(t.isPoisoned) sb.innerHTML += '<div class="status-dot poisoned"></div>';
                     if(t.isStunned) sb.innerHTML += '<div class="status-dot stunned"></div>';
+                    
+                    updateTokenAuraVisuals(el, JSON.parse(el.dataset.auras), t.sizePx);
                 }
             });
             document.querySelectorAll('.token').forEach(el => { if(!serverTokens.find(t => t.id === el.id)) el.remove(); });
-            updateVisibility();
         }
 
         function syncPlayerTableFromServer(fm) {
@@ -792,45 +762,38 @@
             if(img.src !== fm.src) img.src = fm.src;
             img.style.width = (fm.width || 1200) + 'px'; img.style.height = (fm.height || 800) + 'px';
             scaleUnitFactor = fm.gridSize || 40;
+            
             syncTokensOnly(fm.tokens || []);
-
-            const curDarknessCount = document.querySelectorAll('.darkness-zone').length;
-            const curWallsCount = document.querySelectorAll('.wall-zone').length;
-            const serverDarkness = fm.darknessZones || [];
-            const serverWalls = fm.walls || [];
-
-            if (curDarknessCount !== serverDarkness.length || curWallsCount !== serverWalls.length) {
-                document.querySelectorAll('.darkness-zone, .wall-zone').forEach(el => el.remove());
-                serverDarkness.forEach(z => { const el = document.createElement('div'); el.className = 'darkness-zone'; el.style.left = z.left; el.style.top = z.top; el.style.width = z.width; el.style.height = z.height; mapContainer.appendChild(el); });
-                serverWalls.forEach(w => { const el = document.createElement('div'); el.className = 'wall-zone'; el.style.left = w.left; el.style.top = w.top; el.style.width = w.width; el.style.height = w.height; mapContainer.appendChild(el); });
-            }
-            updateVisibility();
         }
 
         function syncActiveGameStorage() {
             if(!activeGame || !activeGame.maps[activeGame.currentMapIdx]) return;
             const cm = activeGame.maps[activeGame.currentMapIdx];
+            
+            // Сбор токенов
             const arr = [];
             document.querySelectorAll('.token').forEach(el => {
-                const au = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{rPx:0, c:'#ff0000'}];
+                const au = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{},{},{}];
                 let ownersList = [];
                 try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
                 
                 arr.push({
                     id: el.id, name: el.querySelector('.token-name').textContent, src: el.querySelector('img').src,
                     left: parseFloat(el.style.left), top: parseFloat(el.style.top), sizePx: parseFloat(el.style.width),
-                    hp: parseInt(el.dataset.hp)||10, maxHp: parseInt(el.dataset.maxHp)||10, layer: el.dataset.layer||'token',
+                    hp: el.querySelector('.qs-hp').value !== '' ? parseInt(el.querySelector('.qs-hp').value) : (parseInt(el.dataset.hp)||0), 
+                    maxHp: parseInt(el.dataset.maxHp)||10, 
+                    ac: el.querySelector('.qs-ac').value || el.dataset.ac || '',
+                    mp: el.querySelector('.qs-mp').value || el.dataset.mp || '',
+                    layer: el.dataset.layer||'token',
                     owner: el.dataset.owner || 'none',
                     owners: ownersList,
                     isDead: !!el.querySelector('.status-dot.dead'), isPoisoned: !!el.querySelector('.status-dot.poisoned'), isStunned: !!el.querySelector('.status-dot.stunned'),
-                    auras: au, darkvision: parseFloat(el.dataset.darkvision)||0
+                    auras: au
                 });
             });
             cm.tokens = arr;
 
             if (isHost) {
-                cm.darknessZones = []; document.querySelectorAll('.darkness-zone').forEach(z => cm.darknessZones.push({ left: z.style.left, top: z.style.top, width: z.style.width, height: z.style.height }));
-                cm.walls = []; document.querySelectorAll('.wall-zone').forEach(w => cm.walls.push({ left: w.style.left, top: w.style.top, width: w.style.width, height: w.style.height }));
                 cm.width = parseFloat(document.getElementById('game-map').style.width)||1200;
                 cm.height = parseFloat(document.getElementById('game-map').style.height)||800;
                 cm.gridSize = scaleUnitFactor;
@@ -860,9 +823,10 @@
             updateRibbonUI();
         }
 
+        // Переключение карты
         function switchMap(initial = false) {
             if(!initial) syncActiveGameStorage();
-            document.querySelectorAll('.token, .darkness-zone, .wall-zone').forEach(el => el.remove());
+            document.querySelectorAll('.token').forEach(el => el.remove());
             deselectAllTokens();
 
             if(!initial && isHost) activeGame.currentMapIdx = parseInt(document.getElementById('map-selector').value) || 0;
@@ -871,11 +835,9 @@
             const img = document.getElementById('game-map'); img.src = mo.src;
             img.style.width = (mo.width || 1200) + 'px'; img.style.height = (mo.height || 800) + 'px';
             if(isHost) { document.getElementById('map-width-input').value = mo.width; document.getElementById('map-height-input').value = mo.height; }
-            scaleUnitFactor = mo.gridSize || 40; document.getElementById('grid-size-input').value = scaleUnitFactor;
+            scaleUnitFactor = mo.gridSize || 40;
 
             (mo.tokens || []).forEach(t => createTokenDOM(t));
-            (mo.darknessZones || []).forEach(z => { const el = document.createElement('div'); el.className = 'darkness-zone'; el.style.left = z.left; el.style.top = z.top; el.style.width = z.width; el.style.height = z.height; mapContainer.appendChild(el); });
-            (mo.walls || []).forEach(w => { const el = document.createElement('div'); el.className = 'wall-zone'; el.style.left = w.left; el.style.top = w.top; el.style.width = w.width; el.style.height = w.height; mapContainer.appendChild(el); });
 
             img.onload = () => resizeRulerCanvas(); resizeRulerCanvas();
         }
@@ -883,7 +845,7 @@
         document.getElementById('map-library-upload').addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
             const r = new FileReader(); r.onload = function(ev) {
-                activeGame.maps.push({ name: `Карта ${activeGame.maps.length + 1}`, src: ev.target.result, width: 1200, height: 800, tokens: [], darknessZones: [], walls: [], gridSize: 40 });
+                activeGame.maps.push({ name: `Карта ${activeGame.maps.length + 1}`, src: ev.target.result, width: 1200, height: 800, tokens: [], gridSize: 40 });
                 activeGame.currentMapIdx = activeGame.maps.length - 1; renderMapSelectorUI(); switchMap(true); syncActiveGameStorage();
             }; r.readAsDataURL(file);
         });
@@ -893,7 +855,6 @@
         function movePlayerRibbon() { if(!isHost) return; activeGame.playerMapIdx = activeGame.currentMapIdx; renderMapSelectorUI(); syncActiveGameStorage(); }
         function updateRibbonUI() { const b = document.getElementById('btn-ribbon'); if(b) b.style.opacity = (activeGame.playerMapIdx === activeGame.currentMapIdx) ? '1' : '0.5'; }
         function applyMapSize() { if(!isHost) return; const w = document.getElementById('map-width-input').value; const h = document.getElementById('map-height-input').value; const img = document.getElementById('game-map'); img.style.width = w+'px'; img.style.height = h+'px'; resizeRulerCanvas(); syncActiveGameStorage(); }
-        function applyGridSize() { if(!isHost) return; scaleUnitFactor = parseInt(document.getElementById('grid-size-input').value)||40; syncActiveGameStorage(); }
         function changeZoomSlider(v) { cameraZoom = parseFloat(v); updateTransform(); document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom*100)+'%'; }
         function changeActiveLayer() { if(!isHost) return; mapContainer.className = `active-layer-${document.getElementById('active-layer-select').value}`; deselectAllTokens(); }
 
@@ -920,6 +881,7 @@
         }
         function clearDiceLog() { db.ref(`shared_games/${activeGame.id}/dice_log`).remove(); }
         
+        // Масштабирование линейки
         function updateUnitsUI() { systemUnit = document.getElementById('unit-system').value; }
         function toPx(v) { return systemUnit === 'ft' ? (v / 5) * scaleUnitFactor : v; }
         function fromPx(v) { return systemUnit === 'ft' ? Math.round((v / scaleUnitFactor) * 5) : Math.round(v); }
@@ -929,7 +891,6 @@
             const h = parseFloat(img.style.height) || 800;
             rulerCanvas.width = w; 
             rulerCanvas.height = h; 
-            updateVisibility(); 
         }
 
         function setMode(m) {
@@ -947,124 +908,47 @@
         }
         function resetRulerCanvas() { rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height); }
 
-        /* === УЛЬТИМАТИВНЫЙ ДВИЖОК ВИДИМОСТИ С ПОСТРОЕНИЕМ ТЕНЕЙ === */
-        function updateVisibility() {
-            const fog = document.getElementById('fog-canvas'); if (!fog) return;
-            const fCtx = fog.getContext('2d'); const img = document.getElementById('game-map');
-            
-            const w = parseFloat(img.style.width) || 1200; 
-            const h = parseFloat(img.style.height) || 800;
-            if (fog.width !== w || fog.height !== h) { fog.width = w; fog.height = h; }
-            fCtx.clearRect(0, 0, w, h);
-            
-            // Если вы Мастер и НЕ смотрите как игрок — туман полностью скрыт
-            if (isHost && !isSpectatingPlayer) return; 
-
-            const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
-            const mCtx = mask.getContext('2d');
-
-            // ИСПРАВЛЕНО: Полная защита от GM-слоя и точное вычисление контроля
-            const myTokens = Array.from(document.querySelectorAll('.token')).filter(t => {
-                const isGmLayer = t.classList.contains('layer-gm') || t.dataset.layer === 'gm';
-                return hasControl(t) && !isGmLayer;
-            });
-            
-            // Если под контролем нет токенов, заливаем всё полной тьмой
-            if (myTokens.length === 0) { 
-                fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h); 
-                return; 
-            }
-
-            const walls = Array.from(document.querySelectorAll('.wall-zone'));
-            const darkZones = Array.from(document.querySelectorAll('.darkness-zone'));
-            const containerRect = mapContainer.getBoundingClientRect();
-
-            myTokens.forEach(t => {
-                const cx = (parseFloat(t.style.left) || 0) + (parseFloat(t.style.width) || 40) / 2;
-                const cy = (parseFloat(t.style.top) || 0) + (parseFloat(t.style.height) || 40) / 2;
-                
-                const dv = parseFloat(t.dataset.darkvision) || 0;
-                const baseSight = dv > 0 ? dv : 300; 
-
-                const tCanv = document.createElement('canvas'); tCanv.width = w; tCanv.height = h;
-                const tCtx = tCanv.getContext('2d');
-
-                tCtx.fillStyle = '#ffffff'; tCtx.beginPath(); tCtx.arc(cx, cy, baseSight, 0, Math.PI * 2); tCtx.fill();
-
-                tCtx.globalCompositeOperation = 'destination-out';
-                
-                darkZones.forEach(z => { 
-                    const r = z.getBoundingClientRect();
-                    const zl = (r.left - containerRect.left) / cameraZoom;
-                    const zt = (r.top - containerRect.top) / cameraZoom;
-                    const zw = r.width / cameraZoom;
-                    const zh = r.height / cameraZoom;
-                    tCtx.fillRect(zl, zt, zw, zh); 
-                });
-
-                if (dv > 0) { 
-                    tCtx.globalCompositeOperation = 'source-over';
-                    tCtx.fillStyle = '#ffffff';
-                    tCtx.beginPath(); tCtx.arc(cx, cy, dv, 0, Math.PI * 2); tCtx.fill(); 
-                }
-
-                tCtx.globalCompositeOperation = 'destination-out';
-                tCtx.fillStyle = '#ffffff';
-                walls.forEach(wall => {
-                    const r = wall.getBoundingClientRect();
-                    const wl = (r.left - containerRect.left) / cameraZoom;
-                    const wt = (r.top - containerRect.top) / cameraZoom;
-                    const ww = r.width / cameraZoom;
-                    const wh = r.height / cameraZoom;
-                    
-                    tCtx.fillRect(wl, wt, ww, wh);
-
-                    const edges = [
-                        [{x: wl, y: wt}, {x: wl + ww, y: wt}],
-                        [{x: wl + ww, y: wt}, {x: wl + ww, y: wt + wh}],
-                        [{x: wl + ww, y: wt + wh}, {x: wl, y: wt + wh}],
-                        [{x: wl, y: wt + wh}, {x: wl, y: wt}]
-                    ];
-
-                    edges.forEach(edge => {
-                        const p1 = edge[0]; const p2 = edge[1];
-                        const dx1 = p1.x - cx; const dy1 = p1.y - cy;
-                        const dx2 = p2.x - cx; const dy2 = p2.y - cy;
-                        const dist1 = Math.sqrt(dx1*dx1 + dy1*dy1) || 1;
-                        const dist2 = Math.sqrt(dx2*dx2 + dy2*dy2) || 1;
-
-                        const proj1x = p1.x + (dx1 / dist1) * 10000;
-                        const proj1y = p1.y + (dy1 / dist1) * 10000;
-                        const proj2x = p2.x + (dx2 / dist2) * 10000;
-                        const proj2y = p2.y + (dy2 / dist2) * 10000;
-
-                        tCtx.beginPath(); tCtx.moveTo(p1.x, p1.y); tCtx.lineTo(p2.x, p2.y);
-                        tCtx.lineTo(proj2x, proj2y); tCtx.lineTo(proj1x, proj1y);
-                        tCtx.closePath(); tCtx.fill();
-                    });
-                });
-
-                mCtx.globalCompositeOperation = 'source-over'; mCtx.drawImage(tCanv, 0, 0);
-            });
-
-            fCtx.fillStyle = '#050508'; fCtx.fillRect(0, 0, w, h);
-            fCtx.globalCompositeOperation = 'destination-out'; fCtx.drawImage(mask, 0, 0);
-        }
-
         document.getElementById('token-upload').addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
             const r = new FileReader(); r.onload = function(ev) {
                 let tl = isHost ? document.getElementById('active-layer-select').value : 'token';
-                createTokenDOM({ id: 't_'+Date.now(), name: "Токен", src: ev.target.result, left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 40, hp: 10, maxHp: 10, layer: tl, darkvision: 0, owner: 'none', owners: [], auras: [{rPx:0, c:'#ff0000'}] });
+                createTokenDOM({ 
+                    id: 't_'+Date.now(), name: "Токен", src: ev.target.result, 
+                    left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 40, 
+                    hp: 10, maxHp: 10, ac: '', mp: '', layer: tl, owner: 'none', owners: [], 
+                    auras: [{}, {}, {}] 
+                });
                 syncActiveGameStorage();
             }; r.readAsDataURL(file);
         });
 
         function createTokenDOM(d) {
             const t = document.createElement('div'); t.className = `token layer-${d.layer}`; t.id = d.id;
-            t.innerHTML = `<div class="aura aura-1"></div><div class="status-effects"></div><img><div class="token-info-container"><div class="token-name"></div><div class="token-hp-bar-container"><div class="token-hp-bar"></div></div></div>`;
+            t.innerHTML = `
+                <div class="quick-stats">
+                    <input type="text" class="qs-hp" placeholder="HP" title="Хиты">
+                    <input type="text" class="qs-ac" placeholder="AC" title="КЗ">
+                    <input type="text" class="qs-mp" placeholder="MP" title="Мана">
+                </div>
+                <div class="aura aura-1"></div><div class="aura aura-2"></div><div class="aura aura-3"></div>
+                <div class="status-effects"></div><img>
+                <div class="token-info-container"><div class="token-name"></div><div class="token-hp-bar-container"><div class="token-hp-bar"></div></div></div>
+            `;
             mapContainer.appendChild(t); t.querySelector('img').src = d.src;
             updateTokenVisuals(t, d); setupTokenEvents(t);
+        }
+
+        function updateTokenAuraVisuals(el, auras, sizePx) {
+            for (let i = 0; i < 3; i++) {
+                const aEl = el.querySelector('.aura-' + (i+1));
+                if (aEl && auras && auras[i] && auras[i].rPx > 0) {
+                    const dim = (auras[i].rPx * 2) + sizePx; 
+                    aEl.style.width = dim+'px'; aEl.style.height = dim+'px'; 
+                    aEl.style.backgroundColor = auras[i].c; aEl.style.display = 'block';
+                } else if (aEl) {
+                    aEl.style.display = 'none';
+                }
+            }
         }
 
         function updateTokenVisuals(el, d) {
@@ -1076,37 +960,63 @@
             el.dataset.owner = d.owner || 'none';
             
             let pct = d.maxHp > 0 ? (d.hp / d.maxHp) * 100 : 0; el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
-            el.dataset.hp = d.hp; el.dataset.maxHp = d.maxHp; el.dataset.layer = d.layer; el.dataset.darkvision = d.darkvision || 0; el.dataset.auras = JSON.stringify(d.auras);
+            
+            el.dataset.hp = d.hp; el.dataset.maxHp = d.maxHp; 
+            el.dataset.ac = d.ac || ''; el.dataset.mp = d.mp || '';
+            el.dataset.layer = d.layer;
+            el.dataset.auras = JSON.stringify(d.auras || [{},{},{}]);
+
+            el.querySelector('.qs-hp').value = d.hp !== undefined ? d.hp : '';
+            el.querySelector('.qs-ac').value = d.ac || '';
+            el.querySelector('.qs-mp').value = d.mp || '';
 
             const sb = el.querySelector('.status-effects'); sb.innerHTML = '';
             if(d.isDead) sb.innerHTML += '<div class="status-dot dead"></div>';
             if(d.isPoisoned) sb.innerHTML += '<div class="status-dot poisoned"></div>';
             if(d.isStunned) sb.innerHTML += '<div class="status-dot stunned"></div>';
 
-            const a1 = el.querySelector('.aura-1');
-            if (d.auras && d.auras[0] && d.auras[0].rPx > 0) {
-                const dim = (d.auras[0].rPx * 2) + d.sizePx; a1.style.width = dim+'px'; a1.style.height = dim+'px'; a1.style.backgroundColor = d.auras[0].c; a1.style.display = 'block';
-            } else a1.style.display = 'none';
-            updateVisibility();
+            updateTokenAuraVisuals(el, d.auras, d.sizePx);
         }
 
         function openTokenContextMenu(t) {
             if(!hasControl(t)) return;
-            t.appendChild(tokenMenu); tokenMenu.style.display = 'flex';
-            const au = t.dataset.auras ? JSON.parse(t.dataset.auras) : [{rPx:0, c:'#ff0000'}];
+            
+            document.body.appendChild(tokenMenu);
+            tokenMenu.style.display = 'flex';
+            
+            const tRect = t.getBoundingClientRect();
+            
+            tokenMenu.style.left = (tRect.left + tRect.width / 2) + 'px';
+            tokenMenu.style.top = (tRect.bottom + 5) + 'px';
+            tokenMenu.style.transform = 'translateX(-50%)';
+
+            const au = t.dataset.auras ? JSON.parse(t.dataset.auras) : [{},{},{}];
             
             renderPermissionsSelect(t);
             
             document.getElementById('ctx-name').value = t.querySelector('.token-name').textContent;
-            document.getElementById('ctx-hp').value = t.dataset.hp || 10; document.getElementById('ctx-max-hp').value = t.dataset.maxHp || 10;
+            document.getElementById('ctx-hp').value = t.dataset.hp || 10; 
+            document.getElementById('ctx-max-hp').value = t.dataset.maxHp || 10;
+            document.getElementById('ctx-ac').value = t.dataset.ac || '';
+            document.getElementById('ctx-mp').value = t.dataset.mp || '';
+
             document.getElementById('ctx-size').value = fromPx(parseFloat(t.style.width)||40);
-            document.getElementById('ctx-darkvision').value = fromPx(parseFloat(t.dataset.darkvision)||0);
             if(isHost) document.getElementById('ctx-layer').value = t.dataset.layer || 'token';
             
             document.getElementById('status-dead').checked = !!t.querySelector('.status-dot.dead');
             document.getElementById('status-poisoned').checked = !!t.querySelector('.status-dot.poisoned');
             document.getElementById('status-stunned').checked = !!t.querySelector('.status-dot.stunned');
-            document.getElementById('aura1-rad').value = fromPx(au[0]?.rPx || 0); document.getElementById('aura1-col').value = au[0]?.c || '#ff0000';
+            
+            for(let i=0; i<3; i++) {
+                document.getElementById(`aura${i+1}-rad`).value = fromPx(au[i]?.rPx || 0); 
+                document.getElementById(`aura${i+1}-col`).value = au[i]?.c || (i===0?'#ff0000':(i===1?'#00ff00':'#0000ff'));
+            }
+
+            if(!isHost) {
+                document.getElementById('btn-delete-token').style.display = 'none';
+            } else {
+                document.getElementById('btn-delete-token').style.display = 'block';
+            }
         }
 
         function applyContextChanges() {
@@ -1124,34 +1034,52 @@
 
                 let d = {
                     id: el.id, name: document.getElementById('ctx-name').value,
-                    hp: parseInt(document.getElementById('ctx-hp').value)||0, maxHp: parseInt(document.getElementById('ctx-max-hp').value)||0,
+                    hp: parseInt(document.getElementById('ctx-hp').value)||0, 
+                    maxHp: parseInt(document.getElementById('ctx-max-hp').value)||0,
+                    ac: document.getElementById('ctx-ac').value,
+                    mp: document.getElementById('ctx-mp').value,
                     sizePx: toPx(parseFloat(document.getElementById('ctx-size').value)||40),
-                    darkvision: toPx(parseFloat(document.getElementById('ctx-darkvision').value)||0),
                     owner: ownersList.includes('all') ? 'all' : (ownersList[0] || 'none'),
                     owners: ownersList,
                     isDead: document.getElementById('status-dead').checked, isPoisoned: document.getElementById('status-poisoned').checked, isStunned: document.getElementById('status-stunned').checked,
                     layer: isHost ? document.getElementById('ctx-layer').value : 'token',
-                    auras: [{ rPx: toPx(parseFloat(document.getElementById('aura1-rad').value)||0), c: document.getElementById('aura1-col').value }]
+                    auras: [
+                        { rPx: toPx(parseFloat(document.getElementById('aura1-rad').value)||0), c: document.getElementById('aura1-col').value },
+                        { rPx: toPx(parseFloat(document.getElementById('aura2-rad').value)||0), c: document.getElementById('aura2-col').value },
+                        { rPx: toPx(parseFloat(document.getElementById('aura3-rad').value)||0), c: document.getElementById('aura3-col').value }
+                    ]
                 };
                 updateTokenVisuals(el, d);
             });
             syncActiveGameStorage();
         }
 
-        function deleteSelectedTokens() { selectedTokens.forEach(el => el.remove()); deselectAllTokens(); syncActiveGameStorage(); }
-        function deselectAllTokens() { tokenMenu.style.display = 'none'; document.body.appendChild(tokenMenu); selectedTokens.forEach(t => t.classList.remove('selected')); selectedTokens = []; }
+        function deleteSelectedTokens() { 
+            if (!isHost) return; 
+            selectedTokens.forEach(el => el.remove()); 
+            deselectAllTokens(); 
+            syncActiveGameStorage(); 
+        }
+
+        function deselectAllTokens() { 
+            tokenMenu.style.display = 'none'; 
+            selectedTokens.forEach(t => t.classList.remove('selected')); 
+            selectedTokens = []; 
+        }
 
         document.addEventListener('keydown', (e) => { 
             if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
 
             if (e.key === 'Delete' || e.key === 'Backspace') {
-                deleteSelectedTokens(); 
+                if (selectedTokens.length > 0) {
+                    deleteSelectedTokens(); 
+                }
             }
             
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
                 if (selectedTokens.length > 0) {
                     copiedTokens = selectedTokens.map(el => {
-                        const au = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{rPx:0, c:'#ff0000'}];
+                        const au = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{},{},{}];
                         let ownersList = [];
                         try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
                         return {
@@ -1160,21 +1088,22 @@
                             sizePx: parseFloat(el.style.width),
                             hp: parseInt(el.dataset.hp)||10,
                             maxHp: parseInt(el.dataset.maxHp)||10,
+                            ac: el.dataset.ac || '',
+                            mp: el.dataset.mp || '',
                             layer: el.dataset.layer||'token',
                             owner: el.dataset.owner || 'none',
                             owners: ownersList,
                             isDead: !!el.querySelector('.status-dot.dead'),
                             isPoisoned: !!el.querySelector('.status-dot.poisoned'),
                             isStunned: !!el.querySelector('.status-dot.stunned'),
-                            auras: au,
-                            darkvision: parseFloat(el.dataset.darkvision)||0
+                            auras: au
                         };
                     });
                 }
             }
 
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
-                if (copiedTokens.length > 0) {
+                if (copiedTokens.length > 0 && isHost) { 
                     copiedTokens.forEach((tData, index) => {
                         const offset = index * 20; 
                         const pasteX = cursorOnMapX + offset;
@@ -1193,10 +1122,8 @@
             }
         });
 
-        function clearAllDarknessAndWalls() { if(isHost) { document.querySelectorAll('.darkness-zone, .wall-zone').forEach(z => z.remove()); syncActiveGameStorage(); updateVisibility(); } }
-
-        let isDraggingToken = false, isPanning = false, isSelecting = false, isDrawingDarkness = false, isDrawingWall = false, isRuling = false;
-        let startX, startY, startSurfX, startSurfY, darkZone, wallZone, dragOffsets = [];
+        let isDraggingToken = false, isPanning = false, isSelecting = false, isRuling = false;
+        let startX, startY, startSurfX, startSurfY, dragOffsets = [];
 
         function setupTokenEvents(t) {
             t.addEventListener('mousedown', function(e) {
@@ -1213,23 +1140,25 @@
                 const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
                 dragOffsets = selectedTokens.map(tok => ({ el: tok, ox: mX - parseFloat(tok.style.left), oy: mY - parseFloat(tok.style.top) }));
             });
+            
             t.addEventListener('dblclick', (e) => { e.stopPropagation(); openTokenContextMenu(t); });
+
+            t.querySelectorAll('.quick-stats input').forEach(inp => {
+                inp.addEventListener('mousedown', e => e.stopPropagation());
+                inp.addEventListener('change', e => {
+                    t.dataset.hp = t.querySelector('.qs-hp').value;
+                    t.dataset.ac = t.querySelector('.qs-ac').value;
+                    t.dataset.mp = t.querySelector('.qs-mp').value;
+                    syncActiveGameStorage();
+                });
+            });
         }
 
         viewport.addEventListener('mousedown', function(e) {
             if (e.button !== 0) return; const rect = mapContainer.getBoundingClientRect();
-            
-            if (e.target.classList.contains('darkness-zone') || e.target.classList.contains('wall-zone')) {
-                if (currentMode !== 'select' && currentMode !== 'pan') {
-                    e.stopPropagation();
-                    return; 
-                }
-            }
 
             if (currentMode === 'pan') { isPanning = true; startX = e.clientX; startY = e.clientY; startSurfX = surfaceX; startSurfY = surfaceY; }
             else if (currentMode === 'select' && e.target !== tokenMenu && !tokenMenu.contains(e.target)) { deselectAllTokens(); isSelecting = true; startX = e.clientX; startY = e.clientY; selectionBox.style.left = startX+'px'; selectionBox.style.top = startY+'px'; selectionBox.style.width = '0px'; selectionBox.style.height = '0px'; selectionBox.style.display = 'block'; }
-            else if (currentMode === 'darkness' && isHost) { isDrawingDarkness = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; darkZone = document.createElement('div'); darkZone.className = 'darkness-zone'; darkZone.style.left = startX + 'px'; darkZone.style.top = startY + 'px'; mapContainer.appendChild(darkZone); }
-            else if (currentMode === 'wall' && isHost) { isDrawingWall = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; wallZone = document.createElement('div'); wallZone.className = 'wall-zone'; wallZone.style.left = startX + 'px'; wallZone.style.top = startY + 'px'; mapContainer.appendChild(wallZone); }
             else if (currentMode === 'ruler') { isRuling = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; }
         });
 
@@ -1242,7 +1171,6 @@
             if (isDraggingToken && currentMode === 'select') {
                 const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
                 dragOffsets.forEach(pos => { pos.el.style.left = (mX - pos.ox) + 'px'; pos.el.style.top = (mY - pos.oy) + 'px'; });
-                updateVisibility(); 
             } else if (isPanning) {
                 surfaceX = startSurfX + (e.clientX - startX); surfaceY = startSurfY + (e.clientY - startY); updateTransform();
             } else if (isSelecting) {
@@ -1255,12 +1183,6 @@
                     if (overlap && !selectedTokens.includes(t)) { t.classList.add('selected'); selectedTokens.push(t); }
                     else if (!overlap && selectedTokens.includes(t)) { t.classList.remove('selected'); selectedTokens = selectedTokens.filter(x => x !== t); }
                 });
-            } else if (isDrawingDarkness && darkZone) {
-                const curX = (e.clientX - rect.left) / cameraZoom; const curY = (e.clientY - rect.top) / cameraZoom;
-                darkZone.style.left = Math.min(startX, curX) + 'px'; darkZone.style.top = Math.min(startY, curY) + 'px'; darkZone.style.width = Math.abs(startX - curX) + 'px'; darkZone.style.height = Math.abs(startY - curY) + 'px';
-            } else if (isDrawingWall && wallZone) {
-                const curX = (e.clientX - rect.left) / cameraZoom; const curY = (e.clientY - rect.top) / cameraZoom;
-                wallZone.style.left = Math.min(startX, curX) + 'px'; wallZone.style.top = Math.min(startY, curY) + 'px'; wallZone.style.width = Math.abs(startX - curX) + 'px'; wallZone.style.height = Math.abs(startY - curY) + 'px';
             } else if (isRuling) {
                 const curX = (e.clientX - rect.left) / cameraZoom; const curY = (e.clientY - rect.top) / cameraZoom;
                 rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height);
@@ -1295,16 +1217,14 @@
             }
         });
 
-        document.addEventListener('mouseup', function() {
+        document.addEventListener('mouseup', function(e) {
             if(isDraggingToken) { 
                 isDraggingToken = false; 
                 document.querySelectorAll('.token.active-drag').forEach(t => t.classList.remove('active-drag'));
                 syncActiveGameStorage(); 
-                updateVisibility();
             }
-            isPanning = false; if (isSelecting) { isSelecting = false; selectionBox.style.display = 'none'; }
-            if (isDrawingDarkness) { isDrawingDarkness = false; darkZone = null; syncActiveGameStorage(); updateVisibility(); }
-            if (isDrawingWall) { isDrawingWall = false; wallZone = null; syncActiveGameStorage(); updateVisibility(); }
+            if (isPanning) isPanning = false; 
+            if (isSelecting) { isSelecting = false; selectionBox.style.display = 'none'; }
             if (isRuling) { isRuling = false; resetRulerCanvas(); }
         });
 
