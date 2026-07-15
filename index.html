@@ -154,15 +154,16 @@
         <div class="lobby-box" id="lobby-dm-edit" style="display:none;">
             <h2>Настройка Мира</h2>
             <input type="text" id="edit-game-name" placeholder="Название игры">
-            <input type="text" id="edit-game-password" placeholder="Пароль для игроков">
             <button onclick="saveGameChanges()" style="background:#22c55e; color:white;">Сохранить</button>
             <button onclick="switchLobbyStep('dm-dashboard')" style="background:#3f3f46; color:white;">Отмена</button>
         </div>
 
         <div class="lobby-box" id="lobby-player-join" style="display:none;">
             <h2>Подключение к игре</h2>
-            <select id="player-game-select"></select>
-            <input type="password" id="player-room-password" placeholder="Пароль от комнаты">
+            <label style="font-size: 11px; color: #a1a1aa;">Ваше имя в игре:</label>
+            <input type="text" id="lobby-join-nickname" placeholder="Ваше Имя" value="Игрок">
+            <label style="font-size: 11px; color: #a1a1aa; margin-top: 5px;">Код партии:</label>
+            <input type="text" id="player-game-code" placeholder="Код комнаты (от Мастера)">
             <button onclick="launchGamePlayer()">Войти в мир</button>
             <button onclick="switchLobbyStep('1')" style="background:transparent; color:#a1a1aa; font-size:11px;">Назад</button>
         </div>
@@ -323,9 +324,9 @@
         </div>
 
         <label style="color:#22c55e;" id="lbl-auras">Ауры (Радиус)</label>
-        <div class="context-row"><input type="number" id="aura1-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura1-col" value="#ff0000" onchange="applyContextChanges()"></div>
-        <div class="context-row"><input type="number" id="aura2-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura2-col" value="#00ff00" onchange="applyContextChanges()"></div>
-        <div class="context-row"><input type="number" id="aura3-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura3-col" value="#0000ff" onchange="applyContextChanges()"></div>
+        <div class="context-row"><input type="number" id="aura1-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura1-col" value="#ff0000" onchange="changeActiveAuraColor(1, this.value)"></div>
+        <div class="context-row"><input type="number" id="aura2-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura2-col" value="#00ff00" onchange="changeActiveAuraColor(2, this.value)"></div>
+        <div class="context-row"><input type="number" id="aura3-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura3-col" value="#0000ff" onchange="changeActiveAuraColor(3, this.value)"></div>
         
         <button id="btn-delete-token" onclick="deleteSelectedTokens()" style="background:#ef4444; color:#fff; font-size:11px; margin-top:4px; width:100%;">❌ Удалить</button>
     </div>
@@ -384,6 +385,14 @@
         
         let surfaceX = 0, surfaceY = 0, cameraZoom = 1;
 
+        // Синхронизируем имя при вводе на первом экране во второе поле
+        document.getElementById('player-nickname').addEventListener('input', (e) => {
+            document.getElementById('lobby-join-nickname').value = e.target.value;
+        });
+        document.getElementById('lobby-join-nickname').addEventListener('input', (e) => {
+            document.getElementById('player-nickname').value = e.target.value;
+        });
+
         window.addEventListener('load', () => {
             loadGamesFromStorage();
             loadDmAccountsFromStorage();
@@ -418,7 +427,6 @@
                     id: 'g_default',
                     dmOwner: 'admin',
                     name: "Стартовое приключение",
-                    password: "123",
                     maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], gridSize: 40 }],
                     currentMapIdx: 0,
                     playerMapIdx: 0
@@ -457,12 +465,12 @@
 
         function renderGamesList() {
             const container = document.getElementById('games-list-container'); container.innerHTML = '';
-            const visibleGames = gamesDatabase.filter(g => !g.dmOwner || g.dmOwner === currentDmUser);
+            const visibleGames = gamesDatabase.filter(g => !g.dmOwner || g.dmOwner === currentDmUser || currentDmUser === '223');
 
             visibleGames.forEach(g => {
                 const div = document.createElement('div');
                 div.className = `game-item ${selectedGameId === g.id ? 'selected' : ''}`;
-                div.innerHTML = `<strong>${g.name}</strong> <span style="font-size:10px; opacity:0.6;">(DM: ${g.dmOwner || 'нет'})</span>`;
+                div.innerHTML = `<div><strong>${g.name}</strong> <span style="font-size:10px; opacity:0.6;">(DM: ${g.dmOwner || 'нет'})</span></div><div style="font-size:11px; color:#38bdf8;">Код: ${g.id}</div>`;
                 div.onclick = () => { 
                     selectedGameId = g.id; 
                     renderGamesList(); 
@@ -472,34 +480,31 @@
         }
 
         function renderPlayerGameSelect() {
-            const select = document.getElementById('player-game-select');
-            select.innerHTML = '<option>Загрузка комнат...</option>';
-            db.ref('shared_games').once('value').then((sn) => {
-                select.innerHTML = ''; const val = sn.val();
-                if(val) {
-                    Object.keys(val).forEach(k => { 
-                        const opt = document.createElement('option'); 
-                        opt.value = k; 
-                        opt.textContent = val[k].name; 
-                        select.appendChild(opt); 
-                    });
-                } else {
-                    select.innerHTML = '<option>Доступных игр нет</option>';
-                }
-            });
+            // Очищаем код комнаты, но оставляем или синхронизируем имя
+            document.getElementById('player-game-code').value = '';
+            document.getElementById('lobby-join-nickname').value = document.getElementById('player-nickname').value.trim() || "Игрок";
         }
 
         function openGameEditor(ex) {
             isEditingMode = ex;
-            if(ex) { const g = gamesDatabase.find(x => x.id === selectedGameId); document.getElementById('edit-game-name').value = g.name; document.getElementById('edit-game-password').value = g.password; }
+            if(ex) { 
+                const g = gamesDatabase.find(x => x.id === selectedGameId); 
+                document.getElementById('edit-game-name').value = g.name; 
+            }
             switchLobbyStep('dm-edit');
         }
 
         function saveGameChanges() {
             const name = document.getElementById('edit-game-name').value || "Без названия";
-            const pass = document.getElementById('edit-game-password').value || "123";
-            if(isEditingMode) { const g = gamesDatabase.find(x => x.id === selectedGameId); g.name = name; g.password = pass; }
-            else { const n = { id: 'g_'+Date.now(), dmOwner: currentDmUser, name: name, password: pass, maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], gridSize: 40 }], currentMapIdx: 0, playerMapIdx: 0 }; gamesDatabase.push(n); selectedGameId = n.id; }
+            if(isEditingMode) { 
+                const g = gamesDatabase.find(x => x.id === selectedGameId); 
+                g.name = name; 
+            }
+            else { 
+                const n = { id: 'g_'+Date.now(), dmOwner: currentDmUser, name: name, maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], gridSize: 40 }], currentMapIdx: 0, playerMapIdx: 0 }; 
+                gamesDatabase.push(n); 
+                selectedGameId = n.id; 
+            }
             saveGamesToStorage(); switchLobbyStep('dm-dashboard');
         }
 
@@ -508,7 +513,7 @@
                 const gameToDelete = gamesDatabase.find(x => x.id === selectedGameId);
                 if (!gameToDelete) return;
                 
-                if (gameToDelete.dmOwner === currentDmUser) {
+                if (gameToDelete.dmOwner === currentDmUser || currentDmUser === '223') {
                     if (confirm(`Вы уверены, что хотите полностью удалить мир "${gameToDelete.name}"?`)) {
                         db.ref('shared_games/'+selectedGameId).remove(); 
                         gamesDatabase = gamesDatabase.filter(x => x.id !== selectedGameId); 
@@ -531,31 +536,37 @@
         }
         
         function launchGamePlayer() {
-            const id = document.getElementById('player-game-select').value;
-            const p = document.getElementById('player-room-password').value;
-            localNickname = document.getElementById('player-nickname').value.trim() || "Игрок";
-            db.ref('shared_games/'+id).once('value').then((sn) => {
-                const g = sn.val(); if(g && g.password === p) { isHost = false; activeGame = g; initVTTTable(); startPlayerSync(); setupPresence(); } else alert("Ошибка входа!");
+            const code = document.getElementById('player-game-code').value.trim();
+            localNickname = document.getElementById('lobby-join-nickname').value.trim() || "Игрок";
+            document.getElementById('player-nickname').value = localNickname; // Синхронизируем обратно
+            
+            if(!code) {
+                alert("Введите код комнаты!");
+                return;
+            }
+
+            db.ref('shared_games/'+code).once('value').then((sn) => {
+                const g = sn.val(); 
+                if(g) { 
+                    isHost = false; 
+                    activeGame = g; 
+                    initVTTTable(); 
+                    startPlayerSync(); 
+                    setupPresence(); 
+                } else { 
+                    alert("Комната не найдена! Проверьте код."); 
+                }
             });
         }
 
         function checkUrlInvite() {
             const urlParams = new URLSearchParams(window.location.search);
             const inviteGameId = urlParams.get('joinGame');
-            const invitePass = urlParams.get('p');
-            if (inviteGameId && invitePass) {
+            if (inviteGameId) {
                 switchLobbyStep('player-join');
                 setTimeout(() => {
-                    const select = document.getElementById('player-game-select');
-                    db.ref('shared_games/'+inviteGameId).once('value').then((sn) => {
-                        const g = sn.val();
-                        if (g) {
-                            select.innerHTML = `<option value="${inviteGameId}">${g.name}</option>`;
-                            document.getElementById('player-room-password').value = invitePass;
-                            alert("Вы перешли по приглашению! Введите никнейм на первом экране (или оставьте базовый) и нажмите 'Войти в мир'.");
-                        }
-                    });
-                }, 1000);
+                    document.getElementById('player-game-code').value = inviteGameId;
+                }, 100);
             }
         }
 
@@ -565,11 +576,11 @@
 
         function copyInviteLink() {
             if (!activeGame) return;
-            const link = `${window.location.origin}${window.location.pathname}?joinGame=${activeGame.id}&p=${activeGame.password}`;
+            const link = `${window.location.origin}${window.location.pathname}?joinGame=${activeGame.id}`;
             navigator.clipboard.writeText(link).then(() => {
-                alert("Ссылка для подключения скопирована в буфер обмена! Отправьте её своим игрокам.");
+                alert(`Код комнаты: ${activeGame.id}\n\nСсылка для подключения скопирована в буфер обмена!`);
             }).catch(err => {
-                alert("Не удалось скопировать. Скопируйте вручную: " + link);
+                alert("Не удалось скопировать. Код комнаты: " + activeGame.id + "\nСсылка: " + link);
             });
         }
 
@@ -770,7 +781,6 @@
             if(!activeGame || !activeGame.maps[activeGame.currentMapIdx]) return;
             const cm = activeGame.maps[activeGame.currentMapIdx];
             
-            // Сбор токенов
             const arr = [];
             document.querySelectorAll('.token').forEach(el => {
                 const au = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{},{},{}];
@@ -823,7 +833,6 @@
             updateRibbonUI();
         }
 
-        // Переключение карты
         function switchMap(initial = false) {
             if(!initial) syncActiveGameStorage();
             document.querySelectorAll('.token').forEach(el => el.remove());
@@ -881,7 +890,6 @@
         }
         function clearDiceLog() { db.ref(`shared_games/${activeGame.id}/dice_log`).remove(); }
         
-        // Масштабирование линейки
         function updateUnitsUI() { systemUnit = document.getElementById('unit-system').value; }
         function toPx(v) { return systemUnit === 'ft' ? (v / 5) * scaleUnitFactor : v; }
         function fromPx(v) { return systemUnit === 'ft' ? Math.round((v / scaleUnitFactor) * 5) : Math.round(v); }
@@ -1017,6 +1025,10 @@
             } else {
                 document.getElementById('btn-delete-token').style.display = 'block';
             }
+        }
+
+        function changeActiveAuraColor(num, val) {
+            applyContextChanges();
         }
 
         function applyContextChanges() {
