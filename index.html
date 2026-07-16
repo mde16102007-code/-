@@ -65,7 +65,6 @@
             right: 15px;
             bottom: 15px;
             width: 175px;
-            max-height: 220px;
             background: rgba(24, 24, 27, 0.96);
             border: 1px solid #bfa15f;
             border-radius: 8px;
@@ -77,6 +76,7 @@
             gap: 6px;
             pointer-events: auto;
             box-sizing: border-box;
+            transition: max-height 0.3s ease;
         }
         #initiative-tracker h4 {
             margin: 0;
@@ -85,6 +85,10 @@
             text-align: center;
             border-bottom: 1px solid #3f3f46;
             padding-bottom: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .initiative-list {
             overflow-y: auto;
@@ -92,6 +96,7 @@
             flex-direction: column;
             gap: 4px;
             max-height: 160px;
+            transition: opacity 0.2s ease, max-height 0.3s ease;
         }
         .initiative-item {
             display: flex;
@@ -130,8 +135,8 @@
         #map-container { position: relative; display: inline-block; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
         #game-map { display: block; width: 1200px; height: 800px; pointer-events: none; background: #27272a; object-fit: fill; z-index: 1; }
         
-        /* Слои видимости - Линейка теперь поверх всех токенов */
-        #ruler-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
+        /* Слои видимости */
+        #ruler-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 500; }
 
         /* === ТОКЕНЫ И СТАТУСЫ === */
         .token { position: absolute; touch-action: none; box-sizing: border-box; }
@@ -151,7 +156,7 @@
         .token.layer-gm { z-index: 30; opacity: 0.5; }
         .token.layer-gm img { filter: drop-shadow(0 0 6px #a855f7); }
 
-        /* Быстрые характеристики над токеном */
+        /* Быстрые характеристики (Хиты, КЗ, Мана) над токеном */
         .token .quick-stats { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); display: none; gap: 4px; z-index: 100; pointer-events: auto; }
         .token.selected .quick-stats { display: flex; }
         .quick-stats input { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #38bdf8; background: rgba(24, 24, 27, 0.95); color: #fff; text-align: center; font-size: 10px; padding: 0; outline: none; box-shadow: 0 0 5px rgba(0,0,0,0.8); cursor: text; }
@@ -159,7 +164,8 @@
         .quick-stats input.qs-ac { border-color: #bfa15f; }
         .quick-stats input.qs-mp { border-color: #3b82f6; }
 
-        .token.active-drag { z-index: 99998 !important; } /* Чуть ниже линейки */
+        /* Класс для активного перетаскивания */
+        .token.active-drag { z-index: 99999 !important; }
 
         .player-mode .token.layer-gm { display: none !important; }
         .player-mode .dm-only { display: none !important; }
@@ -174,12 +180,43 @@
         .token-hp-bar { width: 100%; height: 100%; background: #22c55e; }
 
         /* Контекстное меню */
-        .token-context-menu { position: absolute; background: rgba(24, 24, 27, 0.98); border: 1px solid #38bdf8; border-radius: 6px; padding: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); z-index: 10000; display: none; flex-direction: column; gap: 6px; width: 230px; cursor: default; }
+        .token-context-menu { position: absolute; background: rgba(24, 24, 27, 0.98); border: 1px solid #38bdf8; border-radius: 6px; padding: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); z-index: 2000; display: none; flex-direction: column; gap: 6px; width: 230px; cursor: default; }
         .token-context-menu label { font-size: 10px; color: #a1a1aa; margin-bottom: -2px; display: block;}
         .token-context-menu input, .token-context-menu select { background: #18181b; color: #fff; border: 1px solid #52525b; padding: 4px; border-radius: 3px; font-size: 12px; width: 100%; box-sizing: border-box; }
         .context-row { display: flex; gap: 5px; align-items: center; }
         .status-checkboxes { display: flex; gap: 10px; font-size: 11px; margin: 4px 0; }
         .status-checkboxes label { display: flex; align-items: center; gap: 3px; color: #fff; cursor: pointer; }
+
+        /* === ПЛАВАЮЩИЙ ИНДИКАТОР ЛИНЕЙКИ === */
+        #ruler-distance-indicator {
+            position: fixed;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(24, 24, 27, 0.98);
+            border: 2px solid #bfa15f;
+            border-bottom: none;
+            border-radius: 12px 12px 0 0;
+            padding: 10px 25px;
+            box-shadow: 0 -4px 25px rgba(0,0,0,0.8);
+            z-index: 5000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+        #ruler-distance-indicator.visible {
+            bottom: 0;
+        }
+        #ruler-distance-indicator span {
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            font-family: monospace;
+            letter-spacing: 0.5px;
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -344,15 +381,27 @@
 
     <!-- ТРЕКЕР ИНИЦИАТИВЫ -->
     <div id="initiative-tracker">
-        <h4>⚔️ Инициатива</h4>
-        <div class="initiative-list" id="initiative-list-container"></div>
+        <h4 onclick="toggleInitiativeTracker()">
+            <span>⚔️ Инициатива</span>
+            <span id="initiative-arrow">▼</span>
+        </h4>
+        <div class="initiative-list" id="initiative-list-container">
+            <!-- Элементы инициативы будут рендериться динамически -->
+        </div>
+    </div>
+
+    <!-- ПЛАВАЮЩИЙ ИНДИКАТОР ЛИНЕЙКИ -->
+    <div id="ruler-distance-indicator">
+        <span id="ruler-distance-val">0 ft</span>
     </div>
 
     <!-- НАСТРОЙКИ ТОКЕНА -->
     <div id="token-menu" class="token-context-menu" onmousedown="event.stopPropagation()">
         <div id="permissions-container-block" class="dm-only">
             <label style="color:#38bdf8; font-weight:bold; margin-bottom: 2px;">Контролируется:</label>
-            <select id="ctx-owner-select" onchange="applyContextChanges()"></select>
+            <select id="ctx-owner-select" onchange="applyContextChanges()">
+                <!-- Динамически заполняется только для Мастера -->
+            </select>
             <hr style="border:0; border-top:1px solid #3f3f46; margin: 4px 0;">
         </div>
 
@@ -379,8 +428,7 @@
                 <label style="color:#38bdf8;">Инициатива</label>
                 <input type="number" id="ctx-initiative" placeholder="0" oninput="applyContextChanges()">
             </div>
-            <!-- Скрываем размер токена для игроков (класс dm-only) -->
-            <div style="flex:1;" class="dm-only">
+            <div style="flex:1;" class="dm-only"> <!-- Ограничение размера: только для DM -->
                 <label id="lbl-size">Размер</label>
                 <input type="number" id="ctx-size" oninput="applyContextChanges()">
             </div>
@@ -709,6 +757,29 @@
             const arrow = document.getElementById('players-arrow');
             if(list.style.display === 'none') { list.style.display = 'flex'; arrow.textContent = '▲'; }
             else { list.style.display = 'none'; arrow.textContent = '▼'; }
+        }
+
+        // === СВОРАЧИВАНИЕ ИНИЦИАТИВЫ ===
+        let isInitiativeCollapsed = false;
+        function toggleInitiativeTracker() {
+            const tracker = document.getElementById('initiative-tracker');
+            const listContainer = document.getElementById('initiative-list-container');
+            const arrow = document.getElementById('initiative-arrow');
+            
+            isInitiativeCollapsed = !isInitiativeCollapsed;
+            if (isInitiativeCollapsed) {
+                listContainer.style.maxHeight = '0px';
+                listContainer.style.opacity = '0';
+                setTimeout(() => { if(isInitiativeCollapsed) listContainer.style.display = 'none'; }, 200);
+                arrow.textContent = '▲';
+            } else {
+                listContainer.style.display = 'flex';
+                setTimeout(() => {
+                    listContainer.style.maxHeight = '160px';
+                    listContainer.style.opacity = '1';
+                }, 10);
+                arrow.textContent = '▼';
+            }
         }
 
         function updatePlayersListUI(players) {
@@ -1041,6 +1112,11 @@
             
             const opts = document.getElementById('ruler-options');
             if(opts) opts.style.display = (m === 'ruler') ? 'flex' : 'none';
+            
+            // Если выключили режим линейки — гарантированно прячем окошко
+            if (m !== 'ruler') {
+                document.getElementById('ruler-distance-indicator').classList.remove('visible');
+            }
         }
         function updateRulerShapeUI() {
             const s = document.getElementById('ruler-shape').value;
@@ -1143,12 +1219,12 @@
             document.getElementById('ctx-mp').value = t.dataset.mp || '';
             document.getElementById('ctx-initiative').value = t.dataset.initiative || 0;
 
-            // При открытии меню передаём размер
-            const sizeInput = document.getElementById('ctx-size');
-            if (sizeInput) {
-                sizeInput.value = fromPx(parseFloat(t.style.width) || 40);
+            // Применяем скрытие размера для игроков в UI контекстного меню
+            const sizeField = document.getElementById('ctx-size');
+            if (isHost) {
+                sizeField.value = fromPx(parseFloat(t.style.width)||40);
             }
-            
+
             if(isHost) document.getElementById('ctx-layer').value = t.dataset.layer || 'token';
             
             document.getElementById('status-dead').checked = !!t.querySelector('.status-dot.dead');
@@ -1184,9 +1260,8 @@
                     try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
                 }
 
-                // Читаем значение размера. Игрокам его менять не даем, поэтому если они его изменить не могут, то оставляем текущий размер токена
-                const sizeInp = document.getElementById('ctx-size');
-                const sizeVal = sizeInp && isHost ? (parseFloat(sizeInp.value) || 40) : fromPx(parseFloat(el.style.width) || 40);
+                // Игроки не могут изменить размер. Если изменяет не DM, то размер оставляем прежним.
+                let sizeValue = isHost ? (toPx(parseFloat(document.getElementById('ctx-size').value)||40)) : (parseFloat(el.style.width)||40);
 
                 let d = {
                     id: el.id, name: document.getElementById('ctx-name').value,
@@ -1195,7 +1270,7 @@
                     ac: document.getElementById('ctx-ac').value,
                     mp: document.getElementById('ctx-mp').value,
                     initiative: parseInt(document.getElementById('ctx-initiative').value)||0,
-                    sizePx: toPx(sizeVal),
+                    sizePx: sizeValue,
                     owner: ownersList.includes('all') ? 'all' : (ownersList[0] || 'none'),
                     owners: ownersList,
                     isDead: document.getElementById('status-dead').checked, isPoisoned: document.getElementById('status-poisoned').checked, isStunned: document.getElementById('status-stunned').checked,
@@ -1317,7 +1392,14 @@
 
             if (currentMode === 'pan') { isPanning = true; startX = e.clientX; startY = e.clientY; startSurfX = surfaceX; startSurfY = surfaceY; }
             else if (currentMode === 'select' && e.target !== tokenMenu && !tokenMenu.contains(e.target)) { deselectAllTokens(); isSelecting = true; startX = e.clientX; startY = e.clientY; selectionBox.style.left = startX+'px'; selectionBox.style.top = startY+'px'; selectionBox.style.width = '0px'; selectionBox.style.height = '0px'; selectionBox.style.display = 'block'; }
-            else if (currentMode === 'ruler') { isRuling = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; }
+            else if (currentMode === 'ruler') { 
+                isRuling = true; 
+                startX = (e.clientX - rect.left) / cameraZoom; 
+                startY = (e.clientY - rect.top) / cameraZoom; 
+                
+                // Показываем плавающее окошко при старте замера
+                document.getElementById('ruler-distance-indicator').classList.add('visible');
+            }
         });
 
         document.addEventListener('mousemove', function(e) {
@@ -1349,6 +1431,9 @@
                 const distPx = Math.sqrt(Math.pow(curX - startX, 2) + Math.pow(curY - startY, 2));
                 const text = systemUnit === 'ft' ? `${fromPx(distPx)} ft` : `${Math.round(distPx)} px`;
                 
+                // Дублируем вывод в нижнее всплывающее окошко
+                document.getElementById('ruler-distance-val').textContent = text;
+                
                 rCtx.strokeStyle = '#bfa15f'; rCtx.lineWidth = 3 / cameraZoom;
                 
                 if (shape === 'line') {
@@ -1370,6 +1455,7 @@
                     rCtx.fillStyle = 'rgba(191, 161, 95, 0.12)'; rCtx.fill();
                 }
                 
+                // На карте тоже оставляем небольшой текст для удобства
                 rCtx.fillStyle = '#fff'; rCtx.font = `bold ${15 / cameraZoom}px Arial`;
                 rCtx.fillText(text, curX + 10, curY - 10);
             }
@@ -1383,7 +1469,12 @@
             }
             if (isPanning) isPanning = false; 
             if (isSelecting) { isSelecting = false; selectionBox.style.display = 'none'; }
-            if (isRuling) { isRuling = false; resetRulerCanvas(); }
+            if (isRuling) { 
+                isRuling = false; 
+                resetRulerCanvas(); 
+                // Убираем окошко линейки вниз
+                document.getElementById('ruler-distance-indicator').classList.remove('visible');
+            }
         });
 
         viewport.addEventListener('wheel', function(e) { e.preventDefault(); cameraZoom = Math.min(Math.max(cameraZoom + (e.deltaY < 0 ? 0.07 : -0.07), 0.15), 4); document.getElementById('zoomRangeSide').value = cameraZoom; document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom * 100) + '%'; updateTransform(); }, { passive: false });
