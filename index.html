@@ -43,7 +43,7 @@
         .zoom-block-content { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 5px 0; }
         .zoom-slider-horiz { width: 100%; cursor: pointer; margin: 0; }
         
-        /* Лог куборов */
+        /* Лог кубиков */
         .dice-container { display: flex; flex-direction: column; gap: 5px; }
         .dice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
         .dice-grid button { padding: 5px 0; text-align: center; justify-content: center; font-weight: bold; font-size: 11px; }
@@ -65,6 +65,7 @@
             right: 15px;
             bottom: 15px;
             width: 175px;
+            max-height: 220px;
             background: rgba(24, 24, 27, 0.96);
             border: 1px solid #bfa15f;
             border-radius: 8px;
@@ -76,7 +77,6 @@
             gap: 6px;
             pointer-events: auto;
             box-sizing: border-box;
-            transition: max-height 0.3s ease;
         }
         #initiative-tracker h4 {
             margin: 0;
@@ -96,7 +96,6 @@
             flex-direction: column;
             gap: 4px;
             max-height: 160px;
-            transition: opacity 0.2s ease, max-height 0.3s ease;
         }
         .initiative-item {
             display: flex;
@@ -129,13 +128,42 @@
             font-weight: bold;
         }
 
+        /* === ОТДЕЛЬНОЕ ОКНО ДИСТАНЦИИ ЛИНЕЙКИ (ЦЕНТР СНИЗУ) === */
+        #ruler-info-panel {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: rgba(24, 24, 27, 0.95);
+            border: 1px solid #bfa15f;
+            padding: 6px 16px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+            z-index: 2500;
+            font-size: 14px;
+            font-weight: bold;
+            color: #f4f4f5;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+            opacity: 0;
+            transition: transform 0.25s ease, opacity 0.25s ease;
+        }
+        #ruler-info-panel.visible {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        #ruler-info-panel span {
+            color: #38bdf8;
+        }
+
         /* Игровое поле */
         #game-viewport { width: 100vw; height: 100vh; position: relative; background: #080808; overflow: hidden; }
         #table-surface { position: absolute; top: 0; left: 0; transform-origin: top left; will-change: transform; }
         #map-container { position: relative; display: inline-block; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
         #game-map { display: block; width: 1200px; height: 800px; pointer-events: none; background: #27272a; object-fit: fill; z-index: 1; }
         
-        /* Слои видимости */
         #ruler-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 500; }
 
         /* === ТОКЕНЫ И СТАТУСЫ === */
@@ -156,7 +184,6 @@
         .token.layer-gm { z-index: 30; opacity: 0.5; }
         .token.layer-gm img { filter: drop-shadow(0 0 6px #a855f7); }
 
-        /* Быстрые характеристики (Хиты, КЗ, Мана) над токеном */
         .token .quick-stats { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); display: none; gap: 4px; z-index: 100; pointer-events: auto; }
         .token.selected .quick-stats { display: flex; }
         .quick-stats input { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #38bdf8; background: rgba(24, 24, 27, 0.95); color: #fff; text-align: center; font-size: 10px; padding: 0; outline: none; box-shadow: 0 0 5px rgba(0,0,0,0.8); cursor: text; }
@@ -164,7 +191,6 @@
         .quick-stats input.qs-ac { border-color: #bfa15f; }
         .quick-stats input.qs-mp { border-color: #3b82f6; }
 
-        /* Класс для активного перетаскивания */
         .token.active-drag { z-index: 99999 !important; }
 
         .player-mode .token.layer-gm { display: none !important; }
@@ -186,37 +212,6 @@
         .context-row { display: flex; gap: 5px; align-items: center; }
         .status-checkboxes { display: flex; gap: 10px; font-size: 11px; margin: 4px 0; }
         .status-checkboxes label { display: flex; align-items: center; gap: 3px; color: #fff; cursor: pointer; }
-
-        /* === ПЛАВАЮЩИЙ ИНДИКАТОР ЛИНЕЙКИ === */
-        #ruler-distance-indicator {
-            position: fixed;
-            bottom: -60px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(24, 24, 27, 0.98);
-            border: 2px solid #bfa15f;
-            border-bottom: none;
-            border-radius: 12px 12px 0 0;
-            padding: 10px 25px;
-            box-shadow: 0 -4px 25px rgba(0,0,0,0.8);
-            z-index: 5000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            pointer-events: none;
-        }
-        #ruler-distance-indicator.visible {
-            bottom: 0;
-        }
-        #ruler-distance-indicator span {
-            font-size: 16px;
-            font-weight: bold;
-            color: #fff;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            font-family: monospace;
-            letter-spacing: 0.5px;
-        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -385,23 +380,19 @@
             <span>⚔️ Инициатива</span>
             <span id="initiative-arrow">▼</span>
         </h4>
-        <div class="initiative-list" id="initiative-list-container">
-            <!-- Элементы инициативы будут рендериться динамически -->
-        </div>
+        <div class="initiative-list" id="initiative-list-container"></div>
     </div>
 
-    <!-- ПЛАВАЮЩИЙ ИНДИКАТОР ЛИНЕЙКИ -->
-    <div id="ruler-distance-indicator">
-        <span id="ruler-distance-val">0 ft</span>
+    <!-- ОТДЕЛЬНОЕ ОКНО ДИСТАНЦИИ СНИЗУ ПО ЦЕНТРУ -->
+    <div id="ruler-info-panel">
+        Дистанция: <span id="ruler-distance-text">0 ft</span>
     </div>
 
     <!-- НАСТРОЙКИ ТОКЕНА -->
     <div id="token-menu" class="token-context-menu" onmousedown="event.stopPropagation()">
         <div id="permissions-container-block" class="dm-only">
             <label style="color:#38bdf8; font-weight:bold; margin-bottom: 2px;">Контролируется:</label>
-            <select id="ctx-owner-select" onchange="applyContextChanges()">
-                <!-- Динамически заполняется только для Мастера -->
-            </select>
+            <select id="ctx-owner-select" onchange="applyContextChanges()"></select>
             <hr style="border:0; border-top:1px solid #3f3f46; margin: 4px 0;">
         </div>
 
@@ -428,7 +419,7 @@
                 <label style="color:#38bdf8;">Инициатива</label>
                 <input type="number" id="ctx-initiative" placeholder="0" oninput="applyContextChanges()">
             </div>
-            <div style="flex:1;" class="dm-only"> <!-- Ограничение размера: только для DM -->
+            <div style="flex:1;" id="size-input-wrapper">
                 <label id="lbl-size">Размер</label>
                 <input type="number" id="ctx-size" oninput="applyContextChanges()">
             </div>
@@ -507,10 +498,11 @@
         const tokenMenu = document.getElementById('token-menu');
         const rulerCanvas = document.getElementById('ruler-canvas');
         const rCtx = rulerCanvas.getContext('2d');
+        const rulerInfoPanel = document.getElementById('ruler-info-panel');
+        const rulerDistanceText = document.getElementById('ruler-distance-text');
         
         let surfaceX = 0, surfaceY = 0, cameraZoom = 1;
 
-        // Синхронизируем имя при вводе на первом экране во второе поле
         document.getElementById('player-nickname').addEventListener('input', (e) => {
             document.getElementById('lobby-join-nickname').value = e.target.value;
         });
@@ -655,7 +647,9 @@
             isHost = true; 
             localNickname = document.getElementById('player-nickname').value.trim() || "Мастер DM";
             activeGame = gamesDatabase.find(x => x.id === selectedGameId); 
-            initVTTTable(); startPlayerSync(); setupPresence();
+            initVTTTable(); 
+            startPlayerSync(); 
+            setupPresence(); // Исправление: явно инициализируем присутствие для DM
             document.getElementById('invite-btn').style.display = 'block';
         }
         
@@ -676,7 +670,7 @@
                     activeGame = g; 
                     initVTTTable(); 
                     startPlayerSync(); 
-                    setupPresence(); 
+                    setupPresence(); // Исправление: явно инициализируем присутствие для Игрока
                 } else { 
                     alert("Комната не найдена! Проверьте код."); 
                 }
@@ -720,10 +714,12 @@
                 activeGame.currentMapIdx = activeGame.playerMapIdx || 0; 
                 document.getElementById('btn-delete-token').style.display = 'none';
             }
-            renderMapSelectorUI(); switchMap(true);
+            renderMapSelectorUI(); 
+            switchMap(true);
         }
 
         function setupPresence() {
+            if (!activeGame || !activeGame.id) return;
             const myPresenceRef = db.ref(`shared_games/${activeGame.id}/online_players/${localNickname}`);
             myPresenceRef.set(true);
             myPresenceRef.onDisconnect().remove();
@@ -759,26 +755,15 @@
             else { list.style.display = 'none'; arrow.textContent = '▼'; }
         }
 
-        // === СВОРАЧИВАНИЕ ИНИЦИАТИВЫ ===
-        let isInitiativeCollapsed = false;
         function toggleInitiativeTracker() {
-            const tracker = document.getElementById('initiative-tracker');
-            const listContainer = document.getElementById('initiative-list-container');
+            const list = document.querySelector('#initiative-tracker .initiative-list');
             const arrow = document.getElementById('initiative-arrow');
-            
-            isInitiativeCollapsed = !isInitiativeCollapsed;
-            if (isInitiativeCollapsed) {
-                listContainer.style.maxHeight = '0px';
-                listContainer.style.opacity = '0';
-                setTimeout(() => { if(isInitiativeCollapsed) listContainer.style.display = 'none'; }, 200);
-                arrow.textContent = '▲';
-            } else {
-                listContainer.style.display = 'flex';
-                setTimeout(() => {
-                    listContainer.style.maxHeight = '160px';
-                    listContainer.style.opacity = '1';
-                }, 10);
+            if(list.style.display === 'none') {
+                list.style.display = 'flex';
                 arrow.textContent = '▼';
+            } else {
+                list.style.display = 'none';
+                arrow.textContent = '▲';
             }
         }
 
@@ -841,7 +826,6 @@
 
         function hasControl(el) {
             if (isHost) return true;
-            
             let allowedOwners = [];
             try { 
                 allowedOwners = JSON.parse(el.dataset.owners || "[]"); 
@@ -908,8 +892,6 @@
                 const fresh = snapshot.val(); if(!fresh) return;
                 
                 if(isHost) {
-                    // Исправление: DM должен получать токены с сервера, включая добавленные игроками
-                    activeGame = fresh;
                     const fm = fresh.maps[fresh.currentMapIdx];
                     if (fm && fm.tokens) syncTokensOnly(fm.tokens);
                 } else {
@@ -1114,17 +1096,16 @@
             
             const opts = document.getElementById('ruler-options');
             if(opts) opts.style.display = (m === 'ruler') ? 'flex' : 'none';
-            
-            if (m !== 'ruler') {
-                document.getElementById('ruler-distance-indicator').classList.remove('visible');
-            }
         }
         function updateRulerShapeUI() {
             const s = document.getElementById('ruler-shape').value;
             document.getElementById('ruler-angle-container').style.display = (s === 'cone') ? 'flex' : 'none';
             resetRulerCanvas();
         }
-        function resetRulerCanvas() { rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height); }
+        function resetRulerCanvas() { 
+            rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height); 
+            rulerInfoPanel.classList.remove('visible');
+        }
 
         document.getElementById('token-upload').addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
@@ -1174,11 +1155,7 @@
             el.style.left = d.left + 'px'; el.style.top = d.top + 'px'; el.style.width = d.sizePx + 'px'; el.style.height = d.sizePx + 'px';
             el.querySelector('.token-name').textContent = d.name;
             
-            let parsedOwners = d.owners;
-            if (!parsedOwners || !Array.isArray(parsedOwners)) {
-                parsedOwners = (d.owner === 'all') ? ['all'] : (d.owner && d.owner !== 'none' ? [d.owner] : []);
-            }
-            el.dataset.owners = JSON.stringify(parsedOwners);
+            el.dataset.owners = JSON.stringify(d.owners || (d.owner === 'all' ? ['all'] : (d.owner && d.owner !== 'none' ? [d.owner] : [])));
             el.dataset.owner = d.owner || 'none';
             
             let pct = d.maxHp > 0 ? (d.hp / d.maxHp) * 100 : 0; el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
@@ -1208,7 +1185,6 @@
             tokenMenu.style.display = 'flex';
             
             const tRect = t.getBoundingClientRect();
-            
             tokenMenu.style.left = (tRect.left + tRect.width / 2) + 'px';
             tokenMenu.style.top = (tRect.bottom + 5) + 'px';
             tokenMenu.style.transform = 'translateX(-50%)';
@@ -1224,12 +1200,14 @@
             document.getElementById('ctx-mp').value = t.dataset.mp || '';
             document.getElementById('ctx-initiative').value = t.dataset.initiative || 0;
 
-            const sizeField = document.getElementById('ctx-size');
-            if (isHost) {
-                sizeField.value = fromPx(parseFloat(t.style.width)||40);
+            const sizeInputWrapper = document.getElementById('size-input-wrapper');
+            if (!isHost) {
+                sizeInputWrapper.style.display = 'none';
+            } else {
+                sizeInputWrapper.style.display = 'block';
+                document.getElementById('ctx-size').value = fromPx(parseFloat(t.style.width)||40);
+                document.getElementById('ctx-layer').value = t.dataset.layer || 'token';
             }
-
-            if(isHost) document.getElementById('ctx-layer').value = t.dataset.layer || 'token';
             
             document.getElementById('status-dead').checked = !!t.querySelector('.status-dot.dead');
             document.getElementById('status-poisoned').checked = !!t.querySelector('.status-dot.poisoned');
@@ -1264,7 +1242,13 @@
                     try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
                 }
 
-                let sizeValue = isHost ? (toPx(parseFloat(document.getElementById('ctx-size').value)||40)) : (parseFloat(el.style.width)||40);
+                let currentSizePx = parseFloat(el.style.width) || 40;
+                if (isHost) {
+                    const sizeInputVal = parseFloat(document.getElementById('ctx-size').value);
+                    if (!isNaN(sizeInputVal)) {
+                        currentSizePx = toPx(sizeInputVal);
+                    }
+                }
 
                 let d = {
                     id: el.id, name: document.getElementById('ctx-name').value,
@@ -1273,11 +1257,11 @@
                     ac: document.getElementById('ctx-ac').value,
                     mp: document.getElementById('ctx-mp').value,
                     initiative: parseInt(document.getElementById('ctx-initiative').value)||0,
-                    sizePx: sizeValue,
+                    sizePx: currentSizePx,
                     owner: ownersList.includes('all') ? 'all' : (ownersList[0] || 'none'),
                     owners: ownersList,
                     isDead: document.getElementById('status-dead').checked, isPoisoned: document.getElementById('status-poisoned').checked, isStunned: document.getElementById('status-stunned').checked,
-                    layer: isHost ? document.getElementById('ctx-layer').value : 'token',
+                    layer: isHost ? document.getElementById('ctx-layer').value : (el.dataset.layer || 'token'),
                     auras: [
                         { rPx: toPx(parseFloat(document.getElementById('aura1-rad').value)||0), c: document.getElementById('aura1-col').value },
                         { rPx: toPx(parseFloat(document.getElementById('aura2-rad').value)||0), c: document.getElementById('aura2-col').value },
@@ -1363,6 +1347,17 @@
 
         function setupTokenEvents(t) {
             t.addEventListener('mousedown', function(e) {
+                if (currentMode === 'ruler' && e.button === 0) {
+                    e.stopPropagation();
+                    isRuling = true;
+                    const tRect = t.getBoundingClientRect();
+                    const rect = mapContainer.getBoundingClientRect();
+                    startX = (tRect.left + tRect.width / 2 - rect.left) / cameraZoom;
+                    startY = (tRect.top + tRect.height / 2 - rect.top) / cameraZoom;
+                    rulerInfoPanel.classList.add('visible');
+                    return;
+                }
+
                 if (currentMode !== 'select' || e.button !== 0) return;
                 if (!hasControl(t)) return;
                 
@@ -1399,8 +1394,7 @@
                 isRuling = true; 
                 startX = (e.clientX - rect.left) / cameraZoom; 
                 startY = (e.clientY - rect.top) / cameraZoom; 
-                
-                document.getElementById('ruler-distance-indicator').classList.add('visible');
+                rulerInfoPanel.classList.add('visible');
             }
         });
 
@@ -1433,7 +1427,7 @@
                 const distPx = Math.sqrt(Math.pow(curX - startX, 2) + Math.pow(curY - startY, 2));
                 const text = systemUnit === 'ft' ? `${fromPx(distPx)} ft` : `${Math.round(distPx)} px`;
                 
-                document.getElementById('ruler-distance-val').textContent = text;
+                rulerDistanceText.textContent = text;
                 
                 rCtx.strokeStyle = '#bfa15f'; rCtx.lineWidth = 3 / cameraZoom;
                 
@@ -1469,11 +1463,7 @@
             }
             if (isPanning) isPanning = false; 
             if (isSelecting) { isSelecting = false; selectionBox.style.display = 'none'; }
-            if (isRuling) { 
-                isRuling = false; 
-                resetRulerCanvas(); 
-                document.getElementById('ruler-distance-indicator').classList.remove('visible');
-            }
+            if (isRuling) { isRuling = false; resetRulerCanvas(); }
         });
 
         viewport.addEventListener('wheel', function(e) { e.preventDefault(); cameraZoom = Math.min(Math.max(cameraZoom + (e.deltaY < 0 ? 0.07 : -0.07), 0.15), 4); document.getElementById('zoomRangeSide').value = cameraZoom; document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom * 100) + '%'; updateTransform(); }, { passive: false });
