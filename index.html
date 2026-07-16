@@ -43,7 +43,7 @@
         .zoom-block-content { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 5px 0; }
         .zoom-slider-horiz { width: 100%; cursor: pointer; margin: 0; }
         
-        /* Лог куборов */
+        /* Лог кубиков */
         .dice-container { display: flex; flex-direction: column; gap: 5px; }
         .dice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
         .dice-grid button { padding: 5px 0; text-align: center; justify-content: center; font-weight: bold; font-size: 11px; }
@@ -55,7 +55,7 @@
         .crit-min { color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 1px 3px; border-radius: 3px; }
         .dm-tag { background: #bfa15f; color: #121212; font-weight: bold; padding: 1px 4px; border-radius: 3px; font-size: 10px; margin-right: 4px; display: inline-block; }
 
-        /* Панель Игроков (Справа снизу) */
+        /* Панель Игроков */
         .player-status-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #e4e4e7; padding: 2px 0; }
         .player-status-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 6px #22c55e; }
 
@@ -65,7 +65,6 @@
             right: 15px;
             bottom: 15px;
             width: 175px;
-            max-height: 220px;
             background: rgba(24, 24, 27, 0.96);
             border: 1px solid #bfa15f;
             border-radius: 8px;
@@ -77,6 +76,7 @@
             gap: 6px;
             pointer-events: auto;
             box-sizing: border-box;
+            transition: max-height 0.3s ease;
         }
         #initiative-tracker h4 {
             margin: 0;
@@ -85,6 +85,10 @@
             text-align: center;
             border-bottom: 1px solid #3f3f46;
             padding-bottom: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .initiative-list {
             overflow-y: auto;
@@ -92,6 +96,7 @@
             flex-direction: column;
             gap: 4px;
             max-height: 160px;
+            transition: opacity 0.2s ease, max-height 0.3s ease;
         }
         .initiative-item {
             display: flex;
@@ -130,31 +135,12 @@
         #map-container { position: relative; display: inline-block; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
         #game-map { display: block; width: 1200px; height: 800px; pointer-events: none; background: #27272a; object-fit: fill; z-index: 1; }
         
-        /* Слои видимости */
         #ruler-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 500; }
 
         /* === ТОКЕНЫ И СТАТУСЫ === */
         .token { position: absolute; touch-action: none; box-sizing: border-box; }
         .token img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block; position: relative; z-index: 3; }
         .token.selected img { filter: drop-shadow(0 0 10px #38bdf8) drop-shadow(0 0 2px #38bdf8); }
-
-        /* Маркер изменения размера (Растягивание тайлика) */
-        .resize-handle {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 12px;
-            height: 12px;
-            background: #38bdf8;
-            border-top-left-radius: 4px;
-            cursor: se-resize;
-            z-index: 15;
-            display: none;
-            border: 1px solid #121212;
-        }
-        .token.selected .resize-handle {
-            display: block;
-        }
 
         .status-effects { position: absolute; top: 2px; right: 2px; display: flex; flex-direction: column; gap: 2px; z-index: 4; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #000; }
@@ -169,7 +155,6 @@
         .token.layer-gm { z-index: 30; opacity: 0.5; }
         .token.layer-gm img { filter: drop-shadow(0 0 6px #a855f7); }
 
-        /* Быстрые характеристики (Хиты, КЗ, Мана) над токеном */
         .token .quick-stats { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); display: none; gap: 4px; z-index: 100; pointer-events: auto; }
         .token.selected .quick-stats { display: flex; }
         .quick-stats input { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #38bdf8; background: rgba(24, 24, 27, 0.95); color: #fff; text-align: center; font-size: 10px; padding: 0; outline: none; box-shadow: 0 0 5px rgba(0,0,0,0.8); cursor: text; }
@@ -177,7 +162,6 @@
         .quick-stats input.qs-ac { border-color: #bfa15f; }
         .quick-stats input.qs-mp { border-color: #3b82f6; }
 
-        /* Класс для активного перетаскивания */
         .token.active-drag { z-index: 99999 !important; }
 
         .player-mode .token.layer-gm { display: none !important; }
@@ -199,13 +183,35 @@
         .context-row { display: flex; gap: 5px; align-items: center; }
         .status-checkboxes { display: flex; gap: 10px; font-size: 11px; margin: 4px 0; }
         .status-checkboxes label { display: flex; align-items: center; gap: 3px; color: #fff; cursor: pointer; }
+
+        /* Индикатор линейки */
+        #ruler-distance-indicator {
+            position: fixed;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(24, 24, 27, 0.98);
+            border: 2px solid #bfa15f;
+            border-bottom: none;
+            border-radius: 12px 12px 0 0;
+            padding: 10px 25px;
+            box-shadow: 0 -4px 25px rgba(0,0,0,0.8);
+            z-index: 5000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+        #ruler-distance-indicator.visible { bottom: 0; }
+        #ruler-distance-indicator span { font-size: 16px; font-weight: bold; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.8); font-family: monospace; letter-spacing: 0.5px; }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
 <body>
 
-    <!-- МНОГОФУНКЦИОНАЛЬНОЕ ЛОББИ -->
+    <!-- ЛОББИ -->
     <div id="lobby-screen">
         <div class="lobby-box" id="lobby-step-1">
             <h2>Добро пожаловать</h2>
@@ -363,19 +369,23 @@
 
     <!-- ТРЕКЕР ИНИЦИАТИВЫ -->
     <div id="initiative-tracker">
-        <h4>⚔️ Инициатива</h4>
-        <div class="initiative-list" id="initiative-list-container">
-            <!-- Элементы инициативы будут рендериться динамически -->
-        </div>
+        <h4 onclick="toggleInitiativeTracker()">
+            <span>⚔️ Инициатива</span>
+            <span id="initiative-arrow">▼</span>
+        </h4>
+        <div class="initiative-list" id="initiative-list-container"></div>
+    </div>
+
+    <!-- ИНДИКАТОР ЛИНЕЙКИ -->
+    <div id="ruler-distance-indicator">
+        <span id="ruler-distance-val">0 ft</span>
     </div>
 
     <!-- НАСТРОЙКИ ТОКЕНА -->
     <div id="token-menu" class="token-context-menu" onmousedown="event.stopPropagation()">
         <div id="permissions-container-block" class="dm-only">
             <label style="color:#38bdf8; font-weight:bold; margin-bottom: 2px;">Контролируется:</label>
-            <select id="ctx-owner-select" onchange="applyContextChanges()">
-                <!-- Динамически заполняется только для Мастера -->
-            </select>
+            <select id="ctx-owner-select" onchange="applyContextChanges()"></select>
             <hr style="border:0; border-top:1px solid #3f3f46; margin: 4px 0;">
         </div>
 
@@ -402,7 +412,7 @@
                 <label style="color:#38bdf8;">Инициатива</label>
                 <input type="number" id="ctx-initiative" placeholder="0" oninput="applyContextChanges()">
             </div>
-            <div style="flex:1;">
+            <div style="flex:1;" class="dm-only">
                 <label id="lbl-size">Размер</label>
                 <input type="number" id="ctx-size" oninput="applyContextChanges()">
             </div>
@@ -442,7 +452,6 @@
     </div>
 
     <script>
-        // Конфигурация Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyA6SbXuWwTo4V1Ys5uvoPdrb64WRyITiWc",
             authDomain: "nrii-803a6.firebaseapp.com",
@@ -484,7 +493,6 @@
         
         let surfaceX = 0, surfaceY = 0, cameraZoom = 1;
 
-        // Синхронизируем имя при вводе на первом экране во второе поле
         document.getElementById('player-nickname').addEventListener('input', (e) => {
             document.getElementById('lobby-join-nickname').value = e.target.value;
         });
@@ -570,10 +578,7 @@
                 const div = document.createElement('div');
                 div.className = `game-item ${selectedGameId === g.id ? 'selected' : ''}`;
                 div.innerHTML = `<div><strong>${g.name}</strong> <span style="font-size:10px; opacity:0.6;">(DM: ${g.dmOwner || 'нет'})</span></div><div style="font-size:11px; color:#38bdf8;">Код: ${g.id}</div>`;
-                div.onclick = () => { 
-                    selectedGameId = g.id; 
-                    renderGamesList(); 
-                };
+                div.onclick = () => { selectedGameId = g.id; renderGamesList(); };
                 container.appendChild(div);
             });
         }
@@ -597,8 +602,7 @@
             if(isEditingMode) { 
                 const g = gamesDatabase.find(x => x.id === selectedGameId); 
                 g.name = name; 
-            }
-            else { 
+            } else { 
                 const n = { id: 'g_'+Date.now(), dmOwner: currentDmUser, name: name, maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], gridSize: 40 }], currentMapIdx: 0, playerMapIdx: 0 }; 
                 gamesDatabase.push(n); 
                 selectedGameId = n.id; 
@@ -629,8 +633,15 @@
             isHost = true; 
             localNickname = document.getElementById('player-nickname').value.trim() || "Мастер DM";
             activeGame = gamesDatabase.find(x => x.id === selectedGameId); 
-            initVTTTable(); startPlayerSync(); setupPresence();
-            document.getElementById('invite-btn').style.display = 'block';
+            
+            // Если мир запускается впервые на сервере Firebase, инициализируем его
+            db.ref('shared_games/' + activeGame.id).once('value').then((snapshot) => {
+                if (!snapshot.exists()) {
+                    db.ref('shared_games/' + activeGame.id).set(activeGame);
+                }
+                initVTTTable(); startPlayerSync(); setupPresence();
+                document.getElementById('invite-btn').style.display = 'block';
+            });
         }
         
         function launchGamePlayer() {
@@ -638,10 +649,7 @@
             localNickname = document.getElementById('lobby-join-nickname').value.trim() || "Игрок";
             document.getElementById('player-nickname').value = localNickname;
             
-            if(!code) {
-                alert("Введите код комнаты!");
-                return;
-            }
+            if(!code) { alert("Введите код комнаты!"); return; }
 
             db.ref('shared_games/'+code).once('value').then((sn) => {
                 const g = sn.val(); 
@@ -662,15 +670,11 @@
             const inviteGameId = urlParams.get('joinGame');
             if (inviteGameId) {
                 switchLobbyStep('player-join');
-                setTimeout(() => {
-                    document.getElementById('player-game-code').value = inviteGameId;
-                }, 100);
+                setTimeout(() => { document.getElementById('player-game-code').value = inviteGameId; }, 100);
             }
         }
 
-        window.addEventListener('blur', () => {
-            deselectAllTokens();
-        });
+        window.addEventListener('blur', () => { deselectAllTokens(); });
 
         function copyInviteLink() {
             if (!activeGame) return;
@@ -688,8 +692,7 @@
                 document.body.classList.add('dm-mode'); 
                 changeActiveLayer(); 
                 document.getElementById('btn-delete-token').style.display = 'block';
-            }
-            else { 
+            } else { 
                 document.body.classList.add('player-mode'); 
                 activeGame.currentMapIdx = activeGame.playerMapIdx || 0; 
                 document.getElementById('btn-delete-token').style.display = 'none';
@@ -705,9 +708,7 @@
             db.ref(`shared_games/${activeGame.id}/online_players`).on('value', (snapshot) => {
                 currentOnlinePlayers = snapshot.val() || {};
                 updatePlayersListUI(currentOnlinePlayers);
-                if (selectedTokens.length > 0) {
-                    renderPermissionsSelect(selectedTokens[0]);
-                }
+                if (selectedTokens.length > 0) { renderPermissionsSelect(selectedTokens[0]); }
             });
 
             db.ref(`shared_games/${activeGame.id}/dice_log`).limitToLast(40).on('value', (snapshot) => {
@@ -733,6 +734,22 @@
             else { list.style.display = 'none'; arrow.textContent = '▼'; }
         }
 
+        let isInitiativeCollapsed = false;
+        function toggleInitiativeTracker() {
+            const listContainer = document.getElementById('initiative-list-container');
+            const arrow = document.getElementById('initiative-arrow');
+            isInitiativeCollapsed = !isInitiativeCollapsed;
+            if (isInitiativeCollapsed) {
+                listContainer.style.maxHeight = '0px'; listContainer.style.opacity = '0';
+                setTimeout(() => { if(isInitiativeCollapsed) listContainer.style.display = 'none'; }, 200);
+                arrow.textContent = '▲';
+            } else {
+                listContainer.style.display = 'flex';
+                setTimeout(() => { listContainer.style.maxHeight = '160px'; listContainer.style.opacity = '1'; }, 10);
+                arrow.textContent = '▼';
+            }
+        }
+
         function updatePlayersListUI(players) {
             const container = document.getElementById('players-online-list');
             const countSpan = document.getElementById('online-count');
@@ -749,54 +766,41 @@
 
         function renderPermissionsSelect(tokenElement) {
             const container = document.getElementById('permissions-container-block');
-            if (!isHost) {
-                container.style.display = 'none'; 
-                return;
-            }
+            if (!isHost) { container.style.display = 'none'; return; }
             container.style.display = 'block';
 
             const select = document.getElementById('ctx-owner-select');
             select.innerHTML = '';
 
             let allowedOwners = [];
-            try {
-                allowedOwners = JSON.parse(tokenElement.dataset.owners || "[]");
-            } catch(e) {
-                if(tokenElement.dataset.owner) {
-                    allowedOwners = tokenElement.dataset.owner === 'all' ? ['all'] : [tokenElement.dataset.owner];
-                }
+            try { allowedOwners = JSON.parse(tokenElement.dataset.owners || "[]"); } 
+            catch(e) {
+                if(tokenElement.dataset.owner) allowedOwners = tokenElement.dataset.owner === 'all' ? ['all'] : [tokenElement.dataset.owner];
             }
 
             const optNone = document.createElement('option');
-            optNone.value = 'none';
-            optNone.textContent = 'Только DM';
+            optNone.value = 'none'; optNone.textContent = 'Только DM';
             if (allowedOwners.length === 0 || allowedOwners.includes('none')) optNone.selected = true;
             select.appendChild(optNone);
 
             const optAll = document.createElement('option');
-            optAll.value = 'all';
-            optAll.textContent = '🌐 Все игроки';
+            optAll.value = 'all'; optAll.textContent = '🌐 Все игроки';
             if (allowedOwners.includes('all')) optAll.selected = true;
             select.appendChild(optAll);
 
             Object.keys(currentOnlinePlayers).forEach(playerName => {
                 const opt = document.createElement('option');
-                opt.value = playerName;
-                opt.textContent = `👤 Игрок: ${playerName}`;
-                if (allowedOwners.includes(playerName) && !allowedOwners.includes('all')) {
-                    opt.selected = true;
-                }
+                opt.value = playerName; opt.textContent = `👤 Игрок: ${playerName}`;
+                if (allowedOwners.includes(playerName) && !allowedOwners.includes('all')) { opt.selected = true; }
                 select.appendChild(opt);
             });
         }
 
         function hasControl(el) {
             if (isHost) return true;
-            
             let allowedOwners = [];
-            try { 
-                allowedOwners = JSON.parse(el.dataset.owners || "[]"); 
-            } catch(e) {
+            try { allowedOwners = JSON.parse(el.dataset.owners || "[]"); } 
+            catch(e) {
                 if(el.dataset.owner) allowedOwners = el.dataset.owner === 'all' ? ['all'] : [el.dataset.owner];
             }
             return allowedOwners.includes('all') || allowedOwners.includes(localNickname);
@@ -805,39 +809,27 @@
         function updateInitiativeTracker() {
             const listContainer = document.getElementById('initiative-list-container');
             listContainer.innerHTML = '';
-            
             const tokens = [];
+            
             document.querySelectorAll('.token').forEach(el => {
                 const initVal = parseInt(el.dataset.initiative) || 0;
                 if (initVal > 0) {
                     let isDmOnly = false;
                     let allowedOwners = [];
-                    try { 
-                        allowedOwners = JSON.parse(el.dataset.owners || "[]"); 
-                    } catch(e) {
+                    try { allowedOwners = JSON.parse(el.dataset.owners || "[]"); } 
+                    catch(e) {
                         if (el.dataset.owner) allowedOwners = el.dataset.owner === 'all' ? ['all'] : [el.dataset.owner];
                     }
-                    
-                    if (allowedOwners.length === 0 || allowedOwners.includes('none')) {
-                        isDmOnly = true;
-                    }
+                    if (allowedOwners.length === 0 || allowedOwners.includes('none')) isDmOnly = true;
 
                     let displayName = el.querySelector('.token-name').textContent || 'Токен';
-                    if (isDmOnly) {
-                        displayName = "DM";
-                    }
+                    if (isDmOnly) displayName = "DM";
 
-                    tokens.push({
-                        id: el.id,
-                        name: displayName,
-                        initiative: initVal,
-                        isDm: isDmOnly
-                    });
+                    tokens.push({ id: el.id, name: displayName, initiative: initVal, isDm: isDmOnly });
                 }
             });
 
             tokens.sort((a, b) => b.initiative - a.initiative);
-
             if (tokens.length === 0) {
                 listContainer.innerHTML = '<div style="font-size:11px; text-align:center; color:#52525b; padding:10px;">Нет активных бросков</div>';
                 return;
@@ -846,32 +838,24 @@
             tokens.forEach(t => {
                 const div = document.createElement('div');
                 div.className = `initiative-item ${t.isDm ? 'dm-owned-unit' : ''}`;
-                div.innerHTML = `
-                    <span class="init-name">${t.name}</span>
-                    <span class="init-val">${t.initiative}</span>
-                `;
+                div.innerHTML = `<span class="init-name">${t.name}</span><span class="init-val">${t.initiative}</span>`;
                 listContainer.appendChild(div);
             });
         }
 
         function startPlayerSync() {
             db.ref('shared_games/' + activeGame.id).on('value', (snapshot) => {
-                const fresh = snapshot.val(); if(!fresh) return;
+                const fresh = snapshot.val(); 
+                if(!fresh) return;
                 
+                activeGame = fresh;
                 if(isHost) {
                     const fm = fresh.maps[fresh.currentMapIdx];
                     if (fm && fm.tokens) syncTokensOnly(fm.tokens);
                 } else {
-                    const mapChanged = fresh.playerMapIdx !== activeGame.currentMapIdx;
-                    activeGame = fresh;
                     activeGame.currentMapIdx = fresh.playerMapIdx || 0;
-                    
-                    if (mapChanged) {
-                        renderMapSelectorUI(); switchMap(true);
-                    } else {
-                        const fm = fresh.maps[fresh.currentMapIdx];
-                        if (fm) syncPlayerTableFromServer(fm);
-                    }
+                    const fm = fresh.maps[activeGame.currentMapIdx];
+                    if (fm) syncPlayerTableFromServer(fm);
                 }
                 updateInitiativeTracker();
             });
@@ -881,7 +865,7 @@
             serverTokens.forEach(t => {
                 let el = document.getElementById(t.id);
                 if(!el) { createTokenDOM(t); el = document.getElementById(t.id); }
-                if (el && !(el.classList.contains('selected') && (isDraggingToken || isResizingToken))) {
+                if (el && !(el.classList.contains('selected') && isDraggingToken)) {
                     el.style.left = t.left + 'px'; el.style.top = t.top + 'px';
                     el.style.width = t.sizePx + 'px'; el.style.height = t.sizePx + 'px';
                     el.querySelector('.token-name').textContent = t.name;
@@ -895,7 +879,6 @@
                     
                     let hpVal = t.hp !== undefined ? t.hp : 10;
                     let maxHpVal = t.maxHp !== undefined ? t.maxHp : 10;
-
                     let pct = maxHpVal > 0 ? (hpVal / maxHpVal) * 100 : 0;
                     el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
                     
@@ -925,7 +908,6 @@
             if(img.src !== fm.src) img.src = fm.src;
             img.style.width = (fm.width || 1200) + 'px'; img.style.height = (fm.height || 800) + 'px';
             scaleUnitFactor = fm.gridSize || 40;
-            
             syncTokensOnly(fm.tokens || []);
         }
 
@@ -960,9 +942,7 @@
                 cm.width = parseFloat(document.getElementById('game-map').style.width)||1200;
                 cm.height = parseFloat(document.getElementById('game-map').style.height)||800;
                 cm.gridSize = scaleUnitFactor;
-                
-                db.ref(`shared_games/${activeGame.id}/maps/${activeGame.currentMapIdx}`).set(cm);
-                db.ref(`shared_games/${activeGame.id}/playerMapIdx`).set(activeGame.playerMapIdx || 0);
+                db.ref(`shared_games/${activeGame.id}`).set(activeGame);
             } else {
                 db.ref(`shared_games/${activeGame.id}/maps/${activeGame.currentMapIdx}/tokens`).set(arr);
             }
@@ -1001,7 +981,6 @@
             scaleUnitFactor = mo.gridSize || 40;
 
             (mo.tokens || []).forEach(t => createTokenDOM(t));
-
             img.onload = () => resizeRulerCanvas(); resizeRulerCanvas();
             updateInitiativeTracker();
         }
@@ -1026,8 +1005,7 @@
             const c = parseInt(document.getElementById('dice-count').value)||1; const b = parseInt(document.getElementById('dice-bonus').value)||0;
             let s = 0; let str = [];
             for(let i=0; i<c; i++) { 
-                let r = Math.floor(Math.random()*f)+1; 
-                s+=r; 
+                let r = Math.floor(Math.random()*f)+1; s+=r; 
                 if(r===f) str.push(`<span class="crit-max">${r}</span>`); 
                 else if(r===1) str.push(`<span class="crit-min">${r}</span>`); 
                 else str.push(r); 
@@ -1035,8 +1013,7 @@
             
             const logRef = db.ref(`shared_games/${activeGame.id}/dice_log`).push();
             logRef.set({
-                user: localNickname,
-                isDm: isHost,
+                user: localNickname, isDm: isHost,
                 text: `${c}d${f}${b?(' + '+b):''}`,
                 detail: `[${str.join(', ')}]`,
                 result: s + b,
@@ -1050,10 +1027,8 @@
         function fromPx(v) { return systemUnit === 'ft' ? Math.round((v / scaleUnitFactor) * 5) : Math.round(v); }
         function resizeRulerCanvas() { 
             const img = document.getElementById('game-map'); 
-            const w = parseFloat(img.style.width) || 1200;
-            const h = parseFloat(img.style.height) || 800;
-            rulerCanvas.width = w; 
-            rulerCanvas.height = h; 
+            rulerCanvas.width = parseFloat(img.style.width) || 1200; 
+            rulerCanvas.height = parseFloat(img.style.height) || 800; 
         }
 
         function setMode(m) {
@@ -1063,10 +1038,10 @@
             
             const opts = document.getElementById('ruler-options');
             if(opts) opts.style.display = (m === 'ruler') ? 'flex' : 'none';
+            if (m !== 'ruler') document.getElementById('ruler-distance-indicator').classList.remove('visible');
         }
         function updateRulerShapeUI() {
-            const s = document.getElementById('ruler-shape').value;
-            document.getElementById('ruler-angle-container').style.display = (s === 'cone') ? 'flex' : 'none';
+            document.getElementById('ruler-angle-container').style.display = (document.getElementById('ruler-shape').value === 'cone') ? 'flex' : 'none';
             resetRulerCanvas();
         }
         function resetRulerCanvas() { rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height); }
@@ -1078,8 +1053,7 @@
                 createTokenDOM({ 
                     id: 't_'+Date.now(), name: "Токен", src: ev.target.result, 
                     left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 40, 
-                    hp: 10, maxHp: 10, ac: '', mp: '', initiative: 0, layer: tl, owner: 'none', owners: [], 
-                    auras: [{}, {}, {}] 
+                    hp: 10, maxHp: 10, ac: '', mp: '', initiative: 0, layer: tl, owner: 'none', owners: [], auras: [{}, {}, {}] 
                 });
                 syncActiveGameStorage();
             }; r.readAsDataURL(file);
@@ -1096,7 +1070,6 @@
                 <div class="aura aura-1"></div><div class="aura aura-2"></div><div class="aura aura-3"></div>
                 <div class="status-effects"></div><img>
                 <div class="token-info-container"><div class="token-name"></div><div class="token-hp-bar-container"><div class="token-hp-bar"></div></div></div>
-                <div class="resize-handle"></div>
             `;
             mapContainer.appendChild(t); t.querySelector('img').src = d.src;
             updateTokenVisuals(t, d); setupTokenEvents(t);
@@ -1109,9 +1082,7 @@
                     const dim = (auras[i].rPx * 2) + sizePx; 
                     aEl.style.width = dim+'px'; aEl.style.height = dim+'px'; 
                     aEl.style.backgroundColor = auras[i].c; aEl.style.display = 'block';
-                } else if (aEl) {
-                    aEl.style.display = 'none';
-                }
+                } else if (aEl) { aEl.style.display = 'none'; }
             }
         }
 
@@ -1120,10 +1091,15 @@
             el.style.left = d.left + 'px'; el.style.top = d.top + 'px'; el.style.width = d.sizePx + 'px'; el.style.height = d.sizePx + 'px';
             el.querySelector('.token-name').textContent = d.name;
             
-            el.dataset.owners = JSON.stringify(d.owners || (d.owner === 'all' ? ['all'] : (d.owner && d.owner !== 'none' ? [d.owner] : [])));
+            let parsedOwners = d.owners;
+            if (!parsedOwners || !Array.isArray(parsedOwners)) {
+                parsedOwners = (d.owner === 'all') ? ['all'] : (d.owner && d.owner !== 'none' ? [d.owner] : []);
+            }
+            el.dataset.owners = JSON.stringify(parsedOwners);
             el.dataset.owner = d.owner || 'none';
             
-            let pct = d.maxHp > 0 ? (d.hp / d.maxHp) * 100 : 0; el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
+            let pct = d.maxHp > 0 ? (d.hp / d.maxHp) * 100 : 0; 
+            el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
             
             el.dataset.hp = d.hp; el.dataset.maxHp = d.maxHp; 
             el.dataset.ac = d.ac || ''; el.dataset.mp = d.mp || '';
@@ -1145,18 +1121,15 @@
 
         function openTokenContextMenu(t) {
             if(!hasControl(t)) return;
-            
             document.body.appendChild(tokenMenu);
             tokenMenu.style.display = 'flex';
             
             const tRect = t.getBoundingClientRect();
-            
             tokenMenu.style.left = (tRect.left + tRect.width / 2) + 'px';
             tokenMenu.style.top = (tRect.bottom + 5) + 'px';
             tokenMenu.style.transform = 'translateX(-50%)';
 
             const au = t.dataset.auras ? JSON.parse(t.dataset.auras) : [{},{},{}];
-            
             renderPermissionsSelect(t);
             
             document.getElementById('ctx-name').value = t.querySelector('.token-name').textContent;
@@ -1166,8 +1139,8 @@
             document.getElementById('ctx-mp').value = t.dataset.mp || '';
             document.getElementById('ctx-initiative').value = t.dataset.initiative || 0;
 
-            document.getElementById('ctx-size').value = fromPx(parseFloat(t.style.width)||40);
-            if(isHost) document.getElementById('ctx-layer').value = t.dataset.layer || 'token';
+            if (isHost) document.getElementById('ctx-size').value = fromPx(parseFloat(t.style.width)||40);
+            if (isHost) document.getElementById('ctx-layer').value = t.dataset.layer || 'token';
             
             document.getElementById('status-dead').checked = !!t.querySelector('.status-dot.dead');
             document.getElementById('status-poisoned').checked = !!t.querySelector('.status-dot.poisoned');
@@ -1178,16 +1151,10 @@
                 document.getElementById(`aura${i+1}-col`).value = au[i]?.c || (i===0?'#ff0000':(i===1?'#00ff00':'#0000ff'));
             }
 
-            if(!isHost) {
-                document.getElementById('btn-delete-token').style.display = 'none';
-            } else {
-                document.getElementById('btn-delete-token').style.display = 'block';
-            }
+            document.getElementById('btn-delete-token').style.display = isHost ? 'block' : 'none';
         }
 
-        function changeActiveAuraColor(num, val) {
-            applyContextChanges();
-        }
+        function changeActiveAuraColor(num, val) { applyContextChanges(); }
 
         function applyContextChanges() {
             if (selectedTokens.length === 0) return;
@@ -1202,6 +1169,8 @@
                     try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
                 }
 
+                let sizeValue = isHost ? (toPx(parseFloat(document.getElementById('ctx-size').value)||40)) : (parseFloat(el.style.width)||40);
+
                 let d = {
                     id: el.id, name: document.getElementById('ctx-name').value,
                     hp: parseInt(document.getElementById('ctx-hp').value)||0, 
@@ -1209,7 +1178,7 @@
                     ac: document.getElementById('ctx-ac').value,
                     mp: document.getElementById('ctx-mp').value,
                     initiative: parseInt(document.getElementById('ctx-initiative').value)||0,
-                    sizePx: toPx(parseFloat(document.getElementById('ctx-size').value)||40),
+                    sizePx: sizeValue,
                     owner: ownersList.includes('all') ? 'all' : (ownersList[0] || 'none'),
                     owners: ownersList,
                     isDead: document.getElementById('status-dead').checked, isPoisoned: document.getElementById('status-poisoned').checked, isStunned: document.getElementById('status-stunned').checked,
@@ -1241,106 +1210,52 @@
         document.addEventListener('keydown', (e) => { 
             if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
 
-            if (e.key === 'Delete' || e.key === 'Backspace') {
-                if (selectedTokens.length > 0) {
-                    deleteSelectedTokens(); 
-                }
+            if ((e.key === 'Delete' || e.key === 'Backspace') && selectedTokens.length > 0) {
+                deleteSelectedTokens(); 
             }
             
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
-                if (selectedTokens.length > 0) {
-                    copiedTokens = selectedTokens.map(el => {
-                        const au = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{},{},{}];
-                        let ownersList = [];
-                        try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
-                        return {
-                            name: el.querySelector('.token-name').textContent,
-                            src: el.querySelector('img').src,
-                            sizePx: parseFloat(el.style.width),
-                            hp: parseInt(el.dataset.hp)||10,
-                            maxHp: parseInt(el.dataset.maxHp)||10,
-                            ac: el.dataset.ac || '',
-                            mp: el.dataset.mp || '',
-                            initiative: parseInt(el.dataset.initiative) || 0,
-                            layer: el.dataset.layer||'token',
-                            owner: el.dataset.owner || 'none',
-                            owners: ownersList,
-                            isDead: !!el.querySelector('.status-dot.dead'),
-                            isPoisoned: !!el.querySelector('.status-dot.poisoned'),
-                            isStunned: !!el.querySelector('.status-dot.stunned'),
-                            auras: au
-                        };
-                    });
-                }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && selectedTokens.length > 0) {
+                copiedTokens = selectedTokens.map(el => {
+                    const au = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{},{},{}];
+                    let ownersList = [];
+                    try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
+                    return {
+                        name: el.querySelector('.token-name').textContent,
+                        src: el.querySelector('img').src,
+                        sizePx: parseFloat(el.style.width),
+                        hp: parseInt(el.dataset.hp)||10, maxHp: parseInt(el.dataset.maxHp)||10,
+                        ac: el.dataset.ac || '', mp: el.dataset.mp || '',
+                        initiative: parseInt(el.dataset.initiative) || 0,
+                        layer: el.dataset.layer||'token',
+                        owner: el.dataset.owner || 'none', owners: ownersList,
+                        isDead: !!el.querySelector('.status-dot.dead'),
+                        isPoisoned: !!el.querySelector('.status-dot.poisoned'),
+                        isStunned: !!el.querySelector('.status-dot.stunned'),
+                        auras: au
+                    };
+                });
             }
 
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
-                if (copiedTokens.length > 0 && isHost) { 
-                    copiedTokens.forEach((tData, index) => {
-                        const offset = index * 20; 
-                        const pasteX = cursorOnMapX + offset;
-                        const pasteY = cursorOnMapY + offset;
-                        
-                        const newTokenData = {
-                            ...tData,
-                            id: 't_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                            left: pasteX,
-                            top: pasteY
-                        };
-                        createTokenDOM(newTokenData);
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v' && copiedTokens.length > 0 && isHost) { 
+                copiedTokens.forEach((tData, index) => {
+                    const offset = index * 20; 
+                    createTokenDOM({
+                        ...tData,
+                        id: 't_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                        left: cursorOnMapX + offset, top: cursorOnMapY + offset
                     });
-                    syncActiveGameStorage();
-                }
+                });
+                syncActiveGameStorage();
             }
         });
 
-        let isDraggingToken = false, isPanning = false, isSelecting = false, isRuling = false, isResizingToken = false;
+        let isDraggingToken = false, isPanning = false, isSelecting = false, isRuling = false;
         let startX, startY, startSurfX, startSurfY, dragOffsets = [];
-        let startResizeWidth, startResizeHeight, resizeTokenEl;
 
         function setupTokenEvents(t) {
             t.addEventListener('mousedown', function(e) {
-                if (e.button !== 0) return;
+                if (currentMode !== 'select' || e.button !== 0) return;
                 if (!hasControl(t)) return;
-
-                // Если кликнули по маркеру изменения размера
-                if (e.target.classList.contains('resize-handle')) {
-                    e.stopPropagation();
-                    isResizingToken = true;
-                    resizeTokenEl = t;
-                    startX = e.clientX;
-                    startY = e.clientY;
-                    startResizeWidth = parseFloat(t.style.width) || 40;
-                    startResizeHeight = parseFloat(t.style.height) || 40;
-                    return;
-                }
-
-                // Логика Линейки + Перетаскивания
-                if (currentMode === 'ruler') {
-                    e.stopPropagation();
-                    const rect = mapContainer.getBoundingClientRect();
-                    
-                    // Выставляем линейку строго в исходный центр тайла
-                    const tLeft = parseFloat(t.style.left) || 0;
-                    const tTop = parseFloat(t.style.top) || 0;
-                    const tW = parseFloat(t.style.width) || 40;
-                    const tH = parseFloat(t.style.height) || 40;
-                    
-                    startX = tLeft + tW / 2;
-                    startY = tTop + tH / 2;
-                    isRuling = true;
-
-                    // Параллельно активируем перетаскивание
-                    if (!selectedTokens.includes(t)) { deselectAllTokens(); t.classList.add('selected'); selectedTokens.push(t); }
-                    isDraggingToken = true;
-                    t.classList.add('active-drag');
-                    
-                    const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
-                    dragOffsets = selectedTokens.map(tok => ({ el: tok, ox: mX - parseFloat(tok.style.left), oy: mY - parseFloat(tok.style.top) }));
-                    return;
-                }
-
-                if (currentMode !== 'select') return;
                 
                 e.stopPropagation();
                 document.querySelectorAll('.token.active-drag').forEach(tok => tok.classList.remove('active-drag'));
@@ -1371,40 +1286,23 @@
 
             if (currentMode === 'pan') { isPanning = true; startX = e.clientX; startY = e.clientY; startSurfX = surfaceX; startSurfY = surfaceY; }
             else if (currentMode === 'select' && e.target !== tokenMenu && !tokenMenu.contains(e.target)) { deselectAllTokens(); isSelecting = true; startX = e.clientX; startY = e.clientY; selectionBox.style.left = startX+'px'; selectionBox.style.top = startY+'px'; selectionBox.style.width = '0px'; selectionBox.style.height = '0px'; selectionBox.style.display = 'block'; }
-            else if (currentMode === 'ruler') { isRuling = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; }
+            else if (currentMode === 'ruler') { 
+                isRuling = true; 
+                startX = (e.clientX - rect.left) / cameraZoom; 
+                startY = (e.clientY - rect.top) / cameraZoom; 
+                document.getElementById('ruler-distance-indicator').classList.add('visible');
+            }
         });
 
         document.addEventListener('mousemove', function(e) {
             const rect = mapContainer.getBoundingClientRect();
-            
             cursorOnMapX = (e.clientX - rect.left) / cameraZoom;
             cursorOnMapY = (e.clientY - rect.top) / cameraZoom;
 
-            // Логика растягивания тайла
-            if (isResizingToken && resizeTokenEl) {
-                const deltaX = (e.clientX - startX) / cameraZoom;
-                const deltaY = (e.clientY - startY) / cameraZoom;
-                
-                // Делаем пропорциональный размер на основе большего сдвига
-                const maxDelta = Math.max(deltaX, deltaY);
-                let newSize = Math.max(15, startResizeWidth + maxDelta);
-
-                resizeTokenEl.style.width = newSize + 'px';
-                resizeTokenEl.style.height = newSize + 'px';
-
-                // Динамическое обновление аур при растягивании
-                const sizeVal = parseFloat(resizeTokenEl.style.width) || 40;
-                const au = resizeTokenEl.dataset.auras ? JSON.parse(resizeTokenEl.dataset.auras) : [{},{},{}];
-                updateTokenAuraVisuals(resizeTokenEl, au, sizeVal);
-                return;
-            }
-
-            if (isDraggingToken) {
+            if (isDraggingToken && currentMode === 'select') {
                 const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
                 dragOffsets.forEach(pos => { pos.el.style.left = (mX - pos.ox) + 'px'; pos.el.style.top = (mY - pos.oy) + 'px'; });
-            } 
-            
-            if (isPanning) {
+            } else if (isPanning) {
                 surfaceX = startSurfX + (e.clientX - startX); surfaceY = startSurfY + (e.clientY - startY); updateTransform();
             } else if (isSelecting) {
                 selectionBox.style.left = Math.min(startX, e.clientX) + 'px'; selectionBox.style.top = Math.min(startY, e.clientY) + 'px';
@@ -1424,6 +1322,7 @@
                 const distPx = Math.sqrt(Math.pow(curX - startX, 2) + Math.pow(curY - startY, 2));
                 const text = systemUnit === 'ft' ? `${fromPx(distPx)} ft` : `${Math.round(distPx)} px`;
                 
+                document.getElementById('ruler-distance-val').textContent = text;
                 rCtx.strokeStyle = '#bfa15f'; rCtx.lineWidth = 3 / cameraZoom;
                 
                 if (shape === 'line') {
@@ -1436,15 +1335,11 @@
                     const baseAngle = Math.atan2(curY - startY, curX - startX);
                     const spreadDeg = parseFloat(document.getElementById('ruler-angle').value) || 60;
                     const spreadRad = (spreadDeg * Math.PI) / 180;
-                    const startAngle = baseAngle - spreadRad / 2;
-                    const endAngle = baseAngle + spreadRad / 2;
-                    
                     rCtx.beginPath(); rCtx.moveTo(startX, startY);
-                    rCtx.arc(startX, startY, distPx, startAngle, endAngle);
+                    rCtx.arc(startX, startY, distPx, baseAngle - spreadRad / 2, baseAngle + spreadRad / 2);
                     rCtx.closePath(); rCtx.stroke();
                     rCtx.fillStyle = 'rgba(191, 161, 95, 0.12)'; rCtx.fill();
                 }
-                
                 rCtx.fillStyle = '#fff'; rCtx.font = `bold ${15 / cameraZoom}px Arial`;
                 rCtx.fillText(text, curX + 10, curY - 10);
             }
@@ -1456,17 +1351,19 @@
                 document.querySelectorAll('.token.active-drag').forEach(t => t.classList.remove('active-drag'));
                 syncActiveGameStorage(); 
             }
-            if (isResizingToken) {
-                isResizingToken = false;
-                resizeTokenEl = null;
-                syncActiveGameStorage();
-            }
             if (isPanning) isPanning = false; 
             if (isSelecting) { isSelecting = false; selectionBox.style.display = 'none'; }
-            if (isRuling) { isRuling = false; resetRulerCanvas(); }
+            if (isRuling) { isRuling = false; resetRulerCanvas(); document.getElementById('ruler-distance-indicator').classList.remove('visible'); }
         });
 
-        viewport.addEventListener('wheel', function(e) { e.preventDefault(); cameraZoom = Math.min(Math.max(cameraZoom + (e.deltaY < 0 ? 0.07 : -0.07), 0.15), 4); document.getElementById('zoomRangeSide').value = cameraZoom; document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom * 100) + '%'; updateTransform(); }, { passive: false });
+        viewport.addEventListener('wheel', function(e) { 
+            e.preventDefault(); 
+            cameraZoom = Math.min(Math.max(cameraZoom + (e.deltaY < 0 ? 0.07 : -0.07), 0.15), 4); 
+            document.getElementById('zoomRangeSide').value = cameraZoom; 
+            document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom * 100) + '%'; 
+            updateTransform(); 
+        }, { passive: false });
+
         function updateTransform() { surface.style.transform = `translate(${surfaceX}px, ${surfaceY}px) scale(${cameraZoom})`; }
         setTimeout(() => { surfaceX = (window.innerWidth - 1200)/2 - 80; surfaceY = 60; updateTransform(); resizeRulerCanvas(); }, 150);
     </script>
