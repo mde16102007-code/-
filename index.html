@@ -59,7 +59,7 @@
         .player-status-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #e4e4e7; padding: 2px 0; }
         .player-status-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 6px #22c55e; }
 
-        /* === БЛОК ИНИЦИАТИВЫ (Новый элемент) === */
+        /* === БЛОК ИНИЦИАТИВЫ === */
         #initiative-tracker {
             position: absolute;
             right: 15px;
@@ -137,6 +137,24 @@
         .token { position: absolute; touch-action: none; box-sizing: border-box; }
         .token img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block; position: relative; z-index: 3; }
         .token.selected img { filter: drop-shadow(0 0 10px #38bdf8) drop-shadow(0 0 2px #38bdf8); }
+
+        /* Маркер изменения размера (Растягивание тайлика) */
+        .resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 12px;
+            height: 12px;
+            background: #38bdf8;
+            border-top-left-radius: 4px;
+            cursor: se-resize;
+            z-index: 15;
+            display: none;
+            border: 1px solid #121212;
+        }
+        .token.selected .resize-handle {
+            display: block;
+        }
 
         .status-effects { position: absolute; top: 2px; right: 2px; display: flex; flex-direction: column; gap: 2px; z-index: 4; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #000; }
@@ -343,7 +361,7 @@
         </div>
     </div>
 
-    <!-- ТРЕКЕР ИНИЦИАТИВЫ (Новый элемент справа внизу) -->
+    <!-- ТРЕКЕР ИНИЦИАТИВЫ -->
     <div id="initiative-tracker">
         <h4>⚔️ Инициатива</h4>
         <div class="initiative-list" id="initiative-list-container">
@@ -561,7 +579,6 @@
         }
 
         function renderPlayerGameSelect() {
-            // Очищаем код комнаты, но оставляем или синхронизируем имя
             document.getElementById('player-game-code').value = '';
             document.getElementById('lobby-join-nickname').value = document.getElementById('player-nickname').value.trim() || "Игрок";
         }
@@ -619,7 +636,7 @@
         function launchGamePlayer() {
             const code = document.getElementById('player-game-code').value.trim();
             localNickname = document.getElementById('lobby-join-nickname').value.trim() || "Игрок";
-            document.getElementById('player-nickname').value = localNickname; // Синхронизируем обратно
+            document.getElementById('player-nickname').value = localNickname;
             
             if(!code) {
                 alert("Введите код комнаты!");
@@ -785,7 +802,6 @@
             return allowedOwners.includes('all') || allowedOwners.includes(localNickname);
         }
 
-        // ОБНОВЛЕНИЕ ТРЕКЕРА ИНИЦИАТИВЫ (Новая функция)
         function updateInitiativeTracker() {
             const listContainer = document.getElementById('initiative-list-container');
             listContainer.innerHTML = '';
@@ -793,7 +809,7 @@
             const tokens = [];
             document.querySelectorAll('.token').forEach(el => {
                 const initVal = parseInt(el.dataset.initiative) || 0;
-                if (initVal > 0) { //[cite: 11]
+                if (initVal > 0) {
                     let isDmOnly = false;
                     let allowedOwners = [];
                     try { 
@@ -806,10 +822,9 @@
                         isDmOnly = true;
                     }
 
-                    // Определение отображаемого имени
                     let displayName = el.querySelector('.token-name').textContent || 'Токен';
                     if (isDmOnly) {
-                        displayName = "DM"; //[cite: 11]
+                        displayName = "DM";
                     }
 
                     tokens.push({
@@ -821,7 +836,6 @@
                 }
             });
 
-            // Сортировка по убыванию инициативы
             tokens.sort((a, b) => b.initiative - a.initiative);
 
             if (tokens.length === 0) {
@@ -867,7 +881,7 @@
             serverTokens.forEach(t => {
                 let el = document.getElementById(t.id);
                 if(!el) { createTokenDOM(t); el = document.getElementById(t.id); }
-                if (el && !(el.classList.contains('selected') && isDraggingToken)) {
+                if (el && !(el.classList.contains('selected') && (isDraggingToken || isResizingToken))) {
                     el.style.left = t.left + 'px'; el.style.top = t.top + 'px';
                     el.style.width = t.sizePx + 'px'; el.style.height = t.sizePx + 'px';
                     el.querySelector('.token-name').textContent = t.name;
@@ -887,7 +901,7 @@
                     
                     el.dataset.hp = hpVal; el.dataset.maxHp = maxHpVal;
                     el.dataset.ac = t.ac || ''; el.dataset.mp = t.mp || '';
-                    el.dataset.initiative = t.initiative || 0; //[cite: 11]
+                    el.dataset.initiative = t.initiative || 0;
                     el.dataset.layer = t.layer;
                     el.dataset.auras = JSON.stringify(t.auras || [{},{},{}]);
                     
@@ -932,7 +946,7 @@
                     maxHp: parseInt(el.dataset.maxHp)||10, 
                     ac: el.querySelector('.qs-ac').value || el.dataset.ac || '',
                     mp: el.querySelector('.qs-mp').value || el.dataset.mp || '',
-                    initiative: parseInt(el.dataset.initiative) || 0, //[cite: 11]
+                    initiative: parseInt(el.dataset.initiative) || 0,
                     layer: el.dataset.layer||'token',
                     owner: el.dataset.owner || 'none',
                     owners: ownersList,
@@ -1082,6 +1096,7 @@
                 <div class="aura aura-1"></div><div class="aura aura-2"></div><div class="aura aura-3"></div>
                 <div class="status-effects"></div><img>
                 <div class="token-info-container"><div class="token-name"></div><div class="token-hp-bar-container"><div class="token-hp-bar"></div></div></div>
+                <div class="resize-handle"></div>
             `;
             mapContainer.appendChild(t); t.querySelector('img').src = d.src;
             updateTokenVisuals(t, d); setupTokenEvents(t);
@@ -1112,7 +1127,7 @@
             
             el.dataset.hp = d.hp; el.dataset.maxHp = d.maxHp; 
             el.dataset.ac = d.ac || ''; el.dataset.mp = d.mp || '';
-            el.dataset.initiative = d.initiative || 0; //[cite: 11]
+            el.dataset.initiative = d.initiative || 0;
             el.dataset.layer = d.layer;
             el.dataset.auras = JSON.stringify(d.auras || [{},{},{}]);
 
@@ -1149,7 +1164,7 @@
             document.getElementById('ctx-max-hp').value = t.dataset.maxHp || 10;
             document.getElementById('ctx-ac').value = t.dataset.ac || '';
             document.getElementById('ctx-mp').value = t.dataset.mp || '';
-            document.getElementById('ctx-initiative').value = t.dataset.initiative || 0; //[cite: 11]
+            document.getElementById('ctx-initiative').value = t.dataset.initiative || 0;
 
             document.getElementById('ctx-size').value = fromPx(parseFloat(t.style.width)||40);
             if(isHost) document.getElementById('ctx-layer').value = t.dataset.layer || 'token';
@@ -1193,7 +1208,7 @@
                     maxHp: parseInt(document.getElementById('ctx-max-hp').value)||0,
                     ac: document.getElementById('ctx-ac').value,
                     mp: document.getElementById('ctx-mp').value,
-                    initiative: parseInt(document.getElementById('ctx-initiative').value)||0, //[cite: 11]
+                    initiative: parseInt(document.getElementById('ctx-initiative').value)||0,
                     sizePx: toPx(parseFloat(document.getElementById('ctx-size').value)||40),
                     owner: ownersList.includes('all') ? 'all' : (ownersList[0] || 'none'),
                     owners: ownersList,
@@ -1246,7 +1261,7 @@
                             maxHp: parseInt(el.dataset.maxHp)||10,
                             ac: el.dataset.ac || '',
                             mp: el.dataset.mp || '',
-                            initiative: parseInt(el.dataset.initiative) || 0, //[cite: 11]
+                            initiative: parseInt(el.dataset.initiative) || 0,
                             layer: el.dataset.layer||'token',
                             owner: el.dataset.owner || 'none',
                             owners: ownersList,
@@ -1279,13 +1294,53 @@
             }
         });
 
-        let isDraggingToken = false, isPanning = false, isSelecting = false, isRuling = false;
+        let isDraggingToken = false, isPanning = false, isSelecting = false, isRuling = false, isResizingToken = false;
         let startX, startY, startSurfX, startSurfY, dragOffsets = [];
+        let startResizeWidth, startResizeHeight, resizeTokenEl;
 
         function setupTokenEvents(t) {
             t.addEventListener('mousedown', function(e) {
-                if (currentMode !== 'select' || e.button !== 0) return;
+                if (e.button !== 0) return;
                 if (!hasControl(t)) return;
+
+                // Если кликнули по маркеру изменения размера
+                if (e.target.classList.contains('resize-handle')) {
+                    e.stopPropagation();
+                    isResizingToken = true;
+                    resizeTokenEl = t;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    startResizeWidth = parseFloat(t.style.width) || 40;
+                    startResizeHeight = parseFloat(t.style.height) || 40;
+                    return;
+                }
+
+                // Логика Линейки + Перетаскивания
+                if (currentMode === 'ruler') {
+                    e.stopPropagation();
+                    const rect = mapContainer.getBoundingClientRect();
+                    
+                    // Выставляем линейку строго в исходный центр тайла
+                    const tLeft = parseFloat(t.style.left) || 0;
+                    const tTop = parseFloat(t.style.top) || 0;
+                    const tW = parseFloat(t.style.width) || 40;
+                    const tH = parseFloat(t.style.height) || 40;
+                    
+                    startX = tLeft + tW / 2;
+                    startY = tTop + tH / 2;
+                    isRuling = true;
+
+                    // Параллельно активируем перетаскивание
+                    if (!selectedTokens.includes(t)) { deselectAllTokens(); t.classList.add('selected'); selectedTokens.push(t); }
+                    isDraggingToken = true;
+                    t.classList.add('active-drag');
+                    
+                    const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
+                    dragOffsets = selectedTokens.map(tok => ({ el: tok, ox: mX - parseFloat(tok.style.left), oy: mY - parseFloat(tok.style.top) }));
+                    return;
+                }
+
+                if (currentMode !== 'select') return;
                 
                 e.stopPropagation();
                 document.querySelectorAll('.token.active-drag').forEach(tok => tok.classList.remove('active-drag'));
@@ -1325,10 +1380,31 @@
             cursorOnMapX = (e.clientX - rect.left) / cameraZoom;
             cursorOnMapY = (e.clientY - rect.top) / cameraZoom;
 
-            if (isDraggingToken && currentMode === 'select') {
+            // Логика растягивания тайла
+            if (isResizingToken && resizeTokenEl) {
+                const deltaX = (e.clientX - startX) / cameraZoom;
+                const deltaY = (e.clientY - startY) / cameraZoom;
+                
+                // Делаем пропорциональный размер на основе большего сдвига
+                const maxDelta = Math.max(deltaX, deltaY);
+                let newSize = Math.max(15, startResizeWidth + maxDelta);
+
+                resizeTokenEl.style.width = newSize + 'px';
+                resizeTokenEl.style.height = newSize + 'px';
+
+                // Динамическое обновление аур при растягивании
+                const sizeVal = parseFloat(resizeTokenEl.style.width) || 40;
+                const au = resizeTokenEl.dataset.auras ? JSON.parse(resizeTokenEl.dataset.auras) : [{},{},{}];
+                updateTokenAuraVisuals(resizeTokenEl, au, sizeVal);
+                return;
+            }
+
+            if (isDraggingToken) {
                 const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
                 dragOffsets.forEach(pos => { pos.el.style.left = (mX - pos.ox) + 'px'; pos.el.style.top = (mY - pos.oy) + 'px'; });
-            } else if (isPanning) {
+            } 
+            
+            if (isPanning) {
                 surfaceX = startSurfX + (e.clientX - startX); surfaceY = startSurfY + (e.clientY - startY); updateTransform();
             } else if (isSelecting) {
                 selectionBox.style.left = Math.min(startX, e.clientX) + 'px'; selectionBox.style.top = Math.min(startY, e.clientY) + 'px';
@@ -1379,6 +1455,11 @@
                 isDraggingToken = false; 
                 document.querySelectorAll('.token.active-drag').forEach(t => t.classList.remove('active-drag'));
                 syncActiveGameStorage(); 
+            }
+            if (isResizingToken) {
+                isResizingToken = false;
+                resizeTokenEl = null;
+                syncActiveGameStorage();
             }
             if (isPanning) isPanning = false; 
             if (isSelecting) { isSelecting = false; selectionBox.style.display = 'none'; }
