@@ -59,13 +59,12 @@
         .player-status-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #e4e4e7; padding: 2px 0; }
         .player-status-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 6px #22c55e; }
 
-        /* === БЛОК ИНИЦИАТИВЫ (Новый элемент) === */
+        /* === БЛОК ИНИЦИАТИВЫ === */
         #initiative-tracker {
             position: absolute;
             right: 15px;
             bottom: 15px;
             width: 175px;
-            max-height: 220px;
             background: rgba(24, 24, 27, 0.96);
             border: 1px solid #bfa15f;
             border-radius: 8px;
@@ -77,6 +76,7 @@
             gap: 6px;
             pointer-events: auto;
             box-sizing: border-box;
+            transition: max-height 0.3s ease;
         }
         #initiative-tracker h4 {
             margin: 0;
@@ -85,6 +85,10 @@
             text-align: center;
             border-bottom: 1px solid #3f3f46;
             padding-bottom: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .initiative-list {
             overflow-y: auto;
@@ -92,6 +96,7 @@
             flex-direction: column;
             gap: 4px;
             max-height: 160px;
+            transition: opacity 0.2s ease, max-height 0.3s ease;
         }
         .initiative-item {
             display: flex;
@@ -181,6 +186,37 @@
         .context-row { display: flex; gap: 5px; align-items: center; }
         .status-checkboxes { display: flex; gap: 10px; font-size: 11px; margin: 4px 0; }
         .status-checkboxes label { display: flex; align-items: center; gap: 3px; color: #fff; cursor: pointer; }
+
+        /* === ПЛАВАЮЩИЙ ИНДИКАТОР ЛИНЕЙКИ === */
+        #ruler-distance-indicator {
+            position: fixed;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(24, 24, 27, 0.98);
+            border: 2px solid #bfa15f;
+            border-bottom: none;
+            border-radius: 12px 12px 0 0;
+            padding: 10px 25px;
+            box-shadow: 0 -4px 25px rgba(0,0,0,0.8);
+            z-index: 5000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+        #ruler-distance-indicator.visible {
+            bottom: 0;
+        }
+        #ruler-distance-indicator span {
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            font-family: monospace;
+            letter-spacing: 0.5px;
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -343,12 +379,20 @@
         </div>
     </div>
 
-    <!-- ТРЕКЕР ИНИЦИАТИВЫ (Новый элемент справа внизу) -->
+    <!-- ТРЕКЕР ИНИЦИАТИВЫ -->
     <div id="initiative-tracker">
-        <h4>⚔️ Инициатива</h4>
+        <h4 onclick="toggleInitiativeTracker()">
+            <span>⚔️ Инициатива</span>
+            <span id="initiative-arrow">▼</span>
+        </h4>
         <div class="initiative-list" id="initiative-list-container">
             <!-- Элементы инициативы будут рендериться динамически -->
         </div>
+    </div>
+
+    <!-- ПЛАВАЮЩИЙ ИНДИКАТОР ЛИНЕЙКИ -->
+    <div id="ruler-distance-indicator">
+        <span id="ruler-distance-val">0 ft</span>
     </div>
 
     <!-- НАСТРОЙКИ ТОКЕНА -->
@@ -384,7 +428,7 @@
                 <label style="color:#38bdf8;">Инициатива</label>
                 <input type="number" id="ctx-initiative" placeholder="0" oninput="applyContextChanges()">
             </div>
-            <div style="flex:1;">
+            <div style="flex:1;" class="dm-only"> <!-- Ограничение размера: только для DM -->
                 <label id="lbl-size">Размер</label>
                 <input type="number" id="ctx-size" oninput="applyContextChanges()">
             </div>
@@ -561,7 +605,6 @@
         }
 
         function renderPlayerGameSelect() {
-            // Очищаем код комнаты, но оставляем или синхронизируем имя
             document.getElementById('player-game-code').value = '';
             document.getElementById('lobby-join-nickname').value = document.getElementById('player-nickname').value.trim() || "Игрок";
         }
@@ -619,7 +662,7 @@
         function launchGamePlayer() {
             const code = document.getElementById('player-game-code').value.trim();
             localNickname = document.getElementById('lobby-join-nickname').value.trim() || "Игрок";
-            document.getElementById('player-nickname').value = localNickname; // Синхронизируем обратно
+            document.getElementById('player-nickname').value = localNickname;
             
             if(!code) {
                 alert("Введите код комнаты!");
@@ -716,6 +759,29 @@
             else { list.style.display = 'none'; arrow.textContent = '▼'; }
         }
 
+        // === СВОРАЧИВАНИЕ ИНИЦИАТИВЫ ===
+        let isInitiativeCollapsed = false;
+        function toggleInitiativeTracker() {
+            const tracker = document.getElementById('initiative-tracker');
+            const listContainer = document.getElementById('initiative-list-container');
+            const arrow = document.getElementById('initiative-arrow');
+            
+            isInitiativeCollapsed = !isInitiativeCollapsed;
+            if (isInitiativeCollapsed) {
+                listContainer.style.maxHeight = '0px';
+                listContainer.style.opacity = '0';
+                setTimeout(() => { if(isInitiativeCollapsed) listContainer.style.display = 'none'; }, 200);
+                arrow.textContent = '▲';
+            } else {
+                listContainer.style.display = 'flex';
+                setTimeout(() => {
+                    listContainer.style.maxHeight = '160px';
+                    listContainer.style.opacity = '1';
+                }, 10);
+                arrow.textContent = '▼';
+            }
+        }
+
         function updatePlayersListUI(players) {
             const container = document.getElementById('players-online-list');
             const countSpan = document.getElementById('online-count');
@@ -785,7 +851,6 @@
             return allowedOwners.includes('all') || allowedOwners.includes(localNickname);
         }
 
-        // ОБНОВЛЕНИЕ ТРЕКЕРА ИНИЦИАТИВЫ (Новая функция)
         function updateInitiativeTracker() {
             const listContainer = document.getElementById('initiative-list-container');
             listContainer.innerHTML = '';
@@ -793,7 +858,7 @@
             const tokens = [];
             document.querySelectorAll('.token').forEach(el => {
                 const initVal = parseInt(el.dataset.initiative) || 0;
-                if (initVal > 0) { //[cite: 11]
+                if (initVal > 0) {
                     let isDmOnly = false;
                     let allowedOwners = [];
                     try { 
@@ -806,10 +871,9 @@
                         isDmOnly = true;
                     }
 
-                    // Определение отображаемого имени
                     let displayName = el.querySelector('.token-name').textContent || 'Токен';
                     if (isDmOnly) {
-                        displayName = "DM"; //[cite: 11]
+                        displayName = "DM";
                     }
 
                     tokens.push({
@@ -821,7 +885,6 @@
                 }
             });
 
-            // Сортировка по убыванию инициативы
             tokens.sort((a, b) => b.initiative - a.initiative);
 
             if (tokens.length === 0) {
@@ -845,6 +908,8 @@
                 const fresh = snapshot.val(); if(!fresh) return;
                 
                 if(isHost) {
+                    // Исправление: DM должен получать токены с сервера, включая добавленные игроками
+                    activeGame = fresh;
                     const fm = fresh.maps[fresh.currentMapIdx];
                     if (fm && fm.tokens) syncTokensOnly(fm.tokens);
                 } else {
@@ -887,7 +952,7 @@
                     
                     el.dataset.hp = hpVal; el.dataset.maxHp = maxHpVal;
                     el.dataset.ac = t.ac || ''; el.dataset.mp = t.mp || '';
-                    el.dataset.initiative = t.initiative || 0; //[cite: 11]
+                    el.dataset.initiative = t.initiative || 0;
                     el.dataset.layer = t.layer;
                     el.dataset.auras = JSON.stringify(t.auras || [{},{},{}]);
                     
@@ -932,7 +997,7 @@
                     maxHp: parseInt(el.dataset.maxHp)||10, 
                     ac: el.querySelector('.qs-ac').value || el.dataset.ac || '',
                     mp: el.querySelector('.qs-mp').value || el.dataset.mp || '',
-                    initiative: parseInt(el.dataset.initiative) || 0, //[cite: 11]
+                    initiative: parseInt(el.dataset.initiative) || 0,
                     layer: el.dataset.layer||'token',
                     owner: el.dataset.owner || 'none',
                     owners: ownersList,
@@ -1049,6 +1114,10 @@
             
             const opts = document.getElementById('ruler-options');
             if(opts) opts.style.display = (m === 'ruler') ? 'flex' : 'none';
+            
+            if (m !== 'ruler') {
+                document.getElementById('ruler-distance-indicator').classList.remove('visible');
+            }
         }
         function updateRulerShapeUI() {
             const s = document.getElementById('ruler-shape').value;
@@ -1105,14 +1174,18 @@
             el.style.left = d.left + 'px'; el.style.top = d.top + 'px'; el.style.width = d.sizePx + 'px'; el.style.height = d.sizePx + 'px';
             el.querySelector('.token-name').textContent = d.name;
             
-            el.dataset.owners = JSON.stringify(d.owners || (d.owner === 'all' ? ['all'] : (d.owner && d.owner !== 'none' ? [d.owner] : [])));
+            let parsedOwners = d.owners;
+            if (!parsedOwners || !Array.isArray(parsedOwners)) {
+                parsedOwners = (d.owner === 'all') ? ['all'] : (d.owner && d.owner !== 'none' ? [d.owner] : []);
+            }
+            el.dataset.owners = JSON.stringify(parsedOwners);
             el.dataset.owner = d.owner || 'none';
             
             let pct = d.maxHp > 0 ? (d.hp / d.maxHp) * 100 : 0; el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
             
             el.dataset.hp = d.hp; el.dataset.maxHp = d.maxHp; 
             el.dataset.ac = d.ac || ''; el.dataset.mp = d.mp || '';
-            el.dataset.initiative = d.initiative || 0; //[cite: 11]
+            el.dataset.initiative = d.initiative || 0;
             el.dataset.layer = d.layer;
             el.dataset.auras = JSON.stringify(d.auras || [{},{},{}]);
 
@@ -1149,9 +1222,13 @@
             document.getElementById('ctx-max-hp').value = t.dataset.maxHp || 10;
             document.getElementById('ctx-ac').value = t.dataset.ac || '';
             document.getElementById('ctx-mp').value = t.dataset.mp || '';
-            document.getElementById('ctx-initiative').value = t.dataset.initiative || 0; //[cite: 11]
+            document.getElementById('ctx-initiative').value = t.dataset.initiative || 0;
 
-            document.getElementById('ctx-size').value = fromPx(parseFloat(t.style.width)||40);
+            const sizeField = document.getElementById('ctx-size');
+            if (isHost) {
+                sizeField.value = fromPx(parseFloat(t.style.width)||40);
+            }
+
             if(isHost) document.getElementById('ctx-layer').value = t.dataset.layer || 'token';
             
             document.getElementById('status-dead').checked = !!t.querySelector('.status-dot.dead');
@@ -1187,14 +1264,16 @@
                     try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
                 }
 
+                let sizeValue = isHost ? (toPx(parseFloat(document.getElementById('ctx-size').value)||40)) : (parseFloat(el.style.width)||40);
+
                 let d = {
                     id: el.id, name: document.getElementById('ctx-name').value,
                     hp: parseInt(document.getElementById('ctx-hp').value)||0, 
                     maxHp: parseInt(document.getElementById('ctx-max-hp').value)||0,
                     ac: document.getElementById('ctx-ac').value,
                     mp: document.getElementById('ctx-mp').value,
-                    initiative: parseInt(document.getElementById('ctx-initiative').value)||0, //[cite: 11]
-                    sizePx: toPx(parseFloat(document.getElementById('ctx-size').value)||40),
+                    initiative: parseInt(document.getElementById('ctx-initiative').value)||0,
+                    sizePx: sizeValue,
                     owner: ownersList.includes('all') ? 'all' : (ownersList[0] || 'none'),
                     owners: ownersList,
                     isDead: document.getElementById('status-dead').checked, isPoisoned: document.getElementById('status-poisoned').checked, isStunned: document.getElementById('status-stunned').checked,
@@ -1246,7 +1325,7 @@
                             maxHp: parseInt(el.dataset.maxHp)||10,
                             ac: el.dataset.ac || '',
                             mp: el.dataset.mp || '',
-                            initiative: parseInt(el.dataset.initiative) || 0, //[cite: 11]
+                            initiative: parseInt(el.dataset.initiative) || 0,
                             layer: el.dataset.layer||'token',
                             owner: el.dataset.owner || 'none',
                             owners: ownersList,
@@ -1316,7 +1395,13 @@
 
             if (currentMode === 'pan') { isPanning = true; startX = e.clientX; startY = e.clientY; startSurfX = surfaceX; startSurfY = surfaceY; }
             else if (currentMode === 'select' && e.target !== tokenMenu && !tokenMenu.contains(e.target)) { deselectAllTokens(); isSelecting = true; startX = e.clientX; startY = e.clientY; selectionBox.style.left = startX+'px'; selectionBox.style.top = startY+'px'; selectionBox.style.width = '0px'; selectionBox.style.height = '0px'; selectionBox.style.display = 'block'; }
-            else if (currentMode === 'ruler') { isRuling = true; startX = (e.clientX - rect.left) / cameraZoom; startY = (e.clientY - rect.top) / cameraZoom; }
+            else if (currentMode === 'ruler') { 
+                isRuling = true; 
+                startX = (e.clientX - rect.left) / cameraZoom; 
+                startY = (e.clientY - rect.top) / cameraZoom; 
+                
+                document.getElementById('ruler-distance-indicator').classList.add('visible');
+            }
         });
 
         document.addEventListener('mousemove', function(e) {
@@ -1347,6 +1432,8 @@
                 const shape = document.getElementById('ruler-shape').value;
                 const distPx = Math.sqrt(Math.pow(curX - startX, 2) + Math.pow(curY - startY, 2));
                 const text = systemUnit === 'ft' ? `${fromPx(distPx)} ft` : `${Math.round(distPx)} px`;
+                
+                document.getElementById('ruler-distance-val').textContent = text;
                 
                 rCtx.strokeStyle = '#bfa15f'; rCtx.lineWidth = 3 / cameraZoom;
                 
@@ -1382,7 +1469,11 @@
             }
             if (isPanning) isPanning = false; 
             if (isSelecting) { isSelecting = false; selectionBox.style.display = 'none'; }
-            if (isRuling) { isRuling = false; resetRulerCanvas(); }
+            if (isRuling) { 
+                isRuling = false; 
+                resetRulerCanvas(); 
+                document.getElementById('ruler-distance-indicator').classList.remove('visible');
+            }
         });
 
         viewport.addEventListener('wheel', function(e) { e.preventDefault(); cameraZoom = Math.min(Math.max(cameraZoom + (e.deltaY < 0 ? 0.07 : -0.07), 0.15), 4); document.getElementById('zoomRangeSide').value = cameraZoom; document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom * 100) + '%'; updateTransform(); }, { passive: false });
