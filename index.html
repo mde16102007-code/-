@@ -631,7 +631,20 @@
             isHost = true; 
             localNickname = document.getElementById('player-nickname').value.trim() || "Мастер DM";
             activeGame = gamesDatabase.find(x => x.id === selectedGameId); 
-            initVTTTable(); startPlayerSync(); setupPresence();
+            
+            // Инициализируем комнату в Firebase перед запуском интерфейса
+            db.ref('shared_games/' + activeGame.id).update({
+                id: activeGame.id,
+                name: activeGame.name,
+                dmOwner: activeGame.dmOwner || currentDmUser,
+                currentMapIdx: activeGame.currentMapIdx || 0,
+                playerMapIdx: activeGame.playerMapIdx || 0,
+                maps: activeGame.maps
+            }).then(() => {
+                initVTTTable(); 
+                startPlayerSync(); 
+                setupPresence();
+            });
             document.getElementById('invite-btn').style.display = 'block';
         }
         
@@ -1085,11 +1098,11 @@
             document.getElementById('ruler-options').style.display = (m === 'ruler') ? 'flex' : 'none';
             document.getElementById('fow-options').style.display = (m === 'fow') ? 'flex' : 'none';
 
-            // Если включен режим тумана войны и мы DM, разрешаем кликать по canvas-у тумана[cite: 12]
+            // Если включен режим тумана войны и мы DM, разрешаем кликать по canvas-у тумана
             if (m === 'fow' && isHost) {
                 fowCanvas.style.pointerEvents = 'auto';
             } else {
-                fowCanvas.style.pointerEvents = 'none'; // В остальных режимах клики проходят сквозь туман[cite: 12]
+                fowCanvas.style.pointerEvents = 'none'; // В остальных режимах клики проходят сквозь туман
             }
         }
         
