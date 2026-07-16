@@ -634,10 +634,14 @@
             localNickname = document.getElementById('player-nickname').value.trim() || "Мастер DM";
             activeGame = gamesDatabase.find(x => x.id === selectedGameId); 
             
-            // Если мир запускается впервые на сервере Firebase, инициализируем его
             db.ref('shared_games/' + activeGame.id).once('value').then((snapshot) => {
                 if (!snapshot.exists()) {
                     db.ref('shared_games/' + activeGame.id).set(activeGame);
+                } else {
+                    const serverData = snapshot.val();
+                    if (serverData && serverData.maps) {
+                        activeGame = serverData;
+                    }
                 }
                 initVTTTable(); startPlayerSync(); setupPresence();
                 document.getElementById('invite-btn').style.display = 'block';
@@ -823,7 +827,7 @@
                     if (allowedOwners.length === 0 || allowedOwners.includes('none')) isDmOnly = true;
 
                     let displayName = el.querySelector('.token-name').textContent || 'Токен';
-                    if (isDmOnly) displayName = "DM";
+                    if (isDmOnly && !isHost) displayName = "DM";
 
                     tokens.push({ id: el.id, name: displayName, initiative: initVal, isDm: isDmOnly });
                 }
@@ -850,7 +854,7 @@
                 
                 activeGame = fresh;
                 if(isHost) {
-                    const fm = fresh.maps[fresh.currentMapIdx];
+                    const fm = fresh.maps[activeGame.currentMapIdx];
                     if (fm && fm.tokens) syncTokensOnly(fm.tokens);
                 } else {
                     activeGame.currentMapIdx = fresh.playerMapIdx || 0;
@@ -1273,6 +1277,7 @@
             t.querySelectorAll('.quick-stats input').forEach(inp => {
                 inp.addEventListener('mousedown', e => e.stopPropagation());
                 inp.addEventListener('change', e => {
+                    if (!hasControl(t)) return;
                     t.dataset.hp = t.querySelector('.qs-hp').value;
                     t.dataset.ac = t.querySelector('.qs-ac').value;
                     t.dataset.mp = t.querySelector('.qs-mp').value;
