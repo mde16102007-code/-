@@ -43,7 +43,7 @@
         .zoom-block-content { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 5px 0; }
         .zoom-slider-horiz { width: 100%; cursor: pointer; margin: 0; }
         
-        /* Лог кубов */
+        /* Лог куборов */
         .dice-container { display: flex; flex-direction: column; gap: 5px; }
         .dice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
         .dice-grid button { padding: 5px 0; text-align: center; justify-content: center; font-weight: bold; font-size: 11px; }
@@ -58,6 +58,71 @@
         /* Панель Игроков (Справа снизу) */
         .player-status-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #e4e4e7; padding: 2px 0; }
         .player-status-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 6px #22c55e; }
+
+        /* === БЛОК ИНИЦИАТИВЫ (Новый элемент) === */
+        #initiative-tracker {
+            position: absolute;
+            right: 15px;
+            bottom: 15px;
+            width: 175px;
+            max-height: 220px;
+            background: rgba(24, 24, 27, 0.96);
+            border: 1px solid #bfa15f;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            pointer-events: auto;
+            box-sizing: border-box;
+        }
+        #initiative-tracker h4 {
+            margin: 0;
+            color: #bfa15f;
+            font-size: 12px;
+            text-align: center;
+            border-bottom: 1px solid #3f3f46;
+            padding-bottom: 4px;
+        }
+        .initiative-list {
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-height: 160px;
+        }
+        .initiative-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            background: #18181b;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #3f3f46;
+        }
+        .initiative-item .init-val {
+            font-weight: bold;
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.1);
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+        .initiative-item .init-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100px;
+        }
+        .initiative-item.dm-owned-unit {
+            border-color: #bfa15f;
+        }
+        .initiative-item.dm-owned-unit .init-name {
+            color: #bfa15f;
+            font-weight: bold;
+        }
 
         /* Игровое поле */
         #game-viewport { width: 100vw; height: 100vh; position: relative; background: #080808; overflow: hidden; }
@@ -278,6 +343,14 @@
         </div>
     </div>
 
+    <!-- ТРЕКЕР ИНИЦИАТИВЫ (Новый элемент справа внизу) -->
+    <div id="initiative-tracker">
+        <h4>⚔️ Инициатива</h4>
+        <div class="initiative-list" id="initiative-list-container">
+            <!-- Элементы инициативы будут рендериться динамически -->
+        </div>
+    </div>
+
     <!-- НАСТРОЙКИ ТОКЕНА -->
     <div id="token-menu" class="token-context-menu" onmousedown="event.stopPropagation()">
         <div id="permissions-container-block" class="dm-only">
@@ -306,10 +379,18 @@
             </div>
         </div>
 
-        <label id="lbl-size">Размер</label>
-        <input type="number" id="ctx-size" oninput="applyContextChanges()">
+        <div class="context-row" style="margin-top: 4px;">
+            <div style="flex:1;">
+                <label style="color:#38bdf8;">Инициатива</label>
+                <input type="number" id="ctx-initiative" placeholder="0" oninput="applyContextChanges()">
+            </div>
+            <div style="flex:1;">
+                <label id="lbl-size">Размер</label>
+                <input type="number" id="ctx-size" oninput="applyContextChanges()">
+            </div>
+        </div>
 
-        <label class="dm-only" style="color:#a855f7;">Слой</label>
+        <label class="dm-only" style="color:#a855f7; margin-top: 4px;">Слой</label>
         <select id="ctx-layer" class="dm-only" onchange="applyContextChanges()">
             <option value="item">Предмет</option>
             <option value="token">Токен</option>
@@ -704,6 +785,61 @@
             return allowedOwners.includes('all') || allowedOwners.includes(localNickname);
         }
 
+        // ОБНОВЛЕНИЕ ТРЕКЕРА ИНИЦИАТИВЫ (Новая функция)
+        function updateInitiativeTracker() {
+            const listContainer = document.getElementById('initiative-list-container');
+            listContainer.innerHTML = '';
+            
+            const tokens = [];
+            document.querySelectorAll('.token').forEach(el => {
+                const initVal = parseInt(el.dataset.initiative) || 0;
+                if (initVal > 0) { //[cite: 11]
+                    let isDmOnly = false;
+                    let allowedOwners = [];
+                    try { 
+                        allowedOwners = JSON.parse(el.dataset.owners || "[]"); 
+                    } catch(e) {
+                        if (el.dataset.owner) allowedOwners = el.dataset.owner === 'all' ? ['all'] : [el.dataset.owner];
+                    }
+                    
+                    if (allowedOwners.length === 0 || allowedOwners.includes('none')) {
+                        isDmOnly = true;
+                    }
+
+                    // Определение отображаемого имени
+                    let displayName = el.querySelector('.token-name').textContent || 'Токен';
+                    if (isDmOnly) {
+                        displayName = "DM"; //[cite: 11]
+                    }
+
+                    tokens.push({
+                        id: el.id,
+                        name: displayName,
+                        initiative: initVal,
+                        isDm: isDmOnly
+                    });
+                }
+            });
+
+            // Сортировка по убыванию инициативы
+            tokens.sort((a, b) => b.initiative - a.initiative);
+
+            if (tokens.length === 0) {
+                listContainer.innerHTML = '<div style="font-size:11px; text-align:center; color:#52525b; padding:10px;">Нет активных бросков</div>';
+                return;
+            }
+
+            tokens.forEach(t => {
+                const div = document.createElement('div');
+                div.className = `initiative-item ${t.isDm ? 'dm-owned-unit' : ''}`;
+                div.innerHTML = `
+                    <span class="init-name">${t.name}</span>
+                    <span class="init-val">${t.initiative}</span>
+                `;
+                listContainer.appendChild(div);
+            });
+        }
+
         function startPlayerSync() {
             db.ref('shared_games/' + activeGame.id).on('value', (snapshot) => {
                 const fresh = snapshot.val(); if(!fresh) return;
@@ -723,6 +859,7 @@
                         if (fm) syncPlayerTableFromServer(fm);
                     }
                 }
+                updateInitiativeTracker();
             });
         }
 
@@ -750,6 +887,7 @@
                     
                     el.dataset.hp = hpVal; el.dataset.maxHp = maxHpVal;
                     el.dataset.ac = t.ac || ''; el.dataset.mp = t.mp || '';
+                    el.dataset.initiative = t.initiative || 0; //[cite: 11]
                     el.dataset.layer = t.layer;
                     el.dataset.auras = JSON.stringify(t.auras || [{},{},{}]);
                     
@@ -794,6 +932,7 @@
                     maxHp: parseInt(el.dataset.maxHp)||10, 
                     ac: el.querySelector('.qs-ac').value || el.dataset.ac || '',
                     mp: el.querySelector('.qs-mp').value || el.dataset.mp || '',
+                    initiative: parseInt(el.dataset.initiative) || 0, //[cite: 11]
                     layer: el.dataset.layer||'token',
                     owner: el.dataset.owner || 'none',
                     owners: ownersList,
@@ -814,6 +953,7 @@
                 db.ref(`shared_games/${activeGame.id}/maps/${activeGame.currentMapIdx}/tokens`).set(arr);
             }
             saveGamesToStorage();
+            updateInitiativeTracker();
         }
 
         function renderMapSelectorUI() {
@@ -849,6 +989,7 @@
             (mo.tokens || []).forEach(t => createTokenDOM(t));
 
             img.onload = () => resizeRulerCanvas(); resizeRulerCanvas();
+            updateInitiativeTracker();
         }
 
         document.getElementById('map-library-upload').addEventListener('change', function(e) {
@@ -923,7 +1064,7 @@
                 createTokenDOM({ 
                     id: 't_'+Date.now(), name: "Токен", src: ev.target.result, 
                     left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 40, 
-                    hp: 10, maxHp: 10, ac: '', mp: '', layer: tl, owner: 'none', owners: [], 
+                    hp: 10, maxHp: 10, ac: '', mp: '', initiative: 0, layer: tl, owner: 'none', owners: [], 
                     auras: [{}, {}, {}] 
                 });
                 syncActiveGameStorage();
@@ -971,6 +1112,7 @@
             
             el.dataset.hp = d.hp; el.dataset.maxHp = d.maxHp; 
             el.dataset.ac = d.ac || ''; el.dataset.mp = d.mp || '';
+            el.dataset.initiative = d.initiative || 0; //[cite: 11]
             el.dataset.layer = d.layer;
             el.dataset.auras = JSON.stringify(d.auras || [{},{},{}]);
 
@@ -1007,6 +1149,7 @@
             document.getElementById('ctx-max-hp').value = t.dataset.maxHp || 10;
             document.getElementById('ctx-ac').value = t.dataset.ac || '';
             document.getElementById('ctx-mp').value = t.dataset.mp || '';
+            document.getElementById('ctx-initiative').value = t.dataset.initiative || 0; //[cite: 11]
 
             document.getElementById('ctx-size').value = fromPx(parseFloat(t.style.width)||40);
             if(isHost) document.getElementById('ctx-layer').value = t.dataset.layer || 'token';
@@ -1050,6 +1193,7 @@
                     maxHp: parseInt(document.getElementById('ctx-max-hp').value)||0,
                     ac: document.getElementById('ctx-ac').value,
                     mp: document.getElementById('ctx-mp').value,
+                    initiative: parseInt(document.getElementById('ctx-initiative').value)||0, //[cite: 11]
                     sizePx: toPx(parseFloat(document.getElementById('ctx-size').value)||40),
                     owner: ownersList.includes('all') ? 'all' : (ownersList[0] || 'none'),
                     owners: ownersList,
@@ -1102,6 +1246,7 @@
                             maxHp: parseInt(el.dataset.maxHp)||10,
                             ac: el.dataset.ac || '',
                             mp: el.dataset.mp || '',
+                            initiative: parseInt(el.dataset.initiative) || 0, //[cite: 11]
                             layer: el.dataset.layer||'token',
                             owner: el.dataset.owner || 'none',
                             owners: ownersList,
