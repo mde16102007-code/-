@@ -59,7 +59,7 @@
         .player-status-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #e4e4e7; padding: 2px 0; }
         .player-status-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 6px #22c55e; }
 
-        /* === БЛОК ИНИЦИАТИВЫ === */
+        /* === БЛОК ИНИЦИАТИВЫ (Новый элемент) === */
         #initiative-tracker {
             position: absolute;
             right: 15px;
@@ -132,8 +132,6 @@
         
         /* Слои видимости */
         #ruler-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 500; }
-        #fow-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 400; opacity: 1; pointer-events: none; }
-        .dm-mode #fow-canvas { opacity: 0.65; } /* DM видит сквозь туман */
 
         /* === ТОКЕНЫ И СТАТУСЫ === */
         .token { position: absolute; touch-action: none; box-sizing: border-box; }
@@ -153,7 +151,7 @@
         .token.layer-gm { z-index: 30; opacity: 0.5; }
         .token.layer-gm img { filter: drop-shadow(0 0 6px #a855f7); }
 
-        /* Быстрые характеристики над токеном */
+        /* Быстрые характеристики (Хиты, КЗ, Мана) над токеном */
         .token .quick-stats { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); display: none; gap: 4px; z-index: 100; pointer-events: auto; }
         .token.selected .quick-stats { display: flex; }
         .quick-stats input { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #38bdf8; background: rgba(24, 24, 27, 0.95); color: #fff; text-align: center; font-size: 10px; padding: 0; outline: none; box-shadow: 0 0 5px rgba(0,0,0,0.8); cursor: text; }
@@ -161,6 +159,7 @@
         .quick-stats input.qs-ac { border-color: #bfa15f; }
         .quick-stats input.qs-mp { border-color: #3b82f6; }
 
+        /* Класс для активного перетаскивания */
         .token.active-drag { z-index: 99999 !important; }
 
         .player-mode .token.layer-gm { display: none !important; }
@@ -283,7 +282,6 @@
                 <button id="btn-mode-select" class="active" onclick="setMode('select')">🖱️ Выбор</button>
                 <button id="btn-mode-pan" onclick="setMode('pan')">🖐️ Камера</button>
                 <button id="btn-mode-ruler" onclick="setMode('ruler')">📏 Линейка</button>
-                <button id="btn-mode-fow" class="dm-only" onclick="setMode('fow')">🌫️ Туман</button>
             </div>
             
             <div id="ruler-options" style="display:none; flex-direction:column; gap:4px; margin-top:5px; border-top:1px solid #3f3f46; padding-top:5px;">
@@ -297,20 +295,6 @@
                     <label style="font-size:10px; color:#aaa;">Угол °:</label>
                     <input type="number" id="ruler-angle" value="60" style="width:55px; padding:2px;">
                 </div>
-            </div>
-
-            <!-- НАСТРОЙКИ ТУМАНА ВОЙНЫ -->
-            <div id="fow-options" style="display:none; flex-direction:column; gap:6px; margin-top:5px; border-top:1px solid #3f3f46; padding-top:5px;">
-                <label style="font-size:11px; color:#bfa15f;">Режим кисти:</label>
-                <div style="display:flex; gap:4px;">
-                    <button id="btn-fow-hide" class="active" style="flex:1; font-size:10px; padding:4px;" onclick="setFowBrush('hide')">🖤 Скрыть</button>
-                    <button id="btn-fow-show" style="flex:1; font-size:10px; padding:4px;" onclick="setFowBrush('show')">🤍 Открыть</button>
-                </div>
-                <label style="font-size:10px; color:#aaa;">Радиус кисти: <span id="fow-brush-size-val">50</span></label>
-                <input type="range" id="fow-brush-size" min="10" max="150" step="5" value="50" oninput="updateFowBrushSizeUI(this.value)">
-                
-                <button style="background:#7f1d1d; font-size:11px; margin-top:4px;" onclick="fillWholeMapFow(true)">🌫️ Скрыть всё</button>
-                <button style="background:#0f766e; font-size:11px;" onclick="fillWholeMapFow(false)">💡 Показать всё</button>
             </div>
         </div>
 
@@ -359,17 +343,21 @@
         </div>
     </div>
 
-    <!-- ТРЕКЕР ИНИЦИАТИВЫ -->
+    <!-- ТРЕКЕР ИНИЦИАТИВЫ (Новый элемент справа внизу) -->
     <div id="initiative-tracker">
         <h4>⚔️ Инициатива</h4>
-        <div class="initiative-list" id="initiative-list-container"></div>
+        <div class="initiative-list" id="initiative-list-container">
+            <!-- Элементы инициативы будут рендериться динамически -->
+        </div>
     </div>
 
     <!-- НАСТРОЙКИ ТОКЕНА -->
     <div id="token-menu" class="token-context-menu" onmousedown="event.stopPropagation()">
         <div id="permissions-container-block" class="dm-only">
             <label style="color:#38bdf8; font-weight:bold; margin-bottom: 2px;">Контролируется:</label>
-            <select id="ctx-owner-select" onchange="applyContextChanges()"></select>
+            <select id="ctx-owner-select" onchange="applyContextChanges()">
+                <!-- Динамически заполняется только для Мастера -->
+            </select>
             <hr style="border:0; border-top:1px solid #3f3f46; margin: 4px 0;">
         </div>
 
@@ -429,7 +417,6 @@
     <div id="game-viewport" class="mode-select">
         <div id="table-surface">
             <div id="map-container" class="active-layer-token">
-                <canvas id="fow-canvas"></canvas>
                 <canvas id="ruler-canvas"></canvas>
                 <img id="game-map" src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200" alt="Карта">
             </div>
@@ -469,11 +456,6 @@
         let currentOnlinePlayers = {}; 
         let cursorOnMapX = 0, cursorOnMapY = 0; 
 
-        // Переменные для Тумана Войны
-        let fowBrushMode = 'hide'; // 'hide' (скрыть) или 'show' (открыть)
-        let fowBrushSize = 50;
-        let isDrawingFow = false;
-
         const viewport = document.getElementById('game-viewport');
         const surface = document.getElementById('table-surface');
         const mapContainer = document.getElementById('map-container');
@@ -481,8 +463,6 @@
         const tokenMenu = document.getElementById('token-menu');
         const rulerCanvas = document.getElementById('ruler-canvas');
         const rCtx = rulerCanvas.getContext('2d');
-        const fowCanvas = document.getElementById('fow-canvas');
-        const fowCtx = fowCanvas.getContext('2d');
         
         let surfaceX = 0, surfaceY = 0, cameraZoom = 1;
 
@@ -581,6 +561,7 @@
         }
 
         function renderPlayerGameSelect() {
+            // Очищаем код комнаты, но оставляем или синхронизируем имя
             document.getElementById('player-game-code').value = '';
             document.getElementById('lobby-join-nickname').value = document.getElementById('player-nickname').value.trim() || "Игрок";
         }
@@ -631,27 +612,14 @@
             isHost = true; 
             localNickname = document.getElementById('player-nickname').value.trim() || "Мастер DM";
             activeGame = gamesDatabase.find(x => x.id === selectedGameId); 
-            
-            // Инициализируем комнату в Firebase перед запуском интерфейса
-            db.ref('shared_games/' + activeGame.id).update({
-                id: activeGame.id,
-                name: activeGame.name,
-                dmOwner: activeGame.dmOwner || currentDmUser,
-                currentMapIdx: activeGame.currentMapIdx || 0,
-                playerMapIdx: activeGame.playerMapIdx || 0,
-                maps: activeGame.maps
-            }).then(() => {
-                initVTTTable(); 
-                startPlayerSync(); 
-                setupPresence();
-            });
+            initVTTTable(); startPlayerSync(); setupPresence();
             document.getElementById('invite-btn').style.display = 'block';
         }
         
         function launchGamePlayer() {
             const code = document.getElementById('player-game-code').value.trim();
             localNickname = document.getElementById('lobby-join-nickname').value.trim() || "Игрок";
-            document.getElementById('player-nickname').value = localNickname; 
+            document.getElementById('player-nickname').value = localNickname; // Синхронизируем обратно
             
             if(!code) {
                 alert("Введите код комнаты!");
@@ -817,6 +785,7 @@
             return allowedOwners.includes('all') || allowedOwners.includes(localNickname);
         }
 
+        // ОБНОВЛЕНИЕ ТРЕКЕРА ИНИЦИАТИВЫ (Новая функция)
         function updateInitiativeTracker() {
             const listContainer = document.getElementById('initiative-list-container');
             listContainer.innerHTML = '';
@@ -824,7 +793,7 @@
             const tokens = [];
             document.querySelectorAll('.token').forEach(el => {
                 const initVal = parseInt(el.dataset.initiative) || 0;
-                if (initVal > 0) {
+                if (initVal > 0) { //[cite: 11]
                     let isDmOnly = false;
                     let allowedOwners = [];
                     try { 
@@ -837,9 +806,10 @@
                         isDmOnly = true;
                     }
 
+                    // Определение отображаемого имени
                     let displayName = el.querySelector('.token-name').textContent || 'Токен';
                     if (isDmOnly) {
-                        displayName = "DM";
+                        displayName = "DM"; //[cite: 11]
                     }
 
                     tokens.push({
@@ -851,6 +821,7 @@
                 }
             });
 
+            // Сортировка по убыванию инициативы
             tokens.sort((a, b) => b.initiative - a.initiative);
 
             if (tokens.length === 0) {
@@ -876,7 +847,6 @@
                 if(isHost) {
                     const fm = fresh.maps[fresh.currentMapIdx];
                     if (fm && fm.tokens) syncTokensOnly(fm.tokens);
-                    if (fm && fm.fowData) drawFowFromData(fm.fowData);
                 } else {
                     const mapChanged = fresh.playerMapIdx !== activeGame.currentMapIdx;
                     activeGame = fresh;
@@ -917,7 +887,7 @@
                     
                     el.dataset.hp = hpVal; el.dataset.maxHp = maxHpVal;
                     el.dataset.ac = t.ac || ''; el.dataset.mp = t.mp || '';
-                    el.dataset.initiative = t.initiative || 0; 
+                    el.dataset.initiative = t.initiative || 0; //[cite: 11]
                     el.dataset.layer = t.layer;
                     el.dataset.auras = JSON.stringify(t.auras || [{},{},{}]);
                     
@@ -943,7 +913,6 @@
             scaleUnitFactor = fm.gridSize || 40;
             
             syncTokensOnly(fm.tokens || []);
-            if (fm.fowData) drawFowFromData(fm.fowData);
         }
 
         function syncActiveGameStorage() {
@@ -963,7 +932,7 @@
                     maxHp: parseInt(el.dataset.maxHp)||10, 
                     ac: el.querySelector('.qs-ac').value || el.dataset.ac || '',
                     mp: el.querySelector('.qs-mp').value || el.dataset.mp || '',
-                    initiative: parseInt(el.dataset.initiative) || 0, 
+                    initiative: parseInt(el.dataset.initiative) || 0, //[cite: 11]
                     layer: el.dataset.layer||'token',
                     owner: el.dataset.owner || 'none',
                     owners: ownersList,
@@ -977,7 +946,6 @@
                 cm.width = parseFloat(document.getElementById('game-map').style.width)||1200;
                 cm.height = parseFloat(document.getElementById('game-map').style.height)||800;
                 cm.gridSize = scaleUnitFactor;
-                cm.fowData = fowCanvas.toDataURL(); // Сохраняем туман войны в формате Base64 в БД мира
                 
                 db.ref(`shared_games/${activeGame.id}/maps/${activeGame.currentMapIdx}`).set(cm);
                 db.ref(`shared_games/${activeGame.id}/playerMapIdx`).set(activeGame.playerMapIdx || 0);
@@ -1020,9 +988,7 @@
 
             (mo.tokens || []).forEach(t => createTokenDOM(t));
 
-            img.onload = () => { resizeCanvasElements(); initFowCanvas(mo.fowData); }; 
-            resizeCanvasElements();
-            initFowCanvas(mo.fowData);
+            img.onload = () => resizeRulerCanvas(); resizeRulerCanvas();
             updateInitiativeTracker();
         }
 
@@ -1038,18 +1004,7 @@
         function deleteCurrentMap() { if(!isHost || activeGame.maps.length <= 1) return; if(confirm("Удалить карту?")) { activeGame.maps.splice(activeGame.currentMapIdx, 1); activeGame.currentMapIdx=0; activeGame.playerMapIdx=0; renderMapSelectorUI(); switchMap(true); syncActiveGameStorage(); } }
         function movePlayerRibbon() { if(!isHost) return; activeGame.playerMapIdx = activeGame.currentMapIdx; renderMapSelectorUI(); syncActiveGameStorage(); }
         function updateRibbonUI() { const b = document.getElementById('btn-ribbon'); if(b) b.style.opacity = (activeGame.playerMapIdx === activeGame.currentMapIdx) ? '1' : '0.5'; }
-        
-        function applyMapSize() { 
-            if(!isHost) return; 
-            const w = document.getElementById('map-width-input').value; 
-            const h = document.getElementById('map-height-input').value; 
-            const img = document.getElementById('game-map'); 
-            img.style.width = w+'px'; 
-            img.style.height = h+'px'; 
-            resizeCanvasElements(); 
-            syncActiveGameStorage(); 
-        }
-
+        function applyMapSize() { if(!isHost) return; const w = document.getElementById('map-width-input').value; const h = document.getElementById('map-height-input').value; const img = document.getElementById('game-map'); img.style.width = w+'px'; img.style.height = h+'px'; resizeRulerCanvas(); syncActiveGameStorage(); }
         function changeZoomSlider(v) { cameraZoom = parseFloat(v); updateTransform(); document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom*100)+'%'; }
         function changeActiveLayer() { if(!isHost) return; mapContainer.className = `active-layer-${document.getElementById('active-layer-select').value}`; deselectAllTokens(); }
 
@@ -1079,15 +1034,12 @@
         function updateUnitsUI() { systemUnit = document.getElementById('unit-system').value; }
         function toPx(v) { return systemUnit === 'ft' ? (v / 5) * scaleUnitFactor : v; }
         function fromPx(v) { return systemUnit === 'ft' ? Math.round((v / scaleUnitFactor) * 5) : Math.round(v); }
-        
-        function resizeCanvasElements() { 
+        function resizeRulerCanvas() { 
             const img = document.getElementById('game-map'); 
             const w = parseFloat(img.style.width) || 1200;
             const h = parseFloat(img.style.height) || 800;
             rulerCanvas.width = w; 
             rulerCanvas.height = h; 
-            fowCanvas.width = w;
-            fowCanvas.height = h;
         }
 
         function setMode(m) {
@@ -1095,107 +1047,15 @@
             const activeBtn = document.getElementById(`btn-mode-${m}`); if(activeBtn) activeBtn.classList.add('active');
             viewport.className = `mode-${m}`; deselectAllTokens(); resetRulerCanvas();
             
-            document.getElementById('ruler-options').style.display = (m === 'ruler') ? 'flex' : 'none';
-            document.getElementById('fow-options').style.display = (m === 'fow') ? 'flex' : 'none';
-
-            // Если включен режим тумана войны и мы DM, разрешаем кликать по canvas-у тумана
-            if (m === 'fow' && isHost) {
-                fowCanvas.style.pointerEvents = 'auto';
-            } else {
-                fowCanvas.style.pointerEvents = 'none'; // В остальных режимах клики проходят сквозь туман
-            }
+            const opts = document.getElementById('ruler-options');
+            if(opts) opts.style.display = (m === 'ruler') ? 'flex' : 'none';
         }
-        
         function updateRulerShapeUI() {
             const s = document.getElementById('ruler-shape').value;
             document.getElementById('ruler-angle-container').style.display = (s === 'cone') ? 'flex' : 'none';
             resetRulerCanvas();
         }
         function resetRulerCanvas() { rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height); }
-
-        // === ФУНКЦИОНАЛ ТУМАНА ВОЙНЫ (Fog of War) ===
-        function initFowCanvas(savedFowData) {
-            fowCtx.clearRect(0, 0, fowCanvas.width, fowCanvas.height);
-            if (savedFowData) {
-                drawFowFromData(savedFowData);
-            } else {
-                // По умолчанию карта чистая (без тумана)
-                fowCtx.fillStyle = 'rgba(0, 0, 0, 0)';
-                fowCtx.fillRect(0, 0, fowCanvas.width, fowCanvas.height);
-            }
-        }
-
-        function drawFowFromData(dataUrl) {
-            const img = new Image();
-            img.src = dataUrl;
-            img.onload = () => {
-                fowCtx.clearRect(0, 0, fowCanvas.width, fowCanvas.height);
-                fowCtx.drawImage(img, 0, 0);
-            };
-        }
-
-        function setFowBrush(mode) {
-            fowBrushMode = mode;
-            document.getElementById('btn-fow-hide').classList.toggle('active', mode === 'hide');
-            document.getElementById('btn-fow-show').classList.toggle('active', mode === 'show');
-        }
-
-        function updateFowBrushSizeUI(val) {
-            fowBrushSize = parseInt(val);
-            document.getElementById('fow-brush-size-val').textContent = val;
-        }
-
-        function fillWholeMapFow(shouldFill) {
-            if (!isHost) return;
-            fowCtx.clearRect(0, 0, fowCanvas.width, fowCanvas.height);
-            if (shouldFill) {
-                fowCtx.fillStyle = '#000000';
-                fowCtx.fillRect(0, 0, fowCanvas.width, fowCanvas.height);
-            }
-            syncActiveGameStorage();
-        }
-
-        function drawFowBrush(x, y) {
-            fowCtx.save();
-            if (fowBrushMode === 'show') {
-                // Ластик (очистить до прозрачности)
-                fowCtx.globalCompositeOperation = 'destination-out';
-                fowCtx.fillStyle = 'rgba(0,0,0,1)';
-            } else {
-                // Заливка черным туманом
-                fowCtx.globalCompositeOperation = 'source-over';
-                fowCtx.fillStyle = '#000000';
-            }
-            fowCtx.beginPath();
-            fowCtx.arc(x, y, fowBrushSize, 0, Math.PI * 2);
-            fowCtx.fill();
-            fowCtx.restore();
-        }
-
-        // События рисования тумана войны
-        fowCanvas.addEventListener('mousedown', (e) => {
-            if (!isHost || currentMode !== 'fow' || e.button !== 0) return;
-            isDrawingFow = true;
-            const rect = fowCanvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / cameraZoom;
-            const y = (e.clientY - rect.top) / cameraZoom;
-            drawFowBrush(x, y);
-        });
-
-        fowCanvas.addEventListener('mousemove', (e) => {
-            if (!isDrawingFow || !isHost || currentMode !== 'fow') return;
-            const rect = fowCanvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / cameraZoom;
-            const y = (e.clientY - rect.top) / cameraZoom;
-            drawFowBrush(x, y);
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isDrawingFow) {
-                isDrawingFow = false;
-                syncActiveGameStorage();
-            }
-        });
 
         document.getElementById('token-upload').addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
@@ -1252,7 +1112,7 @@
             
             el.dataset.hp = d.hp; el.dataset.maxHp = d.maxHp; 
             el.dataset.ac = d.ac || ''; el.dataset.mp = d.mp || '';
-            el.dataset.initiative = d.initiative || 0; 
+            el.dataset.initiative = d.initiative || 0; //[cite: 11]
             el.dataset.layer = d.layer;
             el.dataset.auras = JSON.stringify(d.auras || [{},{},{}]);
 
@@ -1289,7 +1149,7 @@
             document.getElementById('ctx-max-hp').value = t.dataset.maxHp || 10;
             document.getElementById('ctx-ac').value = t.dataset.ac || '';
             document.getElementById('ctx-mp').value = t.dataset.mp || '';
-            document.getElementById('ctx-initiative').value = t.dataset.initiative || 0; 
+            document.getElementById('ctx-initiative').value = t.dataset.initiative || 0; //[cite: 11]
 
             document.getElementById('ctx-size').value = fromPx(parseFloat(t.style.width)||40);
             if(isHost) document.getElementById('ctx-layer').value = t.dataset.layer || 'token';
@@ -1333,7 +1193,7 @@
                     maxHp: parseInt(document.getElementById('ctx-max-hp').value)||0,
                     ac: document.getElementById('ctx-ac').value,
                     mp: document.getElementById('ctx-mp').value,
-                    initiative: parseInt(document.getElementById('ctx-initiative').value)||0, 
+                    initiative: parseInt(document.getElementById('ctx-initiative').value)||0, //[cite: 11]
                     sizePx: toPx(parseFloat(document.getElementById('ctx-size').value)||40),
                     owner: ownersList.includes('all') ? 'all' : (ownersList[0] || 'none'),
                     owners: ownersList,
@@ -1386,7 +1246,7 @@
                             maxHp: parseInt(el.dataset.maxHp)||10,
                             ac: el.dataset.ac || '',
                             mp: el.dataset.mp || '',
-                            initiative: parseInt(el.dataset.initiative) || 0, 
+                            initiative: parseInt(el.dataset.initiative) || 0, //[cite: 11]
                             layer: el.dataset.layer||'token',
                             owner: el.dataset.owner || 'none',
                             owners: ownersList,
@@ -1527,7 +1387,7 @@
 
         viewport.addEventListener('wheel', function(e) { e.preventDefault(); cameraZoom = Math.min(Math.max(cameraZoom + (e.deltaY < 0 ? 0.07 : -0.07), 0.15), 4); document.getElementById('zoomRangeSide').value = cameraZoom; document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom * 100) + '%'; updateTransform(); }, { passive: false });
         function updateTransform() { surface.style.transform = `translate(${surfaceX}px, ${surfaceY}px) scale(${cameraZoom})`; }
-        setTimeout(() => { surfaceX = (window.innerWidth - 1200)/2 - 80; surfaceY = 60; updateTransform(); resizeCanvasElements(); }, 150);
+        setTimeout(() => { surfaceX = (window.innerWidth - 1200)/2 - 80; surfaceY = 60; updateTransform(); resizeRulerCanvas(); }, 150);
     </script>
 </body>
 </html>
