@@ -61,79 +61,21 @@
 
         /* === БЛОК ИНИЦИАТИВЫ === */
         #initiative-tracker {
-            position: absolute;
-            right: 15px;
-            bottom: 15px;
-            width: 175px;
-            background: rgba(24, 24, 27, 0.96);
-            border: 1px solid #bfa15f;
-            border-radius: 8px;
-            padding: 10px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            pointer-events: auto;
-            box-sizing: border-box;
-            transition: max-height 0.3s ease;
+            position: absolute; right: 15px; bottom: 15px; width: 175px; background: rgba(24, 24, 27, 0.96); border: 1px solid #bfa15f; border-radius: 8px; padding: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.8); z-index: 1000; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; box-sizing: border-box; transition: max-height 0.3s ease;
         }
-        #initiative-tracker h4 {
-            margin: 0;
-            color: #bfa15f;
-            font-size: 12px;
-            text-align: center;
-            border-bottom: 1px solid #3f3f46;
-            padding-bottom: 4px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .initiative-list {
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            max-height: 160px;
-            transition: opacity 0.2s ease, max-height 0.3s ease;
-        }
-        .initiative-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 12px;
-            background: #18181b;
-            padding: 4px 8px;
-            border-radius: 4px;
-            border: 1px solid #3f3f46;
-        }
-        .initiative-item .init-val {
-            font-weight: bold;
-            color: #38bdf8;
-            background: rgba(56, 189, 248, 0.1);
-            padding: 1px 5px;
-            border-radius: 3px;
-        }
-        .initiative-item .init-name {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 100px;
-        }
-        .initiative-item.dm-owned-unit {
-            border-color: #bfa15f;
-        }
-        .initiative-item.dm-owned-unit .init-name {
-            color: #bfa15f;
-            font-weight: bold;
-        }
+        #initiative-tracker h4 { margin: 0; color: #bfa15f; font-size: 12px; text-align: center; border-bottom: 1px solid #3f3f46; padding-bottom: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .initiative-list { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; max-height: 160px; transition: opacity 0.2s ease, max-height 0.3s ease; }
+        .initiative-item { display: flex; justify-content: space-between; align-items: center; font-size: 12px; background: #18181b; padding: 4px 8px; border-radius: 4px; border: 1px solid #3f3f46; }
+        .initiative-item .init-val { font-weight: bold; color: #38bdf8; background: rgba(56, 189, 248, 0.1); padding: 1px 5px; border-radius: 3px; }
+        .initiative-item .init-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; }
+        .initiative-item.dm-owned-unit { border-color: #bfa15f; }
+        .initiative-item.dm-owned-unit .init-name { color: #bfa15f; font-weight: bold; }
 
         /* Игровое поле */
         #game-viewport { width: 100vw; height: 100vh; position: relative; background: #080808; overflow: hidden; }
         #table-surface { position: absolute; top: 0; left: 0; transform-origin: top left; will-change: transform; }
         #map-container { position: relative; display: inline-block; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
-        #game-map { display: block; width: 1200px; height: 800px; pointer-events: none; background: #27272a; object-fit: fill; z-index: 1; }
+        #game-map { display: block; width: 6200px; height: 4000px; pointer-events: none; background: #27272a; object-fit: fill; z-index: 1; }
         
         #ruler-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 500; }
 
@@ -142,25 +84,28 @@
         .token img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block; position: relative; z-index: 3; }
         .token.selected img { filter: drop-shadow(0 0 10px #38bdf8) drop-shadow(0 0 2px #38bdf8); }
 
-        .status-effects { position: absolute; top: 2px; right: 2px; display: flex; flex-direction: column; gap: 2px; z-index: 4; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #000; }
+        .status-effects { position: absolute; top: 2px; right: 2px; display: flex; flex-direction: column; gap: 3px; z-index: 4; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #000; display: none; }
         .status-dot.dead { background: #ef4444; } 
         .status-dot.poisoned { background: #22c55e; } 
         .status-dot.stunned { background: #eab308; } 
+        .status-dot.active { display: block; }
 
-        .aura { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border-radius: 50%; opacity: 0.25; pointer-events: none; z-index: 1; }
+        .aura { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border-radius: 50%; opacity: 0.25; pointer-events: none; z-index: 1; display: none; }
         
         .token.layer-item { z-index: 10 !important; }
         .token.layer-token { z-index: 20; }
         .token.layer-gm { z-index: 30; opacity: 0.5; }
         .token.layer-gm img { filter: drop-shadow(0 0 6px #a855f7); }
 
-        .token .quick-stats { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); display: none; gap: 4px; z-index: 100; pointer-events: auto; }
+        /* УВЕЛИЧЕННЫЕ В 2 РАЗА КРУЖКИ БЫСТРОГО ВВОДА (HP / AC / MP) */
+        .token .quick-stats { position: absolute; top: -84px; left: 50%; transform: translateX(-50%); display: none; gap: 12px; z-index: 100; pointer-events: auto; }
         .token.selected .quick-stats { display: flex; }
-        .quick-stats input { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #38bdf8; background: rgba(24, 24, 27, 0.95); color: #fff; text-align: center; font-size: 10px; padding: 0; outline: none; box-shadow: 0 0 5px rgba(0,0,0,0.8); cursor: text; }
-        .quick-stats input.qs-hp { border-color: #ef4444; }
-        .quick-stats input.qs-ac { border-color: #bfa15f; }
-        .quick-stats input.qs-mp { border-color: #3b82f6; }
+        .quick-stats input { width: 64px; height: 64px; border-radius: 50%; border: 4px solid #38bdf8; background: rgba(18, 18, 20, 0.95); color: #fff; text-align: center; font-size: 26px; font-weight: bold; padding: 0; outline: none; box-shadow: 0 8px 20px rgba(0,0,0,0.9); cursor: text; transition: transform 0.1s ease; }
+        .quick-stats input:focus { transform: scale(1.15); z-index: 101; }
+        .quick-stats input.qs-hp { border-color: #ef4444; color: #fca5a5; }
+        .quick-stats input.qs-ac { border-color: #bfa15f; color: #fef08a; }
+        .quick-stats input.qs-mp { border-color: #3b82f6; color: #93c5fd; }
 
         .token.active-drag { z-index: 99999 !important; }
 
@@ -171,10 +116,11 @@
         .dm-mode #map-container.active-layer-token .token:not(.layer-token) { pointer-events: none; }
         .dm-mode #map-container.active-layer-gm .token:not(.layer-gm) { pointer-events: none; }
 
-        .token-info-container { position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
-        .token-name { background: rgba(0,0,0,0.85); color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 11px; white-space: nowrap; border: 1px solid #52525b; }
-        .token-hp-bar-container { width: 44px; height: 6px; background: #27272a; border: 1px solid #000; margin-top: 2px; border-radius: 2px; overflow: hidden; }
-        .token-hp-bar { width: 100%; height: 100%; background: #22c55e; }
+        /* УВЕЛИЧЕННАЯ В 3 РАЗА НИЖНЯЯ ПАНЕЛЬ ТОКЕНА (ИМЯ И HP-BAR) */
+        .token-info-container { position: absolute; bottom: -114px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+        .token-name { background: rgba(10, 10, 12, 0.9); color: #fff; padding: 9px 24px; border-radius: 12px; font-size: 39px; font-weight: 600; white-space: nowrap; border: 3px solid #52525b; box-shadow: 0 6px 24px rgba(0,0,0,0.8); }
+        .token-hp-bar-container { width: 180px; height: 30px; background: #18181b; border: 3px solid #000; margin-top: 9px; border-radius: 9px; overflow: hidden; box-shadow: 0 6px 15px rgba(0,0,0,0.8); }
+        .token-hp-bar { width: 100%; height: 100%; background: #22c55e; transition: width 0.2s ease; }
 
         /* Контекстное меню */
         .token-context-menu { position: absolute; background: rgba(24, 24, 27, 0.98); border: 1px solid #38bdf8; border-radius: 6px; padding: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); z-index: 2000; display: none; flex-direction: column; gap: 6px; width: 230px; cursor: default; }
@@ -186,22 +132,7 @@
 
         /* Индикатор линейки */
         #ruler-distance-indicator {
-            position: fixed;
-            bottom: -60px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(24, 24, 27, 0.98);
-            border: 2px solid #bfa15f;
-            border-bottom: none;
-            border-radius: 12px 12px 0 0;
-            padding: 10px 25px;
-            box-shadow: 0 -4px 25px rgba(0,0,0,0.8);
-            z-index: 5000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            pointer-events: none;
+            position: fixed; bottom: -60px; left: 50%; transform: translateX(-50%); background: rgba(24, 24, 27, 0.98); border: 2px solid #bfa15f; border-bottom: none; border-radius: 12px 12px 0 0; padding: 10px 25px; box-shadow: 0 -4px 25px rgba(0,0,0,0.8); z-index: 5000; display: flex; align-items: center; justify-content: center; transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
         }
         #ruler-distance-indicator.visible { bottom: 0; }
         #ruler-distance-indicator span { font-size: 16px; font-weight: bold; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.8); font-family: monospace; letter-spacing: 0.5px; }
@@ -209,7 +140,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
-<body>
+<body oncontextmenu="return false;">
 
     <!-- ЛОББИ -->
     <div id="lobby-screen">
@@ -273,8 +204,8 @@
         
         <div class="panel-section dm-only">
             <span style="font-size:11px; color:#a1a1aa;">Разм:</span>
-            <input type="number" id="map-width-input" value="1200" style="width:45px;" oninput="applyMapSize()"> ×
-            <input type="number" id="map-height-input" value="800" style="width:45px;" oninput="applyMapSize()">
+            <input type="number" id="map-width-input" value="6200" style="width:50px;" oninput="applyMapSize()"> ×
+            <input type="number" id="map-height-input" value="4000" style="width:50px;" oninput="applyMapSize()">
         </div>
 
         <div class="panel-section dm-only">
@@ -303,9 +234,7 @@
         <div class="sidebar-block">
             <h4>Инструменты</h4>
             <div class="tools-grid">
-                <button id="btn-mode-select" class="active" onclick="setMode('select')">🖱️ Выбор</button>
-                <button id="btn-mode-pan" onclick="setMode('pan')">🖐️ Камера</button>
-                <button id="btn-mode-ruler" onclick="setMode('ruler')">📏 Линейка</button>
+                <button id="btn-mode-ruler" onclick="toggleRulerMode()">📏 Линейка</button>
             </div>
             
             <div id="ruler-options" style="display:none; flex-direction:column; gap:4px; margin-top:5px; border-top:1px solid #3f3f46; padding-top:5px;">
@@ -351,7 +280,7 @@
         <div class="sidebar-block">
             <h4>Масштаб</h4>
             <div class="zoom-block-content">
-                <input type="range" id="zoomRangeSide" class="zoom-slider-horiz" min="0.15" max="4" step="0.05" value="1" oninput="changeZoomSlider(this.value)">
+                <input type="range" id="zoomRangeSide" class="zoom-slider-horiz" min="0.08" max="2.2" step="0.02" value="0.55" oninput="changeZoomSlider(this.value)">
                 <span id="zoomValueSide" style="font-size:11px; color:#bfa15f; white-space: nowrap;">100%</span>
             </div>
         </div>
@@ -363,7 +292,7 @@
                 <span id="players-arrow">▼</span>
             </h4>
             <div id="players-online-list" style="display:none; margin-top:5px; max-height:200px; overflow-y:auto; flex-direction:column; gap:4px;"></div>
-            <button id="invite-btn" style="margin-top:5px; width:100%; display:none; background:#38bdf8; color:#121212; font-size:11px;" onclick="copyInviteLink()">🔗 Пригласить друзей</button>
+            <button id="invite-btn" style="margin-top:7px; width:100%; background:#38bdf8; color:#121212; font-size:11px; font-weight:bold; padding:6px; border:none; border-radius:4px; cursor:pointer;" onclick="copyInviteLink()">🔗 Пригласить друзей</button>
         </div>
     </div>
 
@@ -433,9 +362,9 @@
         </div>
 
         <label style="color:#22c55e;" id="lbl-auras">Ауры (Радиус)</label>
-        <div class="context-row"><input type="number" id="aura1-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura1-col" value="#ff0000" onchange="changeActiveAuraColor(1, this.value)"></div>
-        <div class="context-row"><input type="number" id="aura2-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura2-col" value="#00ff00" onchange="changeActiveAuraColor(2, this.value)"></div>
-        <div class="context-row"><input type="number" id="aura3-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura3-col" value="#0000ff" onchange="changeActiveAuraColor(3, this.value)"></div>
+        <div class="context-row"><input type="number" id="aura1-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura1-col" value="#ff0000" onchange="applyContextChanges()"></div>
+        <div class="context-row"><input type="number" id="aura2-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura2-col" value="#00ff00" onchange="applyContextChanges()"></div>
+        <div class="context-row"><input type="number" id="aura3-rad" placeholder="0" oninput="applyContextChanges()"><input type="color" id="aura3-col" value="#0000ff" onchange="applyContextChanges()"></div>
         
         <button id="btn-delete-token" onclick="deleteSelectedTokens()" style="background:#ef4444; color:#fff; font-size:11px; margin-top:4px; width:100%;">❌ Удалить</button>
     </div>
@@ -479,7 +408,7 @@
         let isHost = false;
         let localNickname = "Игрок";
         let systemUnit = 'ft'; 
-        let scaleUnitFactor = 40; 
+        let scaleUnitFactor = 150; 
         let currentOnlinePlayers = {}; 
         let cursorOnMapX = 0, cursorOnMapY = 0; 
 
@@ -491,7 +420,10 @@
         const rulerCanvas = document.getElementById('ruler-canvas');
         const rCtx = rulerCanvas.getContext('2d');
         
-        let surfaceX = 0, surfaceY = 0, cameraZoom = 1;
+        // Переменные масштабирования (стартовое отдаление 55% соответствует привычной сотне)
+        const BASE_ZOOM_FACTOR = 0.55;
+        let surfaceX = 0, surfaceY = 0, cameraZoom = 0.55;
+        let dragStartPositions = new Map();
 
         document.getElementById('player-nickname').addEventListener('input', (e) => {
             document.getElementById('lobby-join-nickname').value = e.target.value;
@@ -524,8 +456,9 @@
                         if (g.playerMapIdx === undefined) g.playerMapIdx = 0;
                         g.maps.forEach(m => {
                             if (!m.tokens) m.tokens = [];
-                            if (!m.height) m.height = 800;
-                            if (!m.gridSize) m.gridSize = 40;
+                            if (!m.width) m.width = 6200;
+                            if (!m.height) m.height = 4000;
+                            if (!m.gridSize) m.gridSize = 150;
                         });
                     }
                 });
@@ -534,7 +467,7 @@
                     id: 'g_default',
                     dmOwner: 'admin',
                     name: "Стартовое приключение",
-                    maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], gridSize: 40 }],
+                    maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 6200, height: 4000, tokens: [], gridSize: 150 }],
                     currentMapIdx: 0,
                     playerMapIdx: 0
                 }];
@@ -603,25 +536,31 @@
                 const g = gamesDatabase.find(x => x.id === selectedGameId); 
                 g.name = name; 
             } else { 
-                const n = { id: 'g_'+Date.now(), dmOwner: currentDmUser, name: name, maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 1200, height: 800, tokens: [], gridSize: 40 }], currentMapIdx: 0, playerMapIdx: 0 }; 
+                const n = { id: 'g_'+Date.now(), dmOwner: currentDmUser, name: name, maps: [{ name: "Локация 1", src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200", width: 6200, height: 4000, tokens: [], gridSize: 150 }], currentMapIdx: 0, playerMapIdx: 0 }; 
                 gamesDatabase.push(n); 
                 selectedGameId = n.id; 
             }
             saveGamesToStorage(); switchLobbyStep('dm-dashboard');
         }
 
+        /* ПОЛНОЕ УДАЛЕНИЕ МИРА ИЗ ЛОКАЛЬНОГО И СЕТЕВОГО ХРАНИЛИЩА (FIREBASE) */
         function deleteGameClick() { 
             if(selectedGameId) { 
                 const gameToDelete = gamesDatabase.find(x => x.id === selectedGameId);
                 if (!gameToDelete) return;
                 
                 if (gameToDelete.dmOwner === currentDmUser || currentDmUser === '223') {
-                    if (confirm(`Вы уверены, что хотите полностью удалить мир "${gameToDelete.name}"?`)) {
-                        db.ref('shared_games/'+selectedGameId).remove(); 
-                        gamesDatabase = gamesDatabase.filter(x => x.id !== selectedGameId); 
-                        saveGamesToStorage(); 
-                        selectedGameId = null;
-                        renderGamesList(); 
+                    if (confirm(`Вы уверены, что хотите полностью удалить мир "${gameToDelete.name}" из базы данных?`)) {
+                        // Полное удаление ветки из Realtime Database
+                        db.ref('shared_games/' + selectedGameId).remove().then(() => {
+                            gamesDatabase = gamesDatabase.filter(x => x.id !== selectedGameId); 
+                            saveGamesToStorage(); 
+                            selectedGameId = null;
+                            renderGamesList();
+                            alert("Мир полностью удален!");
+                        }).catch(err => {
+                            alert("Ошибка при удалении из базы данных: " + err.message);
+                        });
                     }
                 } else {
                     alert("У вас нет прав для удаления этой партии!");
@@ -644,7 +583,6 @@
                     }
                 }
                 initVTTTable(); startPlayerSync(); setupPresence();
-                document.getElementById('invite-btn').style.display = 'block';
             });
         }
         
@@ -720,13 +658,15 @@
                 const logBox = document.getElementById('dice-log-box');
                 logBox.innerHTML = '';
                 if(logs) {
+                    const fragment = document.createDocumentFragment();
                     Object.keys(logs).sort().reverse().forEach(key => {
                         const l = logs[key];
                         const p = document.createElement('p');
                         const dmTag = l.isDm ? `<span class="dm-tag">DM</span>` : '';
                         p.innerHTML = `${dmTag}<strong>${l.user}</strong> rolled <strong>${l.text}</strong>: ${l.detail} = <strong>${l.result}</strong>`;
-                        logBox.appendChild(p);
+                        fragment.appendChild(p);
                     });
+                    logBox.appendChild(fragment);
                 }
             });
         }
@@ -760,12 +700,29 @@
             container.innerHTML = '';
             const names = Object.keys(players);
             countSpan.textContent = names.length;
+            const fragment = document.createDocumentFragment();
             names.forEach(name => {
                 const item = document.createElement('div');
                 item.className = 'player-status-item';
                 item.innerHTML = `<div class="player-status-dot"></div><span>${name}</span>`;
-                container.appendChild(item);
+                fragment.appendChild(item);
             });
+            container.appendChild(fragment);
+        }
+
+        function getOwners(el) {
+            try {
+                return JSON.parse(el.dataset.owners || "[]");
+            } catch(e) {
+                if (el.dataset.owner) return el.dataset.owner === 'all' ? ['all'] : [el.dataset.owner];
+                return [];
+            }
+        }
+
+        function hasControl(el) {
+            if (isHost) return true;
+            const allowedOwners = getOwners(el);
+            return allowedOwners.includes('all') || allowedOwners.includes(localNickname);
         }
 
         function renderPermissionsSelect(tokenElement) {
@@ -776,11 +733,7 @@
             const select = document.getElementById('ctx-owner-select');
             select.innerHTML = '';
 
-            let allowedOwners = [];
-            try { allowedOwners = JSON.parse(tokenElement.dataset.owners || "[]"); } 
-            catch(e) {
-                if(tokenElement.dataset.owner) allowedOwners = tokenElement.dataset.owner === 'all' ? ['all'] : [tokenElement.dataset.owner];
-            }
+            const allowedOwners = getOwners(tokenElement);
 
             const optNone = document.createElement('option');
             optNone.value = 'none'; optNone.textContent = 'Только DM';
@@ -800,16 +753,6 @@
             });
         }
 
-        function hasControl(el) {
-            if (isHost) return true;
-            let allowedOwners = [];
-            try { allowedOwners = JSON.parse(el.dataset.owners || "[]"); } 
-            catch(e) {
-                if(el.dataset.owner) allowedOwners = el.dataset.owner === 'all' ? ['all'] : [el.dataset.owner];
-            }
-            return allowedOwners.includes('all') || allowedOwners.includes(localNickname);
-        }
-
         function updateInitiativeTracker() {
             const listContainer = document.getElementById('initiative-list-container');
             listContainer.innerHTML = '';
@@ -818,13 +761,8 @@
             document.querySelectorAll('.token').forEach(el => {
                 const initVal = parseInt(el.dataset.initiative) || 0;
                 if (initVal > 0) {
-                    let isDmOnly = false;
-                    let allowedOwners = [];
-                    try { allowedOwners = JSON.parse(el.dataset.owners || "[]"); } 
-                    catch(e) {
-                        if (el.dataset.owner) allowedOwners = el.dataset.owner === 'all' ? ['all'] : [el.dataset.owner];
-                    }
-                    if (allowedOwners.length === 0 || allowedOwners.includes('none')) isDmOnly = true;
+                    const allowedOwners = getOwners(el);
+                    const isDmOnly = allowedOwners.length === 0 || allowedOwners.includes('none');
 
                     let displayName = el.querySelector('.token-name').textContent || 'Токен';
                     if (isDmOnly && !isHost) displayName = "DM";
@@ -839,12 +777,14 @@
                 return;
             }
 
+            const fragment = document.createDocumentFragment();
             tokens.forEach(t => {
                 const div = document.createElement('div');
                 div.className = `initiative-item ${t.isDm ? 'dm-owned-unit' : ''}`;
                 div.innerHTML = `<span class="init-name">${t.name}</span><span class="init-val">${t.initiative}</span>`;
-                listContainer.appendChild(div);
+                fragment.appendChild(div);
             });
+            listContainer.appendChild(fragment);
         }
 
         function startPlayerSync() {
@@ -866,52 +806,30 @@
         }
 
         function syncTokensOnly(serverTokens) {
+            const serverTokenIds = new Set(serverTokens.map(t => t.id));
+
             serverTokens.forEach(t => {
                 let el = document.getElementById(t.id);
-                if(!el) { createTokenDOM(t); el = document.getElementById(t.id); }
-                if (el && !(el.classList.contains('selected') && isDraggingToken)) {
-                    el.style.left = t.left + 'px'; el.style.top = t.top + 'px';
-                    el.style.width = t.sizePx + 'px'; el.style.height = t.sizePx + 'px';
-                    el.querySelector('.token-name').textContent = t.name;
-                    
-                    let parsedOwners = t.owners;
-                    if (!parsedOwners || !Array.isArray(parsedOwners)) {
-                        parsedOwners = (t.owner === 'all') ? ['all'] : (t.owner && t.owner !== 'none' ? [t.owner] : []);
-                    }
-                    el.dataset.owners = JSON.stringify(parsedOwners);
-                    el.dataset.owner = t.owner || 'none';
-                    
-                    let hpVal = t.hp !== undefined ? t.hp : 10;
-                    let maxHpVal = t.maxHp !== undefined ? t.maxHp : 10;
-                    let pct = maxHpVal > 0 ? (hpVal / maxHpVal) * 100 : 0;
-                    el.querySelector('.token-hp-bar').style.width = Math.min(Math.max(pct, 0), 100) + '%';
-                    
-                    el.dataset.hp = hpVal; el.dataset.maxHp = maxHpVal;
-                    el.dataset.ac = t.ac || ''; el.dataset.mp = t.mp || '';
-                    el.dataset.initiative = t.initiative || 0;
-                    el.dataset.layer = t.layer;
-                    el.dataset.auras = JSON.stringify(t.auras || [{},{},{}]);
-                    
-                    el.querySelector('.qs-hp').value = hpVal;
-                    el.querySelector('.qs-ac').value = t.ac || '';
-                    el.querySelector('.qs-mp').value = t.mp || '';
+                if (!el) {
+                    createTokenDOM(t);
+                    el = document.getElementById(t.id);
+                }
 
-                    const sb = el.querySelector('.status-effects'); sb.innerHTML = '';
-                    if(t.isDead) sb.innerHTML += '<div class="status-dot dead"></div>';
-                    if(t.isPoisoned) sb.innerHTML += '<div class="status-dot poisoned"></div>';
-                    if(t.isStunned) sb.innerHTML += '<div class="status-dot stunned"></div>';
-                    
-                    updateTokenAuraVisuals(el, JSON.parse(el.dataset.auras), t.sizePx);
+                if (el && !(el.classList.contains('selected') && isDraggingToken)) {
+                    updateTokenVisuals(el, t);
                 }
             });
-            document.querySelectorAll('.token').forEach(el => { if(!serverTokens.find(t => t.id === el.id)) el.remove(); });
+
+            document.querySelectorAll('.token').forEach(el => {
+                if (!serverTokenIds.has(el.id)) el.remove();
+            });
         }
 
         function syncPlayerTableFromServer(fm) {
             const img = document.getElementById('game-map');
             if(img.src !== fm.src) img.src = fm.src;
-            img.style.width = (fm.width || 1200) + 'px'; img.style.height = (fm.height || 800) + 'px';
-            scaleUnitFactor = fm.gridSize || 40;
+            img.style.width = (fm.width || 6200) + 'px'; img.style.height = (fm.height || 4000) + 'px';
+            scaleUnitFactor = fm.gridSize || 150;
             syncTokensOnly(fm.tokens || []);
         }
 
@@ -922,8 +840,7 @@
             const arr = [];
             document.querySelectorAll('.token').forEach(el => {
                 const au = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{},{},{}];
-                let ownersList = [];
-                try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
+                const ownersList = getOwners(el);
                 
                 arr.push({
                     id: el.id, name: el.querySelector('.token-name').textContent, src: el.querySelector('img').src,
@@ -936,15 +853,17 @@
                     layer: el.dataset.layer||'token',
                     owner: el.dataset.owner || 'none',
                     owners: ownersList,
-                    isDead: !!el.querySelector('.status-dot.dead'), isPoisoned: !!el.querySelector('.status-dot.poisoned'), isStunned: !!el.querySelector('.status-dot.stunned'),
+                    isDead: el.querySelector('.status-dot.dead').classList.contains('active'),
+                    isPoisoned: el.querySelector('.status-dot.poisoned').classList.contains('active'),
+                    isStunned: el.querySelector('.status-dot.stunned').classList.contains('active'),
                     auras: au
                 });
             });
             cm.tokens = arr;
 
             if (isHost) {
-                cm.width = parseFloat(document.getElementById('game-map').style.width)||1200;
-                cm.height = parseFloat(document.getElementById('game-map').style.height)||800;
+                cm.width = parseFloat(document.getElementById('game-map').style.width)||6200;
+                cm.height = parseFloat(document.getElementById('game-map').style.height)||4000;
                 cm.gridSize = scaleUnitFactor;
                 db.ref(`shared_games/${activeGame.id}`).set(activeGame);
             } else {
@@ -980,9 +899,9 @@
             const mo = activeGame.maps[activeGame.currentMapIdx];
 
             const img = document.getElementById('game-map'); img.src = mo.src;
-            img.style.width = (mo.width || 1200) + 'px'; img.style.height = (mo.height || 800) + 'px';
+            img.style.width = (mo.width || 6200) + 'px'; img.style.height = (mo.height || 4000) + 'px';
             if(isHost) { document.getElementById('map-width-input').value = mo.width; document.getElementById('map-height-input').value = mo.height; }
-            scaleUnitFactor = mo.gridSize || 40;
+            scaleUnitFactor = mo.gridSize || 150;
 
             (mo.tokens || []).forEach(t => createTokenDOM(t));
             img.onload = () => resizeRulerCanvas(); resizeRulerCanvas();
@@ -992,7 +911,7 @@
         document.getElementById('map-library-upload').addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
             const r = new FileReader(); r.onload = function(ev) {
-                activeGame.maps.push({ name: `Карта ${activeGame.maps.length + 1}`, src: ev.target.result, width: 1200, height: 800, tokens: [], gridSize: 40 });
+                activeGame.maps.push({ name: `Карта ${activeGame.maps.length + 1}`, src: ev.target.result, width: 6200, height: 4000, tokens: [], gridSize: 150 });
                 activeGame.currentMapIdx = activeGame.maps.length - 1; renderMapSelectorUI(); switchMap(true); syncActiveGameStorage();
             }; r.readAsDataURL(file);
         });
@@ -1002,48 +921,92 @@
         function movePlayerRibbon() { if(!isHost) return; activeGame.playerMapIdx = activeGame.currentMapIdx; renderMapSelectorUI(); syncActiveGameStorage(); }
         function updateRibbonUI() { const b = document.getElementById('btn-ribbon'); if(b) b.style.opacity = (activeGame.playerMapIdx === activeGame.currentMapIdx) ? '1' : '0.5'; }
         function applyMapSize() { if(!isHost) return; const w = document.getElementById('map-width-input').value; const h = document.getElementById('map-height-input').value; const img = document.getElementById('game-map'); img.style.width = w+'px'; img.style.height = h+'px'; resizeRulerCanvas(); syncActiveGameStorage(); }
-        function changeZoomSlider(v) { cameraZoom = parseFloat(v); updateTransform(); document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom*100)+'%'; }
+
+        /* ПЕРЕСЧЕТ МАСШТАБА МИРА И ИНТЕРФЕЙСА С ОПОРНЫМ ВАЛУЕМ 100% = 0.55 */
+        function changeZoomSlider(v) { 
+            cameraZoom = parseFloat(v); 
+            updateTransform(); 
+            document.getElementById('zoomValueSide').textContent = Math.round((cameraZoom / BASE_ZOOM_FACTOR) * 100) + '%'; 
+        }
+
         function changeActiveLayer() { if(!isHost) return; mapContainer.className = `active-layer-${document.getElementById('active-layer-select').value}`; deselectAllTokens(); }
 
-        function rollDice(f) {
-            const c = parseInt(document.getElementById('dice-count').value)||1; const b = parseInt(document.getElementById('dice-bonus').value)||0;
-            let s = 0; let str = [];
-            for(let i=0; i<c; i++) { 
-                let r = Math.floor(Math.random()*f)+1; s+=r; 
-                if(r===f) str.push(`<span class="crit-max">${r}</span>`); 
-                else if(r===1) str.push(`<span class="crit-min">${r}</span>`); 
-                else str.push(r); 
+        /* === БРОСКИ КУБОВ === */
+        function rollDice(faces) {
+            if (!activeGame) {
+                alert("Сначала войдите в игру!");
+                return;
             }
+            const countInput = document.getElementById('dice-count');
+            const bonusInput = document.getElementById('dice-bonus');
+            
+            const count = Math.max(1, parseInt(countInput ? countInput.value : 1) || 1);
+            const bonus = parseInt(bonusInput ? bonusInput.value : 0) || 0;
+            
+            let total = 0;
+            let rolls = [];
+            
+            for (let i = 0; i < count; i++) {
+                let roll = Math.floor(Math.random() * faces) + 1;
+                total += roll;
+                if (roll === faces) {
+                    rolls.push(`<span class="crit-max">${roll}</span>`);
+                } else if (roll === 1) {
+                    rolls.push(`<span class="crit-min">${roll}</span>`);
+                } else {
+                    rolls.push(roll);
+                }
+            }
+            
+            const finalResult = total + bonus;
+            const bonusText = bonus > 0 ? ` + ${bonus}` : (bonus < 0 ? ` - ${Math.abs(bonus)}` : '');
             
             const logRef = db.ref(`shared_games/${activeGame.id}/dice_log`).push();
             logRef.set({
-                user: localNickname, isDm: isHost,
-                text: `${c}d${f}${b?(' + '+b):''}`,
-                detail: `[${str.join(', ')}]`,
-                result: s + b,
+                user: localNickname,
+                isDm: isHost,
+                text: `${count}d${faces}${bonusText}`,
+                detail: `[${rolls.join(', ')}]${bonusText}`,
+                result: finalResult,
                 time: firebase.database.ServerValue.TIMESTAMP
             });
         }
-        function clearDiceLog() { db.ref(`shared_games/${activeGame.id}/dice_log`).remove(); }
+
+        function clearDiceLog() { 
+            if (activeGame && isHost) {
+                db.ref(`shared_games/${activeGame.id}/dice_log`).remove(); 
+            }
+        }
         
         function updateUnitsUI() { systemUnit = document.getElementById('unit-system').value; }
         function toPx(v) { return systemUnit === 'ft' ? (v / 5) * scaleUnitFactor : v; }
         function fromPx(v) { return systemUnit === 'ft' ? Math.round((v / scaleUnitFactor) * 5) : Math.round(v); }
         function resizeRulerCanvas() { 
             const img = document.getElementById('game-map'); 
-            rulerCanvas.width = parseFloat(img.style.width) || 1200; 
-            rulerCanvas.height = parseFloat(img.style.height) || 800; 
+            rulerCanvas.width = parseFloat(img.style.width) || 6200; 
+            rulerCanvas.height = parseFloat(img.style.height) || 4000; 
+        }
+
+        function toggleRulerMode() {
+            if (currentMode === 'ruler') {
+                setMode('select');
+            } else {
+                setMode('ruler');
+            }
         }
 
         function setMode(m) {
-            currentMode = m; document.querySelectorAll('.tools-grid button').forEach(b => b.classList.remove('active'));
-            const activeBtn = document.getElementById(`btn-mode-${m}`); if(activeBtn) activeBtn.classList.add('active');
+            currentMode = m;
+            const rulerBtn = document.getElementById('btn-mode-ruler');
+            if(rulerBtn) rulerBtn.classList.toggle('active', m === 'ruler');
+            
             viewport.className = `mode-${m}`; deselectAllTokens(); resetRulerCanvas();
             
             const opts = document.getElementById('ruler-options');
             if(opts) opts.style.display = (m === 'ruler') ? 'flex' : 'none';
             if (m !== 'ruler') document.getElementById('ruler-distance-indicator').classList.remove('visible');
         }
+
         function updateRulerShapeUI() {
             document.getElementById('ruler-angle-container').style.display = (document.getElementById('ruler-shape').value === 'cone') ? 'flex' : 'none';
             resetRulerCanvas();
@@ -1056,7 +1019,7 @@
                 let tl = isHost ? document.getElementById('active-layer-select').value : 'token';
                 createTokenDOM({ 
                     id: 't_'+Date.now(), name: "Токен", src: ev.target.result, 
-                    left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 40, 
+                    left: Math.abs(surfaceX/cameraZoom)+200, top: Math.abs(surfaceY/cameraZoom)+200, sizePx: 150, 
                     hp: 10, maxHp: 10, ac: '', mp: '', initiative: 0, layer: tl, owner: 'none', owners: [], auras: [{}, {}, {}] 
                 });
                 syncActiveGameStorage();
@@ -1064,19 +1027,31 @@
         });
 
         function createTokenDOM(d) {
-            const t = document.createElement('div'); t.className = `token layer-${d.layer}`; t.id = d.id;
+            const t = document.createElement('div');
+            t.className = `token layer-${d.layer}`;
+            t.id = d.id;
             t.innerHTML = `
                 <div class="quick-stats">
-                    <input type="text" class="qs-hp" placeholder="HP" title="Хиты">
-                    <input type="text" class="qs-ac" placeholder="AC" title="КЗ">
-                    <input type="text" class="qs-mp" placeholder="MP" title="Мана">
+                    <input type="text" class="qs-hp" placeholder="HP" title="Здоровье (HP)">
+                    <input type="text" class="qs-ac" placeholder="AC" title="Класс Защиты (AC)">
+                    <input type="text" class="qs-mp" placeholder="MP" title="Мана / Энергия (MP)">
                 </div>
                 <div class="aura aura-1"></div><div class="aura aura-2"></div><div class="aura aura-3"></div>
-                <div class="status-effects"></div><img>
-                <div class="token-info-container"><div class="token-name"></div><div class="token-hp-bar-container"><div class="token-hp-bar"></div></div></div>
+                <div class="status-effects">
+                    <div class="status-dot dead"></div>
+                    <div class="status-dot poisoned"></div>
+                    <div class="status-dot stunned"></div>
+                </div>
+                <img>
+                <div class="token-info-container">
+                    <div class="token-name"></div>
+                    <div class="token-hp-bar-container"><div class="token-hp-bar"></div></div>
+                </div>
             `;
-            mapContainer.appendChild(t); t.querySelector('img').src = d.src;
-            updateTokenVisuals(t, d); setupTokenEvents(t);
+            mapContainer.appendChild(t); 
+            t.querySelector('img').src = d.src;
+            updateTokenVisuals(t, d); 
+            setupTokenEvents(t);
         }
 
         function updateTokenAuraVisuals(el, auras, sizePx) {
@@ -1115,10 +1090,13 @@
             el.querySelector('.qs-ac').value = d.ac || '';
             el.querySelector('.qs-mp').value = d.mp || '';
 
-            const sb = el.querySelector('.status-effects'); sb.innerHTML = '';
-            if(d.isDead) sb.innerHTML += '<div class="status-dot dead"></div>';
-            if(d.isPoisoned) sb.innerHTML += '<div class="status-dot poisoned"></div>';
-            if(d.isStunned) sb.innerHTML += '<div class="status-dot stunned"></div>';
+            const dotDead = el.querySelector('.status-dot.dead');
+            const dotPoisoned = el.querySelector('.status-dot.poisoned');
+            const dotStunned = el.querySelector('.status-dot.stunned');
+            
+            dotDead.classList.toggle('active', !!d.isDead);
+            dotPoisoned.classList.toggle('active', !!d.isPoisoned);
+            dotStunned.classList.toggle('active', !!d.isStunned);
 
             updateTokenAuraVisuals(el, d.auras, d.sizePx);
         }
@@ -1143,12 +1121,12 @@
             document.getElementById('ctx-mp').value = t.dataset.mp || '';
             document.getElementById('ctx-initiative').value = t.dataset.initiative || 0;
 
-            if (isHost) document.getElementById('ctx-size').value = fromPx(parseFloat(t.style.width)||40);
+            if (isHost) document.getElementById('ctx-size').value = fromPx(parseFloat(t.style.width)||150);
             if (isHost) document.getElementById('ctx-layer').value = t.dataset.layer || 'token';
             
-            document.getElementById('status-dead').checked = !!t.querySelector('.status-dot.dead');
-            document.getElementById('status-poisoned').checked = !!t.querySelector('.status-dot.poisoned');
-            document.getElementById('status-stunned').checked = !!t.querySelector('.status-dot.stunned');
+            document.getElementById('status-dead').checked = t.querySelector('.status-dot.dead').classList.contains('active');
+            document.getElementById('status-poisoned').checked = t.querySelector('.status-dot.poisoned').classList.contains('active');
+            document.getElementById('status-stunned').checked = t.querySelector('.status-dot.stunned').classList.contains('active');
             
             for(let i=0; i<3; i++) {
                 document.getElementById(`aura${i+1}-rad`).value = fromPx(au[i]?.rPx || 0); 
@@ -1157,8 +1135,6 @@
 
             document.getElementById('btn-delete-token').style.display = isHost ? 'block' : 'none';
         }
-
-        function changeActiveAuraColor(num, val) { applyContextChanges(); }
 
         function applyContextChanges() {
             if (selectedTokens.length === 0) return;
@@ -1170,10 +1146,10 @@
                     else if (selVal === 'all') ownersList = ['all'];
                     else ownersList = [selVal];
                 } else {
-                    try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
+                    ownersList = getOwners(el);
                 }
 
-                let sizeValue = isHost ? (toPx(parseFloat(document.getElementById('ctx-size').value)||40)) : (parseFloat(el.style.width)||40);
+                let sizeValue = isHost ? (toPx(parseFloat(document.getElementById('ctx-size').value)||150)) : (parseFloat(el.style.width)||150);
 
                 let d = {
                     id: el.id, name: document.getElementById('ctx-name').value,
@@ -1221,8 +1197,7 @@
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && selectedTokens.length > 0) {
                 copiedTokens = selectedTokens.map(el => {
                     const au = el.dataset.auras ? JSON.parse(el.dataset.auras) : [{},{},{}];
-                    let ownersList = [];
-                    try { ownersList = JSON.parse(el.dataset.owners || "[]"); } catch(e) {}
+                    const ownersList = getOwners(el);
                     return {
                         name: el.querySelector('.token-name').textContent,
                         src: el.querySelector('img').src,
@@ -1232,9 +1207,9 @@
                         initiative: parseInt(el.dataset.initiative) || 0,
                         layer: el.dataset.layer||'token',
                         owner: el.dataset.owner || 'none', owners: ownersList,
-                        isDead: !!el.querySelector('.status-dot.dead'),
-                        isPoisoned: !!el.querySelector('.status-dot.poisoned'),
-                        isStunned: !!el.querySelector('.status-dot.stunned'),
+                        isDead: el.querySelector('.status-dot.dead').classList.contains('active'),
+                        isPoisoned: el.querySelector('.status-dot.poisoned').classList.contains('active'),
+                        isStunned: el.querySelector('.status-dot.stunned').classList.contains('active'),
                         auras: au
                     };
                 });
@@ -1258,7 +1233,8 @@
 
         function setupTokenEvents(t) {
             t.addEventListener('mousedown', function(e) {
-                if (currentMode !== 'select' || e.button !== 0) return;
+                if (e.button !== 0) return;
+                if (currentMode === 'ruler') return;
                 if (!hasControl(t)) return;
                 
                 e.stopPropagation();
@@ -1270,6 +1246,16 @@
                 
                 const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
                 dragOffsets = selectedTokens.map(tok => ({ el: tok, ox: mX - parseFloat(tok.style.left), oy: mY - parseFloat(tok.style.top) }));
+
+                dragStartPositions.clear();
+                selectedTokens.forEach(tok => {
+                    dragStartPositions.set(tok.id, {
+                        x: parseFloat(tok.style.left) + (parseFloat(tok.style.width) / 2),
+                        y: parseFloat(tok.style.top) + (parseFloat(tok.style.height) / 2)
+                    });
+                });
+
+                document.getElementById('ruler-distance-indicator').classList.add('visible');
             });
             
             t.addEventListener('dblclick', (e) => { e.stopPropagation(); openTokenContextMenu(t); });
@@ -1287,11 +1273,27 @@
         }
 
         viewport.addEventListener('mousedown', function(e) {
-            if (e.button !== 0) return; const rect = mapContainer.getBoundingClientRect();
+            const rect = mapContainer.getBoundingClientRect();
 
-            if (currentMode === 'pan') { isPanning = true; startX = e.clientX; startY = e.clientY; startSurfX = surfaceX; startSurfY = surfaceY; }
-            else if (currentMode === 'select' && e.target !== tokenMenu && !tokenMenu.contains(e.target)) { deselectAllTokens(); isSelecting = true; startX = e.clientX; startY = e.clientY; selectionBox.style.left = startX+'px'; selectionBox.style.top = startY+'px'; selectionBox.style.width = '0px'; selectionBox.style.height = '0px'; selectionBox.style.display = 'block'; }
-            else if (currentMode === 'ruler') { 
+            if (e.button === 2 || e.button === 1) { 
+                isPanning = true; 
+                startX = e.clientX; 
+                startY = e.clientY; 
+                startSurfX = surfaceX; 
+                startSurfY = surfaceY; 
+            }
+            else if (e.button === 0 && currentMode === 'select' && e.target !== tokenMenu && !tokenMenu.contains(e.target)) { 
+                deselectAllTokens(); 
+                isSelecting = true; 
+                startX = e.clientX; 
+                startY = e.clientY; 
+                selectionBox.style.left = startX+'px'; 
+                selectionBox.style.top = startY+'px'; 
+                selectionBox.style.width = '0px'; 
+                selectionBox.style.height = '0px'; 
+                selectionBox.style.display = 'block'; 
+            }
+            else if (e.button === 0 && currentMode === 'ruler') { 
                 isRuling = true; 
                 startX = (e.clientX - rect.left) / cameraZoom; 
                 startY = (e.clientY - rect.top) / cameraZoom; 
@@ -1304,9 +1306,31 @@
             cursorOnMapX = (e.clientX - rect.left) / cameraZoom;
             cursorOnMapY = (e.clientY - rect.top) / cameraZoom;
 
-            if (isDraggingToken && currentMode === 'select') {
+            if (isDraggingToken) {
                 const mX = e.clientX / cameraZoom; const mY = e.clientY / cameraZoom;
                 dragOffsets.forEach(pos => { pos.el.style.left = (mX - pos.ox) + 'px'; pos.el.style.top = (mY - pos.oy) + 'px'; });
+
+                if (selectedTokens.length > 0) {
+                    const primaryToken = selectedTokens[0];
+                    const startPos = dragStartPositions.get(primaryToken.id);
+                    if (startPos) {
+                        rCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height);
+                        const curX = parseFloat(primaryToken.style.left) + (parseFloat(primaryToken.style.width) / 2);
+                        const curY = parseFloat(primaryToken.style.top) + (parseFloat(primaryToken.style.height) / 2);
+                        
+                        const distPx = Math.sqrt(Math.pow(curX - startPos.x, 2) + Math.pow(curY - startPos.y, 2));
+                        const text = systemUnit === 'ft' ? `${fromPx(distPx)} ft` : `${Math.round(distPx)} px`;
+                        
+                        const distIndicator = document.getElementById('ruler-distance-indicator-val') || document.getElementById('ruler-distance-val');
+                        if (distIndicator) distIndicator.textContent = text;
+
+                        rCtx.strokeStyle = '#bfa15f'; rCtx.lineWidth = 3 / cameraZoom;
+                        rCtx.beginPath(); rCtx.moveTo(startPos.x, startPos.y); rCtx.lineTo(curX, curY); rCtx.stroke();
+                        
+                        rCtx.fillStyle = '#fff'; rCtx.font = `bold ${15 / cameraZoom}px Arial`;
+                        rCtx.fillText(text, curX + 10, curY - 10);
+                    }
+                }
             } else if (isPanning) {
                 surfaceX = startSurfX + (e.clientX - startX); surfaceY = startSurfY + (e.clientY - startY); updateTransform();
             } else if (isSelecting) {
@@ -1354,6 +1378,8 @@
             if(isDraggingToken) { 
                 isDraggingToken = false; 
                 document.querySelectorAll('.token.active-drag').forEach(t => t.classList.remove('active-drag'));
+                resetRulerCanvas();
+                document.getElementById('ruler-distance-indicator').classList.remove('visible');
                 syncActiveGameStorage(); 
             }
             if (isPanning) isPanning = false; 
@@ -1363,14 +1389,14 @@
 
         viewport.addEventListener('wheel', function(e) { 
             e.preventDefault(); 
-            cameraZoom = Math.min(Math.max(cameraZoom + (e.deltaY < 0 ? 0.07 : -0.07), 0.15), 4); 
+            cameraZoom = Math.min(Math.max(cameraZoom + (e.deltaY < 0 ? 0.04 : -0.04), 0.08), 2.2); 
             document.getElementById('zoomRangeSide').value = cameraZoom; 
-            document.getElementById('zoomValueSide').textContent = Math.round(cameraZoom * 100) + '%'; 
+            document.getElementById('zoomValueSide').textContent = Math.round((cameraZoom / BASE_ZOOM_FACTOR) * 100) + '%'; 
             updateTransform(); 
         }, { passive: false });
 
         function updateTransform() { surface.style.transform = `translate(${surfaceX}px, ${surfaceY}px) scale(${cameraZoom})`; }
-        setTimeout(() => { surfaceX = (window.innerWidth - 1200)/2 - 80; surfaceY = 60; updateTransform(); resizeRulerCanvas(); }, 150);
+        setTimeout(() => { surfaceX = (window.innerWidth - 6200)/2 - 80; surfaceY = 60; updateTransform(); resizeRulerCanvas(); }, 150);
     </script>
 </body>
 </html>
